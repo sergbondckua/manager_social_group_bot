@@ -1,57 +1,102 @@
 import logging
-from typing import NoReturn
+from datetime import datetime
+from typing import NoReturn, List, Tuple
 
 import monobank
 
 logger = logging.getLogger("monobank")
 
 
-def setup_webhook(token: str, webhook_url: str) -> None:
-    """Configure Monobank webhook."""
-    mono_client = monobank.Client(token=token)
+class MonobankService:
+    def __init__(self, token: str):
+        """Ініціалізація класу MonobankService."""
 
-    try:
-        client_info = mono_client.get_client_info()
-        if not client_info.get("webHookUrl"):
-            mono_client.create_webhook(url=webhook_url)
-            logger.info("Webhook successfully created")
-        else:
-            logger.info("Webhook is already configured")
-    except monobank.TooManyRequests as e:
-        logger.error("Rate limit exceeded: %s. Retrying later...", e)
-    except monobank.Error as e:
-        logger.error("API error occurred: %s", e)
+        self.token = token
+        self.client = monobank.Client(token=token)
+
+    def setup_webhook(self, webhook_url: str) -> NoReturn:
+        """Налаштування вебхука Monobank."""
+        try:
+            client_info = self.client.get_client_info()
+            if not client_info.get("webHookUrl"):
+                self.client.create_webhook(url=webhook_url)
+                logger.info("Webhook successfully created")
+            else:
+                logger.info("Webhook is already configured")
+        except monobank.TooManyRequests as e:
+            logger.error("Rate limit exceeded: %s. Retrying later...", e)
+        except monobank.Error as e:
+            logger.error("API error occurred: %s", e)
+
+    def get_credit_card_ids(self) -> List[Tuple[str, str]]:
+        """Отримує ідентифікатори кредитних рахунків та їх деталі."""
+        try:
+            accounts = self.client.get_client_info().get("accounts", [])
+        except monobank.Error as e:
+            logger.error("Error occurred: %s", e)
+            return []
+
+        card_choices = []
+        for account in accounts:
+            account_id = account.get("id", "Unknown ID")
+            account_type = account.get("type", "Unknown type")
+            masked_pan = account.get("maskedPan", ["Unknown maskedPan"])
+
+            card_choices.append(
+                (account_id, f"{account_type} - {', '.join(masked_pan)}")
+            )
+
+        return card_choices
+
+    def is_token_valid(self) -> bool:
+        """Перевіряє, чи дійсний токен."""
+        try:
+            self.client.get_client_info()
+            return True
+        except monobank.Error:
+            return False
 
 
-def get_id_creditcard(token: str) -> list:
-    """Отримує ідентифікатор кредитного рахунку та деталі для вибору."""
-    try:
-        mono_client = monobank.Client(token=token)
-        accounts = mono_client.get_client_info().get("accounts", [])
-    except Exception as e:
-        logger.error("Error occurred: %s", e)
-        return []
+def format_monobank_message(data):
+    # Отримання даних із JSON
+    statement_item = data["statementItem"]
 
-    card_choices = []
-    for account in accounts:
-        account_id = account.get("id", "Unknown ID")
-        account_type = account.get("type", "Unknown type")
-        masked_pan = account.get("maskedPan", ["Unknown maskedPan"])
+    # Форматування часу
+    timestamp = statement_item["time"]
+    date_time = datetime.fromtimestamp(timestamp)
+    formatted_date = date_time.strftime("%d %B %Y р.")
+    formatted_time = date_time.strftime("%H:%M:%S")
 
-        card_choices.append(
-            (account_id, f"{account_type} - {', '.join(masked_pan)}"),
+    # Форматування даних
+    description = statement_item.get("description", "Не зазначено")
+    comment = statement_item.get("comment", "---")
+    amount = statement_item["amount"] / 100  # Приведення до гривень
+    balance = statement_item["balance"] / 100  # Приведення до гривень
+    receipt_id = statement_item.get("receiptId", "")
+
+    # Визначення типу повідомлення
+    if amount > 0:
+        message = (
+            "✅ Зараз відбулось надходження!\n\n"
+            f"📅 {formatted_date} 🕘 {formatted_time}\n"
+            f"💳 {description}\n"
+            f"💬 {comment}\n"
+            f"💰 Сума: {amount:.2f}\n"
+            f"💵 Баланс: {balance:.2f}\n"
+            "〰〰〰〰〰〰〰"
         )
-
-    return card_choices
-
-
-def main() -> NoReturn:
-    """Main application entry point."""
-    client_info = get_id_creditcard(
-        "bc76dftg7eyg4b3fnoij8y78t6fg"
-    )
-    print(client_info)
-
+    else:
+        message = (
+            "🔻 Щойно були витрачені кошти!\n\n"
+            f"📅 {formatted_date} 🕘 {formatted_time}\n"
+            f"🛍 Кому: {description}\n"
+            f"🧾  <a href=https://check.gov.ua/{receipt_id}>{receipt_id}</a>\n"
+            f"💰 Сума: {amount:.2f}\n"
+            f"💵 Залишок: {balance:.2f}\n"
+            "〰〰〰〰〰〰〰"
+        )
+    print(message)
+    return message
 
 if __name__ == "__main__":
-    main()
+    pass
