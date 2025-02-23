@@ -48,7 +48,7 @@ def get_id_creditcard(token: str) -> list:
 def main() -> NoReturn:
     """Main application entry point."""
     client_info = get_id_creditcard(
-        "ucadxHvlLD7wM51h4MvU3MsubtaQv6n7PyA0mNQa1ATU"
+        "bc76dftg7eyg4b3fnoij8y78t6fg"
     )
     print(client_info)
 
