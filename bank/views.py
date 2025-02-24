@@ -1,13 +1,22 @@
 import json
 
+from asgiref.sync import async_to_sync
+from django.conf import settings
 from django.contrib.auth.mixins import PermissionRequiredMixin
 from django.http import JsonResponse
 from django.utils.decorators import method_decorator
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
 
-from bank.models import MonoBankClient
-from bank.services.mono import MonobankService, format_monobank_message
+from bank.models import MonoBankClient, MonoBankCard
+from bank.services.mono import (
+    MonobankService,
+    MonoBankMessageFormatter,
+    MonoBankChatIDProvider,
+    TelegramMessageSender,
+)
+from common.utils import clean_tag_message
+from robot.config import ROBOT
 
 
 class GetCardsView(PermissionRequiredMixin, View):
@@ -46,8 +55,23 @@ class MonobankWebhookView(View):
             if event_type == "StatementItem":
                 # Обробка транзакції
                 transaction_data = data.get("data", {})
-                # Логіка для обробки транзакції
-                format_monobank_message(transaction_data)
+
+                # Форматування повідомлення
+                formatter = MonoBankMessageFormatter(transaction_data)
+                message = formatter.format_message()
+
+                # Отримання chat_id
+                chat_id_provider = MonoBankChatIDProvider(
+                    account=transaction_data["account"],
+                    db_model=MonoBankCard,
+                    admins=settings.ADMINS_BOT,
+                )
+                chat_ids = chat_id_provider.get_chat_ids()
+                sender = TelegramMessageSender(bot=ROBOT)
+                async_to_sync(sender.send_message)(
+                    clean_tag_message(message), chat_ids
+                )
+                print(chat_ids, message, sep="\n")
             else:
                 print(f"Unhandled event type: {event_type}")
 

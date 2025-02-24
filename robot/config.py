@@ -1,6 +1,10 @@
 from dataclasses import dataclass
 
+from aiogram import Bot
+from aiogram.client.default import DefaultBotProperties
 from environs import Env
+
+from core.settings import TELEGRAM_BOT_TOKEN
 
 # Створіть об'єкт ENV.
 # Об'єкт ENV буде використовуватися для читання змінних середовища.
@@ -27,3 +31,8 @@ class TgBot:
 
 
 config_bot = TgBot.from_env(env)
+
+ROBOT = Bot(
+    token=TELEGRAM_BOT_TOKEN,
+    default=DefaultBotProperties(parse_mode="HTML"),
+)

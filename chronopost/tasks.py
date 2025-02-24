@@ -10,20 +10,14 @@ from chronopost.services.weather import (
     WeatherFormatter,
     TelegramNotifier,
 )
-from core.settings import TELEGRAM_BOT_TOKEN, WEATHER_API_KEY, CITY_COORDINATES
+from core.settings import WEATHER_API_KEY, CITY_COORDINATES
 from celery import shared_task
-from aiogram import Bot
-from aiogram.client.default import DefaultBotProperties
+
 
 from chronopost.services.schedulers import MessageScheduler
+from robot.config import ROBOT
 
 logger = logging.getLogger("chronopost")
-
-
-ROBOT = Bot(
-    token=TELEGRAM_BOT_TOKEN,
-    default=DefaultBotProperties(parse_mode="HTML"),
-)
 
 
 @shared_task(expires=10)

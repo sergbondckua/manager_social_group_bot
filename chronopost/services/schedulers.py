@@ -13,7 +13,7 @@ from django.utils import timezone
 
 from chronopost.enums import PeriodicityChoices
 from chronopost.models import ScheduledMessage
-from chronopost.utils import clean_tag_message
+from common.utils import clean_tag_message
 
 logger = logging.getLogger("schedulers")
 

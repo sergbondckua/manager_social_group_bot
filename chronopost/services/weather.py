@@ -7,7 +7,7 @@ from typing import Dict, List, Optional, Tuple, Any
 from aiogram import Bot
 from aiogram.types import FSInputFile
 
-from chronopost.utils import clean_tag_message
+from common.utils import clean_tag_message
 
 logger = logging.getLogger("weather_api")
 

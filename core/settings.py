@@ -83,7 +83,8 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = "core.wsgi.application"
+# WSGI_APPLICATION = "core.wsgi.application"
+ASGI_APPLICATION = "core.asgi.application"
 
 
 # Database
@@ -148,6 +149,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # Telegram bot settings
 TELEGRAM_BOT_TOKEN = env.str("TELEGRAM_BOT_TOKEN")  # Bot token
 DEFAULT_CHAT_ID = env.int("DEFAULT_CHAT_ID")  # Default chat ID
+ADMINS_BOT = env.list("ADMINS_BOT", subcast=int)
 
 # REDIS connection
 REDIS_HOST = "0.0.0.0"

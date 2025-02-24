@@ -1,8 +1,10 @@
 import logging
 from datetime import datetime
-from typing import NoReturn, List, Tuple
+from typing import NoReturn, List, Tuple, Optional
 
 import monobank
+from aiogram import Bot
+from aiogram.exceptions import TelegramAPIError
 
 logger = logging.getLogger("monobank")
 
@@ -57,46 +59,165 @@ class MonobankService:
             return False
 
 
-def format_monobank_message(data):
-    # Отримання даних із JSON
-    statement_item = data["statementItem"]
+class TransactionDataParser:
+    """Клас для отримання та парсингу даних транзакції."""
 
-    # Форматування часу
-    timestamp = statement_item["time"]
-    date_time = datetime.fromtimestamp(timestamp)
-    formatted_date = date_time.strftime("%d %B %Y р.")
-    formatted_time = date_time.strftime("%H:%M:%S")
+    def __init__(self, data: dict):
+        self._data = data
+        self._statement_item = data["statementItem"]
 
-    # Форматування даних
-    description = statement_item.get("description", "Не зазначено")
-    comment = statement_item.get("comment", "---")
-    amount = statement_item["amount"] / 100  # Приведення до гривень
-    balance = statement_item["balance"] / 100  # Приведення до гривень
-    receipt_id = statement_item.get("receiptId", "")
+    @property
+    def amount(self) -> float:
+        return self._statement_item["amount"] / 100
 
-    # Визначення типу повідомлення
-    if amount > 0:
-        message = (
+    @property
+    def balance(self) -> float:
+        return self._statement_item["balance"] / 100
+
+    @property
+    def description(self) -> str:
+        return self._statement_item.get("description", "Не зазначено")
+
+    @property
+    def comment(self) -> str:
+        return self._statement_item.get("comment", "---")
+
+    @property
+    def receipt_id(self) -> str:
+        return self._statement_item.get("receiptId", "")
+
+    @property
+    def timestamp(self) -> int:
+        return self._statement_item["time"]
+
+
+class DateTimeFormatter:
+    """Клас для форматування дати та часу"""
+
+    def __init__(self, timestamp: int):
+        self._date_time = datetime.fromtimestamp(timestamp)
+
+    @property
+    def formatted_date(self) -> str:
+        return self._date_time.strftime("%d %B %Y р.")
+
+    @property
+    def formatted_time(self) -> str:
+        return self._date_time.strftime("%H:%M:%S")
+
+
+class MessageTemplate:
+    """Базовий клас для шаблонів повідомлень"""
+
+    def __init__(
+        self, parser: TransactionDataParser, dt_formatter: DateTimeFormatter
+    ):
+        self.parser = parser
+        self.dt_formatter = dt_formatter
+
+    @property
+    def common_part(self) -> str:
+        return (
+            f"💰 Сума: {self.parser.amount:.2f}\n"
+            f"💵 Баланс: {self.parser.balance:.2f}\n"
+            "〰〰〰〰〰〰〰"
+        )
+
+
+class IncomeMessageTemplate(MessageTemplate):
+    """Шаблон для повідомлення про надходження"""
+
+    @property
+    def message(self) -> str:
+        return (
             "✅ Зараз відбулось надходження!\n\n"
-            f"📅 {formatted_date} 🕘 {formatted_time}\n"
-            f"💳 {description}\n"
-            f"💬 {comment}\n"
-            f"💰 Сума: {amount:.2f}\n"
-            f"💵 Баланс: {balance:.2f}\n"
-            "〰〰〰〰〰〰〰"
+            f"📅 {self.dt_formatter.formatted_date} 🕘 {self.dt_formatter.formatted_time}\n"
+            f"💳 {self.parser.description}\n"
+            f"💬 {self.parser.comment}\n"
+            f"{self.common_part}"
         )
-    else:
-        message = (
+
+
+class ExpenseMessageTemplate(MessageTemplate):
+    """Шаблон для повідомлення про витрату"""
+
+    @property
+    def message(self) -> str:
+        return (
             "🔻 Щойно були витрачені кошти!\n\n"
-            f"📅 {formatted_date} 🕘 {formatted_time}\n"
-            f"🛍 Кому: {description}\n"
-            f"🧾  <a href=https://check.gov.ua/{receipt_id}>{receipt_id}</a>\n"
-            f"💰 Сума: {amount:.2f}\n"
-            f"💵 Залишок: {balance:.2f}\n"
-            "〰〰〰〰〰〰〰"
+            f"📅 {self.dt_formatter.formatted_date} 🕘 {self.dt_formatter.formatted_time}\n"
+            f"🛍 Кому: {self.parser.description}\n"
+            f"💬 {self.parser.comment}\n"
+            f"🧾 <a href='https://check.gov.ua/'>{self.parser.receipt_id}</a>\n"
+            f"{self.common_part}"
         )
-    print(message)
-    return message
+
+
+class MonoBankMessageFormatter:
+    """Головний клас для форматування повідомлень"""
+
+    def __init__(self, data: dict):
+        self.parser = TransactionDataParser(data)
+        self.dt_formatter = DateTimeFormatter(self.parser.timestamp)
+
+    def format_message(self) -> str:
+        if self.parser.amount > 0:
+            template = IncomeMessageTemplate(self.parser, self.dt_formatter)
+        else:
+            template = ExpenseMessageTemplate(self.parser, self.dt_formatter)
+        return template.message
+
+
+class MonoBankChatIDProvider:
+    """Клас для отримання chat_id з бази даних"""
+
+    def __init__(self, account: str, db_model, admins: list):
+        self.account = account
+        self.db_model = db_model
+        self.admins = admins
+
+    def get_chat_ids(self) -> Optional[List[int]]:
+        """Отримання ідентифікаторів чатів"""
+        try:
+            chat_id = self.db_model.objects.get(card_id=self.account).chat_id
+            return [chat_id] if chat_id else self.admins
+        except self.db_model.DoesNotExist:
+            return None
+
+
+class TelegramMessageSender:
+    """Клас для відправлення повідомлень в Telegram"""
+
+    def __init__(self, bot: Bot):
+        self.bot = bot
+
+    async def send_message(
+        self, message: str, chat_ids: List[int] | None
+    ) -> bool:
+        """
+        Відправляє повідомлення в зазначені чати
+        Повертає статус відправлення (True/False)
+        """
+        if not chat_ids:
+            return False
+
+        success = False
+        for chat_id in chat_ids:
+            try:
+                await self.bot.send_message(
+                    chat_id=chat_id,
+                    text=message,
+                    parse_mode="HTML",
+                    disable_web_page_preview=True,
+                )
+                success = True
+            except TelegramAPIError as e:
+                logger.error(
+                    "Помилка відправлення повідомлення для %s: %s", chat_id, e
+                )
+
+        return success
+
 
 if __name__ == "__main__":
     pass

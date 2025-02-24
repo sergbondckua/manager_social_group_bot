@@ -36,6 +36,7 @@ class MonoBankCard(BaseModel):
     )
     card_id = models.CharField(
         max_length=100,
+        unique=True,
         verbose_name="ID картки",
         help_text="ID картки, для взаємодії з API Монобанку",
     )
