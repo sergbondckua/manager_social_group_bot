@@ -118,6 +118,7 @@ class MessageTemplate:
     @property
     def common_part(self) -> str:
         return (
+            f"💬 {self.parser.comment}\n"
             f"💰 Сума: {self.parser.amount:.2f}\n"
             f"💵 Баланс: {self.parser.balance:.2f}\n"
             "〰〰〰〰〰〰〰"
@@ -133,7 +134,6 @@ class IncomeMessageTemplate(MessageTemplate):
             "✅ Зараз відбулось надходження!\n\n"
             f"📅 {self.dt_formatter.formatted_date} 🕘 {self.dt_formatter.formatted_time}\n"
             f"💳 {self.parser.description}\n"
-            f"💬 {self.parser.comment}\n"
             f"{self.common_part}"
         )
 
@@ -147,7 +147,6 @@ class ExpenseMessageTemplate(MessageTemplate):
             "🔻 Щойно були витрачені кошти!\n\n"
             f"📅 {self.dt_formatter.formatted_date} 🕘 {self.dt_formatter.formatted_time}\n"
             f"🛍 Кому: {self.parser.description}\n"
-            f"💬 {self.parser.comment}\n"
             f"🧾 <a href='https://check.gov.ua/'>{self.parser.receipt_id}</a>\n"
             f"{self.common_part}"
         )
