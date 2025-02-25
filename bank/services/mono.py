@@ -1,10 +1,14 @@
 import logging
+import re
 from datetime import datetime
-from typing import NoReturn, List, Tuple, Optional
+from typing import NoReturn, List, Tuple, Optional, Type
 
 import monobank
 from aiogram import Bot
+from aiogram.client.default import DefaultBotProperties
 from aiogram.exceptions import TelegramAPIError
+
+from bank.models import MonoBankCard
 
 logger = logging.getLogger("monobank")
 
@@ -84,7 +88,7 @@ class TransactionDataParser:
 
     @property
     def receipt_id(self) -> str:
-        return self._statement_item.get("receiptId", "")
+        return self._statement_item.get("receiptId", "-x-x-")
 
     @property
     def timestamp(self) -> int:
@@ -152,6 +156,18 @@ class ExpenseMessageTemplate(MessageTemplate):
         )
 
 
+class PayerMessageTemplate(MessageTemplate):
+    @property
+    def message(self) -> str:
+        return (
+            "✅ Дякую! Ваш внесок отримано!\n\n"
+            f"📅 {self.dt_formatter.formatted_date} 🕘 {self.dt_formatter.formatted_time}\n"
+            f"👤 {self.parser.description}\n"
+            f"🧾 <a href='https://check.gov.ua/'>{self.parser.receipt_id}</a>\n\n"
+            f"💰 Сума: {self.parser.amount:.2f}\n"
+        )
+
+
 class MonoBankMessageFormatter:
     """Головний клас для форматування повідомлень"""
 
@@ -166,29 +182,52 @@ class MonoBankMessageFormatter:
             template = ExpenseMessageTemplate(self.parser, self.dt_formatter)
         return template.message
 
+    def format_payer_message(self) -> str:
+        template = PayerMessageTemplate(self.parser, self.dt_formatter)
+        return template.message
+
 
 class MonoBankChatIDProvider:
-    """Клас для отримання chat_id з бази даних"""
+    """
+    Надає функціонал для отримання chat_id з бази даних та аналізу коментарів.
+    """
 
-    def __init__(self, account: str, db_model, admins: list):
+    # Компілюємо регулярний вираз
+    _USER_ID_PATTERN = re.compile(r"user_id:\s*(\d+)", re.IGNORECASE)
+
+    def __init__(
+        self, account: str, db_model: Type[MonoBankCard], admins: List[int]
+    ):
         self.account = account
         self.db_model = db_model
         self.admins = admins
 
     def get_chat_ids(self) -> Optional[List[int]]:
-        """Отримання ідентифікаторів чатів"""
+        """Повертає chat_id з бази даних або резервний список адміністраторів."""
         try:
-            chat_id = self.db_model.objects.get(card_id=self.account).chat_id
-            return [chat_id] if chat_id else self.admins
+            record = self.db_model.objects.get(card_id=self.account)
+            return [record.chat_id] if record.chat_id else self.admins
         except self.db_model.DoesNotExist:
             return None
+
+    def get_payer_chat_id(self, comment: Optional[str]) -> Optional[int]:
+        """Видобуває числовий ідентифікатор платника з коментаря."""
+        if not comment:
+            return None
+
+        if match := self._USER_ID_PATTERN.search(comment):
+            return int(match.group(1))
+        return None
 
 
 class TelegramMessageSender:
     """Клас для відправлення повідомлень в Telegram"""
 
-    def __init__(self, bot: Bot):
-        self.bot = bot
+    def __init__(self, token: str):
+        self.token = token
+        self.bot = Bot(
+            token=self.token, default=DefaultBotProperties(parse_mode="HTML")
+        )
 
     async def send_message(
         self, message: str, chat_ids: List[int] | None
@@ -203,20 +242,16 @@ class TelegramMessageSender:
         success = False
         for chat_id in chat_ids:
             try:
-                await self.bot.send_message(
-                    chat_id=chat_id,
-                    text=message,
-                    parse_mode="HTML",
-                    disable_web_page_preview=True,
-                )
+                async with self.bot as bot:
+                    await bot.send_message(
+                        chat_id=chat_id,
+                        text=message,
+                        parse_mode="HTML",
+                        disable_web_page_preview=True,
+                    )
                 success = True
             except TelegramAPIError as e:
                 logger.error(
                     "Помилка відправлення повідомлення для %s: %s", chat_id, e
                 )
-
         return success
-
-
-if __name__ == "__main__":
-    pass

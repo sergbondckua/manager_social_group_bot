@@ -16,7 +16,6 @@ from bank.services.mono import (
     TelegramMessageSender,
 )
 from common.utils import clean_tag_message
-from robot.config import ROBOT
 
 
 class GetCardsView(PermissionRequiredMixin, View):
@@ -46,36 +45,46 @@ class MonobankWebhookView(View):
 
     def post(self, request, *args, **kwargs):
         try:
-            # Отримання даних із запиту
             body = request.body.decode("utf-8")
             data = json.loads(body)
 
-            # Обробка отриманих даних
             event_type = data.get("type")
             if event_type == "StatementItem":
-                # Обробка транзакції
                 transaction_data = data.get("data", {})
-
-                # Форматування повідомлення
                 formatter = MonoBankMessageFormatter(transaction_data)
                 message = formatter.format_message()
 
-                # Отримання chat_id
                 chat_id_provider = MonoBankChatIDProvider(
                     account=transaction_data["account"],
                     db_model=MonoBankCard,
                     admins=settings.ADMINS_BOT,
                 )
                 chat_ids = chat_id_provider.get_chat_ids()
-                sender = TelegramMessageSender(bot=ROBOT)
-                async_to_sync(sender.send_message)(
-                    clean_tag_message(message), chat_ids
+
+                # Створюємо єдиний sender для всіх операцій
+                sender = TelegramMessageSender(
+                    token=settings.TELEGRAM_BOT_TOKEN
                 )
-                print(chat_ids, message, sep="\n")
+
+                # Асинхронно відправляємо повідомлення
+                async def send_message():
+                    await sender.send_message(
+                        clean_tag_message(message), chat_ids
+                    )
+
+                    if payer_chat_id := chat_id_provider.get_payer_chat_id(
+                        transaction_data["statementItem"].get("comment")
+                    ):
+                        payer_message = formatter.format_payer_message()
+                        await sender.send_message(
+                            clean_tag_message(payer_message), [payer_chat_id]
+                        )
+
+                # Викликаємо асинхронну функцію
+                async_to_sync(send_message)()
             else:
                 print(f"Unhandled event type: {event_type}")
 
-            # Повертаємо відповідь Monobank
             return JsonResponse({"status": "success"})
 
         except json.JSONDecodeError:
