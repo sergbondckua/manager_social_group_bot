@@ -59,7 +59,7 @@ def send_weather_forecast():
             logger.warning("No data after filtration")
             return None
 
-        presenter = WeatherFormatter(include_today_only=False)
+        presenter = WeatherFormatter(include_today_only=True)
         formatted_data = presenter.format_weather_report(clear_data)
 
         if not formatted_data:

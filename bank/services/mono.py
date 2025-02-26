@@ -5,7 +5,6 @@ from typing import NoReturn, List, Tuple, Optional, Type
 
 import monobank
 from aiogram import Bot
-from aiogram.client.default import DefaultBotProperties
 from aiogram.exceptions import TelegramAPIError
 
 from bank.models import MonoBankCard
@@ -103,7 +102,7 @@ class DateTimeFormatter:
 
     @property
     def formatted_date(self) -> str:
-        return self._date_time.strftime("%d %B %Y р.")
+        return self._date_time.strftime("%d.%m.%Y")
 
     @property
     def formatted_time(self) -> str:
@@ -223,15 +222,10 @@ class MonoBankChatIDProvider:
 class TelegramMessageSender:
     """Клас для відправлення повідомлень в Telegram"""
 
-    def __init__(self, token: str):
-        self.token = token
-        self.bot = Bot(
-            token=self.token, default=DefaultBotProperties(parse_mode="HTML")
-        )
+    def __init__(self, bot: Bot):
+        self.bot = bot
 
-    async def send_message(
-        self, message: str, chat_ids: List[int] | None
-    ) -> bool:
+    async def send_message(self, message: str, chat_ids: List[int]) -> bool:
         """
         Відправляє повідомлення в зазначені чати
         Повертає статус відправлення (True/False)
@@ -242,13 +236,12 @@ class TelegramMessageSender:
         success = False
         for chat_id in chat_ids:
             try:
-                async with self.bot as bot:
-                    await bot.send_message(
-                        chat_id=chat_id,
-                        text=message,
-                        parse_mode="HTML",
-                        disable_web_page_preview=True,
-                    )
+                await self.bot.send_message(
+                    chat_id=chat_id,
+                    text=message,
+                    parse_mode="HTML",
+                    disable_web_page_preview=True,
+                )
                 success = True
             except TelegramAPIError as e:
                 logger.error(

@@ -151,6 +151,10 @@ TELEGRAM_BOT_TOKEN = env.str("TELEGRAM_BOT_TOKEN")  # Bot token
 DEFAULT_CHAT_ID = env.int("DEFAULT_CHAT_ID")  # Default chat ID
 ADMINS_BOT = env.list("ADMINS_BOT", subcast=int)
 
+# Bank settings
+BASE_URL = env.str("BASE_URL")
+MONOBANK_WEBHOOK_PATH = env.str("MONOBANK_WEBHOOK_PATH")
+
 # REDIS connection
 REDIS_HOST = "0.0.0.0"
 REDIS_PORT = "6379"

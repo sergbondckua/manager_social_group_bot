@@ -1,6 +1,6 @@
 import json
+import logging
 
-from asgiref.sync import async_to_sync
 from django.conf import settings
 from django.contrib.auth.mixins import PermissionRequiredMixin
 from django.http import JsonResponse
@@ -13,9 +13,10 @@ from bank.services.mono import (
     MonobankService,
     MonoBankMessageFormatter,
     MonoBankChatIDProvider,
-    TelegramMessageSender,
 )
-from common.utils import clean_tag_message
+from bank.tasks import send_telegram_message, send_telegram_message_to_payer
+
+logger = logging.getLogger("monobank-webhook")
 
 
 class GetCardsView(PermissionRequiredMixin, View):
@@ -47,47 +48,38 @@ class MonobankWebhookView(View):
         try:
             body = request.body.decode("utf-8")
             data = json.loads(body)
-
             event_type = data.get("type")
+
             if event_type == "StatementItem":
-                transaction_data = data.get("data", {})
-                formatter = MonoBankMessageFormatter(transaction_data)
-                message = formatter.format_message()
-
-                chat_id_provider = MonoBankChatIDProvider(
-                    account=transaction_data["account"],
-                    db_model=MonoBankCard,
-                    admins=settings.ADMINS_BOT,
-                )
-                chat_ids = chat_id_provider.get_chat_ids()
-
-                # Створюємо єдиний sender для всіх операцій
-                sender = TelegramMessageSender(
-                    token=settings.TELEGRAM_BOT_TOKEN
-                )
-
-                # Асинхронно відправляємо повідомлення
-                async def send_message():
-                    await sender.send_message(
-                        clean_tag_message(message), chat_ids
-                    )
-
-                    if payer_chat_id := chat_id_provider.get_payer_chat_id(
-                        transaction_data["statementItem"].get("comment")
-                    ):
-                        payer_message = formatter.format_payer_message()
-                        await sender.send_message(
-                            clean_tag_message(payer_message), [payer_chat_id]
-                        )
-
-                # Викликаємо асинхронну функцію
-                async_to_sync(send_message)()
+                self._handle_statement_item(data)
             else:
-                print(f"Unhandled event type: {event_type}")
-
+                logger.info("Невідповідний тип подій: %s", event_type)
             return JsonResponse({"status": "success"})
-
         except json.JSONDecodeError:
             return JsonResponse({"error": "Invalid JSON"}, status=400)
         except Exception as e:
             return JsonResponse({"error": str(e)}, status=500)
+
+    @staticmethod
+    def _handle_statement_item(data: dict) -> None:
+        """Обробляє подію StatementItem."""
+        transaction_data = data.get("data", {})
+        formatter = MonoBankMessageFormatter(transaction_data)
+        message = formatter.format_message()
+        chat_id_provider = MonoBankChatIDProvider(
+            account=transaction_data["account"],
+            db_model=MonoBankCard,
+            admins=settings.ADMINS_BOT,
+        )
+        chat_ids = chat_id_provider.get_chat_ids()
+
+        # Викликаємо Celery задачу для відправки повідомлення
+        send_telegram_message.delay(message, chat_ids)
+
+        if (
+            payer_chat_id := chat_id_provider.get_payer_chat_id(
+                transaction_data["statementItem"].get("comment")
+            )
+        ) and chat_ids:
+            payer_message = formatter.format_payer_message()
+            send_telegram_message_to_payer.delay(payer_message, payer_chat_id)
