@@ -72,14 +72,14 @@ class MonobankWebhookView(View):
             admins=settings.ADMINS_BOT,
         )
         chat_ids = chat_id_provider.get_chat_ids()
+        payer_chat_id = chat_id_provider.get_payer_chat_id(
+            transaction_data["statementItem"].get("comment")
+        )
 
         # Викликаємо Celery задачу для відправки повідомлення
-        send_telegram_message.delay(message, chat_ids)
+        send_telegram_message.delay(message, chat_ids, payer_chat_id)
 
-        if (
-            payer_chat_id := chat_id_provider.get_payer_chat_id(
-                transaction_data["statementItem"].get("comment")
-            )
-        ) and chat_ids:
+        # Відправляємо Celery задачу для повідомлення платникам
+        if payer_chat_id and chat_ids:
             payer_message = formatter.format_payer_message()
             send_telegram_message_to_payer.delay(payer_message, payer_chat_id)

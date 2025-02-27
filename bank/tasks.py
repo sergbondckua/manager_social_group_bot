@@ -4,15 +4,14 @@ from django.conf import settings
 from celery import shared_task
 from bank.models import MonoBankClient
 from bank.services.mono import MonobankService, TelegramMessageSender
-from common.utils import clean_tag_message
 from robot.config import ROBOT
 
 logger = logging.getLogger("monobank")
 
 
-@shared_task(expires=24 * 3600)
+@shared_task(expires=24 * 60 * 60)
 def create_monobank_webhooks():
-    """ Celery-завдання для налаштування вебхуків усіх клієнтів MonoBank. """
+    """Celery-завдання для налаштування вебхуків усіх клієнтів MonoBank."""
 
     if not hasattr(settings, "BASE_URL"):
         logger.error("BASE_URL не знайдено в налаштуваннях")
@@ -49,27 +48,32 @@ def create_monobank_webhooks():
     )
 
 
-@shared_task
-def send_telegram_message(message, chat_ids):
-    """ Завдання Celery для відправки повідомлення. """
+@shared_task(expires=(24 * 60 * 60) * 28)
+def send_telegram_message(message, chat_ids, payer_chat_id=None):
+    """Завдання Celery для відправки повідомлення."""
+
     async def main() -> None:
         async with ROBOT as bot:
             sender = TelegramMessageSender(bot)
-            await sender.send_message(clean_tag_message(message), chat_ids)
+            photo_payer = (
+                await sender.get_user_profile_photo(payer_chat_id)
+                if payer_chat_id
+                else None
+            )
+            await sender.send_message(message, chat_ids, photo_payer)
 
     loop = asyncio.get_event_loop()
     loop.run_until_complete(main())
 
 
-@shared_task
+@shared_task(expires=(24 * 60 * 60) * 28)
 def send_telegram_message_to_payer(payer_message, payer_chat_id):
-    """ Завдання Celery для відправки повідомлення платникам. """
+    """Завдання Celery для відправки повідомлення платникам."""
+
     async def main() -> None:
         async with ROBOT as bot:
             sender = TelegramMessageSender(bot)
-            await sender.send_message(
-                clean_tag_message(payer_message), [payer_chat_id]
-            )
+            await sender.send_message(payer_message, [payer_chat_id])
 
     loop = asyncio.get_event_loop()
     loop.run_until_complete(main())
