@@ -8,6 +8,7 @@ from aiogram import Bot
 from aiogram.exceptions import TelegramAPIError
 
 from bank.models import MonoBankCard
+import bank.resources.bot_msg_templates as bmt
 from common.utils import clean_tag_message
 from core.settings import DEFAULT_CHAT_ID
 
@@ -122,11 +123,10 @@ class MessageTemplate:
 
     @property
     def common_part(self) -> str:
-        return (
-            f"💬 {self.parser.comment}\n"
-            f"💰 Сума: {self.parser.amount:.2f}\n"
-            f"💵 Баланс: {self.parser.balance:.2f}\n"
-            "〰〰〰〰〰〰〰"
+        return bmt.common_part_text.format(
+            comment=self.parser.comment,
+            amount=f"{self.parser.amount:.2f}",
+            balance=f"{self.parser.balance:.2f}",
         )
 
 
@@ -135,11 +135,11 @@ class IncomeMessageTemplate(MessageTemplate):
 
     @property
     def message(self) -> str:
-        return (
-            "✅ Зараз відбулось надходження!\n\n"
-            f"📅 {self.dt_formatter.formatted_date} 🕘 {self.dt_formatter.formatted_time}\n"
-            f"💳 {self.parser.description}\n"
-            f"{self.common_part}"
+        return bmt.income_text.format(
+            dt=self.dt_formatter.formatted_date,
+            time=self.dt_formatter.formatted_time,
+            description=self.parser.description,
+            common_part=self.common_part,
         )
 
 
@@ -148,24 +148,26 @@ class ExpenseMessageTemplate(MessageTemplate):
 
     @property
     def message(self) -> str:
-        return (
-            "🔻 Щойно були витрачені кошти!\n\n"
-            f"📅 {self.dt_formatter.formatted_date} 🕘 {self.dt_formatter.formatted_time}\n"
-            f"🛍 Кому: {self.parser.description}\n"
-            f"🧾 <a href='https://check.gov.ua/'>{self.parser.receipt_id}</a>\n"
-            f"{self.common_part}"
+        return bmt.expense_text.format(
+            dt=self.dt_formatter.formatted_date,
+            time=self.dt_formatter.formatted_time,
+            description=self.parser.description,
+            title=self.parser.receipt_id,
+            url="https://check.gov.ua/",
+            common_part=self.common_part,
         )
 
 
 class PayerMessageTemplate(MessageTemplate):
     @property
     def message(self) -> str:
-        return (
-            "✅ Дякую! Ваш внесок отримано!\n\n"
-            f"📅 {self.dt_formatter.formatted_date} 🕘 {self.dt_formatter.formatted_time}\n"
-            f"👤 {self.parser.description}\n"
-            f"🧾 <a href='https://check.gov.ua/'>{self.parser.receipt_id}</a>\n\n"
-            f"💰 Сума: {self.parser.amount:.2f}\n"
+        return bmt.payer_text.format(
+            dt=self.dt_formatter.formatted_date,
+            time=self.dt_formatter.formatted_time,
+            description=self.parser.description,
+            title=self.parser.receipt_id,
+            url="https://check.gov.ua/",
+            amount=f"{self.parser.amount:.2f}",
         )
 
 
@@ -268,7 +270,7 @@ class TelegramMessageSender:
         return success
 
     async def get_user_profile_photo(self, user_id: int) -> Optional[str]:
-        """ Отримує фото профілю користувача """
+        """Отримує фото профілю користувача"""
 
         photos = await self.bot.get_user_profile_photos(user_id)
         if photos.total_count > 0:
