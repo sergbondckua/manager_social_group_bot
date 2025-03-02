@@ -1,7 +1,7 @@
 import logging
 import re
 from datetime import datetime
-from typing import NoReturn, List, Tuple, Optional, Type
+from typing import List, Tuple, Optional, Type
 
 import monobank
 from aiogram import Bot
@@ -22,19 +22,39 @@ class MonobankService:
         self.token = token
         self.client = monobank.Client(token=token)
 
-    def setup_webhook(self, webhook_url: str) -> NoReturn:
-        """Налаштування вебхука Monobank."""
+    def is_webhook_configured(self) -> Optional[str]:
+        """Перевіряє, чи налаштований вебхук."""
         try:
             client_info = self.client.get_client_info()
-            if not client_info.get("webHookUrl"):
-                self.client.create_webhook(url=webhook_url)
-                logger.info("Webhook successfully created")
-            else:
-                logger.info("Webhook is already configured")
+            return client_info.get("webHookUrl")
+        except Exception as e:
+            logger.error("Failed to retrieve client info: %s", e)
+            return None
+
+    def create_webhook(self, webhook_url: str) -> bool:
+        """Створює вебхук за вказаною URL-адресою."""
+        try:
+            self.client.create_webhook(url=webhook_url)
+            logger.info("Webhook successfully created")
+            return True
         except monobank.TooManyRequests as e:
             logger.error("Rate limit exceeded: %s. Retrying later...", e)
         except monobank.Error as e:
-            logger.error("API error occurred: %s", e)
+            logger.error("API error occurred while creating webhook: %s", e)
+        except Exception as e:
+            logger.error("Unexpected error occurred while creating webhook: %s", e)
+
+        return False
+
+    def setup_webhook(self, webhook_url: str) -> bool:
+        """Головна функція для налаштування вебхука."""
+        current_webhook = self.is_webhook_configured()
+
+        if current_webhook:
+            logger.info("Webhook is already configured: %s", current_webhook)
+            return True
+
+        return self.create_webhook(webhook_url)
 
     def get_credit_card_ids(self) -> List[Tuple[str, str]]:
         """Отримує ідентифікатори кредитних рахунків та їх деталі."""

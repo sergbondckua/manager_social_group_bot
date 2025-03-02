@@ -4,6 +4,7 @@ import logging
 from asgiref.sync import sync_to_async
 
 from chronopost.models import WeatherNotification
+import chronopost.resources.bot_msg_templates as bmt
 from chronopost.services.weather import (
     OpenWeatherClient,
     WeatherProcessor,
@@ -79,11 +80,13 @@ def send_weather_forecast():
 
         for recipient in receivers:
             notifier = TelegramNotifier(ROBOT, recipient.chat_id)
-            message = (
-                f"{recipient.text}\n➖ ➖ ➖\n"
-                f"🌆 {weather_data['city']}, {weather_data['country']}\n\n"
-                + "\n".join(weather_data["formatted_data"])
+            message = bmt.forecast_text.format(
+                recipient_text=recipient.text,
+                city=weather_data["city"],
+                country=weather_data["country"],
+                formatted_data=" ".join(weather_data["formatted_data"]),
             )
+
             try:
                 await notifier.send_message(
                     text=message, poster=recipient.poster

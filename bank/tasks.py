@@ -9,7 +9,7 @@ from robot.config import ROBOT
 logger = logging.getLogger("monobank")
 
 
-@shared_task(expires=24 * 60 * 60)
+@shared_task(expires=60 * 60)
 def create_monobank_webhooks():
     """Celery-завдання для налаштування вебхуків усіх клієнтів MonoBank."""
 
@@ -29,22 +29,24 @@ def create_monobank_webhooks():
 
     logger.info("Початок налаштування вебхуків для %s клієнтів", total_clients)
 
-    success_count = 0
+    success_count, failure_count = 0, 0
     for client in clients:
-        try:
-            MonobankService(client.client_token).setup_webhook(webhook_url)
-            logger.info("Вебхук успішно налаштовано для клієнта %s", client.id)
-            success_count += 1
-        except Exception as e:
-            logger.error(
-                "Помилка налаштування вебхука для клієнта %s: %s",
-                client.id,
-                str(e),
-                exc_info=True,
+        if MonobankService(client.client_token).setup_webhook(webhook_url):
+            logger.info(
+                "Вебхук успішно налаштовано для клієнта %s", client.name
             )
+            success_count += 1
+        else:
+            logger.error(
+                "Помилка налаштування вебхука для клієнта %s", client.name
+            )
+            failure_count += 1
 
     logger.info(
-        "Налаштування завершено. Успішно: %s/%s", success_count, total_clients
+        "Налаштування завершено. Успішно: %s/%s, Помилки: %s",
+        success_count,
+        total_clients,
+        failure_count,
     )
 
 

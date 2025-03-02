@@ -7,6 +7,7 @@ from typing import Dict, List, Optional, Tuple, Any
 from aiogram import Bot
 from aiogram.types import FSInputFile
 
+import chronopost.resources.bot_msg_templates as bmt
 from common.utils import clean_tag_message
 
 logger = logging.getLogger("weather_api")
@@ -143,11 +144,11 @@ class WeatherFormatter:
         )
         temperature = round(float(entry.get("main", {}).get("temp", "N/A")), 1)
 
-        return (
-            f"🕗 <b>{forecast_time}</b> :\n"
-            f"    🔸 {weather_description}"
-            f"🌡 {temperature}°C "
-            f"☂️ {precipitation_info or 'немає'}\n"
+        return bmt.part_forecast_text.format(
+            forecast_time=forecast_time,
+            weather_description=weather_description,
+            temperature=temperature,
+            precipitation_info=precipitation_info,
         )
 
     @staticmethod
@@ -200,7 +201,8 @@ class TelegramNotifier:
                         chat_id=self.chat_id, action="typing"
                     )
                     await bot.send_message(
-                        chat_id=self.chat_id, text=clean_tag_message(text[:4096])
+                        chat_id=self.chat_id,
+                        text=clean_tag_message(text[:4096]),
                     )
             logger.info("Message sent to chat %s", self.chat_id)
         except Exception as e:

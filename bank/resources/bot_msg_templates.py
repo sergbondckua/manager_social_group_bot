@@ -1,11 +1,4 @@
-from aiogram.utils.markdown import (
-    text,
-    hbold,
-    hcode,
-    hlink,
-    hitalic,
-    hblockquote,
-)
+from aiogram.utils.markdown import text, hbold, hlink
 
 
 common_part_text = text(
@@ -40,6 +33,5 @@ payer_text = text(
     "💰 Сума: {amount}",
     "〰〰〰〰〰〰〰",
     "🙏 Ваш внесок дуже цінується! Дякуємо за довіру! 💖",
-    "🚀 Разом ми рухаємось до нових цілей! 🌈",
     sep="\n",
 )
