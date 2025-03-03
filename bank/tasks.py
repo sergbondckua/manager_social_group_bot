@@ -68,14 +68,14 @@ def send_telegram_message(message, chat_ids, payer_chat_id=None):
     loop.run_until_complete(main())
 
 
-@shared_task(expires=(24 * 60 * 60) * 28)
-def send_telegram_message_to_payer(payer_message, payer_chat_id):
-    """Завдання Celery для відправки повідомлення платникам."""
-
-    async def main() -> None:
-        async with ROBOT as bot:
-            sender = TelegramMessageSender(bot)
-            await sender.send_message(payer_message, [payer_chat_id])
-
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(main())
+# @shared_task(expires=(24 * 60 * 60) * 28)
+# def send_telegram_message_to_payer(payer_message, payer_chat_id):
+#     """Завдання Celery для відправки повідомлення платникам."""
+#
+#     async def main() -> None:
+#         async with ROBOT as bot:
+#             sender = TelegramMessageSender(bot)
+#             await sender.send_message(payer_message, [payer_chat_id])
+#
+#     loop = asyncio.get_event_loop()
+#     loop.run_until_complete(main())
