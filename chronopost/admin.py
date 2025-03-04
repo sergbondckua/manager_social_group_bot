@@ -88,7 +88,10 @@ class WeatherNotificationAdmin(BaseAdmin):
     save_as = True
 
     fieldsets = (
-        ("Основні дані", {"fields": ("title", "chat_id", "text")}),
+        (
+            "Основні дані",
+            {"fields": ("title", "chat_id", "text", "is_active")},
+        ),
         (
             "Зображення",
             {

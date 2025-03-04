@@ -17,31 +17,31 @@ def create_monobank_webhooks() -> NoReturn:
     """Celery-завдання для налаштування вебхуків усіх клієнтів MonoBank."""
 
     if not hasattr(settings, "BASE_URL"):
-        logger.error("BASE_URL не знайдено в налаштуваннях")
+        logger.error("BASE_URL не встановлено в налаштуваннях")
         return
 
     webhook_path = settings.MONOBANK_WEBHOOK_PATH
     webhook_url = f"{settings.BASE_URL}{webhook_path}"
-
-    clients = MonoBankClient.objects.all().iterator()
-    total_clients = MonoBankClient.objects.count()
+    active_clients = MonoBankClient.objects.filter(is_active=True)
+    total_clients = active_clients.count()
+    clients_iterator = active_clients.iterator()
 
     if not total_clients:
-        logger.info("Не знайдено клієнтів MonoBank для налаштування вебхуків")
+        logger.info("Немає клієнтів для налаштування вебхуків")
         return
 
     logger.info("Початок налаштування вебхуків для %s клієнтів", total_clients)
 
     success_count, failure_count = 0, 0
-    for client in clients:
+    for client in clients_iterator:
         if MonobankService(client.client_token).setup_webhook(webhook_url):
             logger.info(
-                "Вебхук успішно налаштовано для клієнта %s", client.name
+                "Webhook успішно налаштовано для клієнта %s", client.name
             )
             success_count += 1
         else:
             logger.error(
-                "Помилка налаштування вебхука для клієнта %s", client.name
+                "Помилка налаштування webhook для клієнта %s", client.name
             )
             failure_count += 1
 
@@ -55,16 +55,22 @@ def create_monobank_webhooks() -> NoReturn:
 
 @shared_task(expires=(24 * 60 * 60) * 28)
 def send_telegram_message(
-    message: str, chat_ids: List[int], payer_chat_id: int = None
+    message: str, chat_ids: List[int], payer_user_id: int = None
 ) -> NoReturn:
-    """Завдання Celery для відправки повідомлення."""
+    """
+    Завдання Celery для надсилання повідомлення.
+        param message: текст повідомлення
+        param chat_ids: список чатів, до яких треба надіслати повідомлення
+        param payer_chat_id: user_id платника
+    """
 
     async def main() -> None:
+
         async with ROBOT as bot:
             sender = TelegramMessageSender(bot)
             photo_payer = (
-                await sender.get_user_profile_photo(payer_chat_id)
-                if payer_chat_id
+                await sender.get_user_profile_photo(payer_user_id)
+                if payer_user_id
                 else None
             )
             await sender.send_message(message, chat_ids, photo_payer)

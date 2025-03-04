@@ -8,14 +8,15 @@ from .services.mono import MonobankService
 
 @admin.register(MonoBankClient)
 class MonoBankClientAdmin(admin.ModelAdmin):
-    list_display = ["id", "name", "client_token", "status_token"]
+    list_display = ["id", "name", "client_token", "status_token", "is_active"]
     list_display_links = ("id", "name")
+    list_filter = ["is_active"]
     search_fields = ["name", "client_token"]
     readonly_fields = ("id", "created_at", "updated_at")
     save_on_top = True
     save_as = True
     fieldsets = (
-        ("Основні дані", {"fields": ("name", "client_token")}),
+        ("Основні дані", {"fields": ("name", "client_token", "is_active")}),
     ) + BaseAdmin.fieldsets
 
     @admin.display(description="Статус токену")

@@ -39,10 +39,10 @@ class GetCardsView(PermissionRequiredMixin, View):
 
 @method_decorator(csrf_exempt, name="dispatch")
 class MonobankWebhookView(View):
-    """Обробляє вебхук Monobank."""
+    """Обробляє webhook від Monobank."""
 
     def get(self, request, *args, **kwargs):
-        return JsonResponse({"status": "success"})
+        return JsonResponse({"status": "method not allowed"}, status=405)
 
     def post(self, request, *args, **kwargs):
         try:
@@ -76,7 +76,7 @@ class MonobankWebhookView(View):
             transaction_data["statementItem"].get("comment")
         )
 
-        # Викликаємо Celery задачу для відправки повідомлення
+        # Викликаємо Celery задачу для надсилання повідомлення
         send_telegram_message.delay(message, chat_ids, payer_chat_id)
 
         # Відправляємо Celery задачу для повідомлення платникам

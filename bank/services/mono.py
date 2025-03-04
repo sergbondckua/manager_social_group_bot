@@ -23,7 +23,7 @@ class MonobankService:
         self.client = monobank.Client(token=token)
 
     def is_webhook_configured(self) -> Optional[str]:
-        """Перевіряє, чи налаштований вебхук."""
+        """Перевіряє, чи налаштований webhook."""
         try:
             client_info = self.client.get_client_info()
             return client_info.get("webHookUrl")
@@ -32,7 +32,7 @@ class MonobankService:
             return None
 
     def create_webhook(self, webhook_url: str) -> bool:
-        """Створює вебхук за вказаною URL-адресою."""
+        """Створює webhook за вказаною URL-адресою."""
         try:
             self.client.create_webhook(url=webhook_url)
             logger.info("Webhook successfully created")
@@ -42,12 +42,14 @@ class MonobankService:
         except monobank.Error as e:
             logger.error("API error occurred while creating webhook: %s", e)
         except Exception as e:
-            logger.error("Unexpected error occurred while creating webhook: %s", e)
+            logger.error(
+                "Unexpected error occurred while creating webhook: %s", e
+            )
 
         return False
 
     def setup_webhook(self, webhook_url: str) -> bool:
-        """Головна функція для налаштування вебхука."""
+        """Головна функція для налаштування webhook."""
         current_webhook = self.is_webhook_configured()
 
         if current_webhook:
@@ -228,7 +230,9 @@ class MonoBankChatIDProvider:
     def get_chat_ids(self) -> Optional[List[int]]:
         """Повертає chat_id з бази даних або резервний список адміністраторів."""
         try:
-            record = self.db_model.objects.get(card_id=self.account)
+            record = self.db_model.objects.get(
+                card_id=self.account, is_active=True
+            )
             return [record.chat_id] if record.chat_id else self.admins
         except self.db_model.DoesNotExist:
             return None
@@ -308,8 +312,12 @@ class TelegramMessageSender:
 
         try:
             member = await self.bot.get_chat_member(group_id, user_id)
-            # Якщо користувач є учасником групи, повертаємо True
-            return member.status in ["member", "administrator", "creator"]
-        except Exception as e:
-            logger.error("Помилка при отриманні статусу користувача: %s", e)
+            return member.status in {"member", "administrator", "creator"}
+        except TelegramAPIError as e:
+            logger.error(
+                "Помилка при отриманні статусу користувача %d у групі %d: %s",
+                user_id,
+                group_id,
+                e,
+            )
             return False

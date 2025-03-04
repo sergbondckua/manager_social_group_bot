@@ -15,6 +15,7 @@ class MonoBankClient(BaseModel):
         verbose_name="Токен клієнта",
         help_text="Токен клієнта, для взаємодії з API Монобанку",
     )
+    is_active = models.BooleanField(verbose_name="Діє", default=True)
 
     def __str__(self):
         return self.name
@@ -46,7 +47,7 @@ class MonoBankCard(BaseModel):
         null=True,
         help_text="ID чату, до якого будуть відправлятися повідомлення при транзакціях по картці",
     )
-    is_active = models.BooleanField(default=True, verbose_name="Активний")
+    is_active = models.BooleanField(default=True, verbose_name="Дієва")
 
     def __str__(self):
         return f"{self.client.name} - {self.card_id or 'Без ID'}"
