@@ -14,7 +14,7 @@ from bank.services.mono import (
     MonoBankMessageFormatter,
     MonoBankChatIDProvider,
 )
-from bank.tasks import send_telegram_message, send_telegram_message_to_payer
+from bank.tasks import send_telegram_message
 
 logger = logging.getLogger("monobank-webhook")
 
@@ -82,5 +82,4 @@ class MonobankWebhookView(View):
         # Відправляємо Celery задачу для повідомлення платникам
         if payer_chat_id and chat_ids:
             payer_message = formatter.format_payer_message()
-            # send_telegram_message_to_payer.delay(payer_message, payer_chat_id)
-            send_telegram_message.delay(payer_message, [payer_chat_id], payer_chat_id)
+            send_telegram_message.delay(payer_message, [payer_chat_id])

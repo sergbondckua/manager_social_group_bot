@@ -1,7 +1,10 @@
 import asyncio
 import logging
+from typing import List, NoReturn
+
 from django.conf import settings
 from celery import shared_task
+
 from bank.models import MonoBankClient
 from bank.services.mono import MonobankService, TelegramMessageSender
 from robot.config import ROBOT
@@ -10,7 +13,7 @@ logger = logging.getLogger("monobank")
 
 
 @shared_task(expires=60 * 60)
-def create_monobank_webhooks():
+def create_monobank_webhooks() -> NoReturn:
     """Celery-завдання для налаштування вебхуків усіх клієнтів MonoBank."""
 
     if not hasattr(settings, "BASE_URL"):
@@ -51,7 +54,9 @@ def create_monobank_webhooks():
 
 
 @shared_task(expires=(24 * 60 * 60) * 28)
-def send_telegram_message(message, chat_ids, payer_chat_id=None):
+def send_telegram_message(
+    message: str, chat_ids: List[int], payer_chat_id: int = None
+) -> NoReturn:
     """Завдання Celery для відправки повідомлення."""
 
     async def main() -> None:
@@ -66,16 +71,3 @@ def send_telegram_message(message, chat_ids, payer_chat_id=None):
 
     loop = asyncio.get_event_loop()
     loop.run_until_complete(main())
-
-
-# @shared_task(expires=(24 * 60 * 60) * 28)
-# def send_telegram_message_to_payer(payer_message, payer_chat_id):
-#     """Завдання Celery для відправки повідомлення платникам."""
-#
-#     async def main() -> None:
-#         async with ROBOT as bot:
-#             sender = TelegramMessageSender(bot)
-#             await sender.send_message(payer_message, [payer_chat_id])
-#
-#     loop = asyncio.get_event_loop()
-#     loop.run_until_complete(main())
