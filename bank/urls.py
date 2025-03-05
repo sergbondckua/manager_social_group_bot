@@ -13,3 +13,5 @@ urlpatterns = [
         name="monobank_webhook",
     ),
 ]
+
+app_name = "bank"
