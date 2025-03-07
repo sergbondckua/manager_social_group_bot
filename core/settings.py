@@ -49,10 +49,11 @@ INSTALLED_APPS = [
     "tinymce",
     "django_cleanup",
     # Local apps
+    "bank",
     "common",
     "chronopost",
+    "profiles",
     "robot",
-    "bank",
 ]
 
 MIDDLEWARE = [

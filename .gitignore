@@ -70,4 +70,4 @@ Thumbs.db
 ntuser.dat
 Desktop.ini
 
-*/migrations
+*/migrations/000*.py
