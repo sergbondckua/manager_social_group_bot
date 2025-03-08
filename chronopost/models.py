@@ -117,5 +117,5 @@ class WeatherNotification(BaseModel):
         return f"Сповіщення для Chat ID: {self.chat_id}"
 
     class Meta:
-        verbose_name = "Інформер про опади"
-        verbose_name_plural = "🌂 Інформери про опади"
+        verbose_name = "Інформер опадів"
+        verbose_name_plural = "🌂 Інформери опадів"

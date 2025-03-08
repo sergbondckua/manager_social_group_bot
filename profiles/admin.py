@@ -21,10 +21,20 @@ class ProfileAdmin(UserAdmin):
         "full_name",
         "telegram_id",
         "phone_number",
+        "is_staff",
         "is_active",
     )
     list_display_links = ("username", "full_name")  # Поля, що є посиланнями
     list_editable = ("is_active",)  # Поля, які можна редагувати прямо у списку
+    readonly_fields = (
+        "telegram_username",
+        "telegram_first_name",
+        "telegram_last_name",
+        "telegram_photo_id",
+        "telegram_language_code",
+        "last_login",
+        "date_joined",
+    )  # Поля, які не можна редагувати
     search_fields = (
         "username",
         "email",
@@ -41,7 +51,7 @@ class ProfileAdmin(UserAdmin):
     fieldsets = (
         (None, {"fields": ("username", "password")}),
         (
-            _("Personal Info"),
+            "Персональні дані",
             {
                 "fields": (
                     "first_name",
@@ -53,13 +63,20 @@ class ProfileAdmin(UserAdmin):
             },
         ),
         (
-            _("Telegram Info"),
+            "Телеграм інформація",
             {
-                "fields": ("telegram_id",),
+                "fields": (
+                    "telegram_id",
+                    "telegram_username",
+                    "telegram_first_name",
+                    "telegram_last_name",
+                    "telegram_photo_id",
+                    "telegram_language_code",
+                ),
             },
         ),
         (
-            _("Permissions"),
+            "Права доступу",
             {
                 "fields": (
                     "is_active",
@@ -70,9 +87,5 @@ class ProfileAdmin(UserAdmin):
                 ),
             },
         ),
-        (_("Important Dates"), {"fields": ("last_login", "date_joined")}),
+        ("Дата", {"fields": ("last_login", "date_joined")}),
     )
-
-    # Покращення сортування та фільтрації, якщо необхідно
-    ordering = ("username",)  # Сортування за замовчуванням
-    readonly_fields = ("last_login", "date_joined")  # Поля тільки для читання
