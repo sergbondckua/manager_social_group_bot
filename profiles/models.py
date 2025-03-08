@@ -82,10 +82,10 @@ class ClubUser(AbstractUser, TelegramProfileMixin):
     )
 
     USERNAME_FIELD = (
-        "username"  # Використовуємо для авторизації
+        "telegram_id"  # Використовуємо для авторизації
     )
     REQUIRED_FIELDS = (
-        ["telegram_id"]
+        ["username"]
     )  # Використовуємо telegram_id для авторизації
 
     def __str__(self):

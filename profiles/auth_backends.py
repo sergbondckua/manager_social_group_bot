@@ -6,7 +6,7 @@ class TelegramOrUsernameAuthBackend(BaseBackend):
     def authenticate(self, request, username=None, telegram_id=None, **kwargs):
         try:
             if telegram_id:
-                return ClubUser.objects.get(telegram_id=telegram_id)
+                return str(ClubUser.objects.get(telegram_id=telegram_id))
             elif username:
                 return ClubUser.objects.get(username=username)
         except ClubUser.DoesNotExist:

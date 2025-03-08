@@ -2,11 +2,13 @@ import json
 import logging
 
 from django.conf import settings
+from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth.mixins import PermissionRequiredMixin
 from django.http import JsonResponse
 from django.utils.decorators import method_decorator
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
+from django.views.generic import TemplateView
 
 from bank.models import MonoBankClient, MonoBankCard
 from bank.services.mono import (
@@ -83,3 +85,22 @@ class MonobankWebhookView(View):
         if payer_chat_id and chat_ids:
             payer_message = formatter.format_payer_message()
             send_telegram_message.delay(payer_message, [payer_chat_id])
+
+
+@method_decorator(staff_member_required, name="dispatch")
+class MonobankStatementView(TemplateView):
+    template_name = "admin/monobank_statement.html"
+
+    def get_context_data(self, **kwargs):
+        # API логіка
+        data = [
+            {"date": "2025-03-08", "amount": 150, "description": "Переказ"},
+            {
+                "date": "2025-03-07",
+                "amount": 200,
+                "description": "Оплата послуг",
+            },
+        ]  # Замініть реальними даними
+        context = super().get_context_data(**kwargs)
+        context["transactions"] = data
+        return context

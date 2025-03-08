@@ -1,0 +1,13 @@
+{% extends "admin/base_site.html" %}
+
+{% block sidebar %}
+    {{ block.super }}
+    <div class="module">
+        <h3>Додаткові посилання</h3>
+        <ul>
+            <li>
+                <a href="{% url 'bank_admin:monobank_statement' %}">Виписка Monobank</a>
+            </li>
+        </ul>
+    </div>
+{% endblock %}
