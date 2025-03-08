@@ -15,7 +15,6 @@ class MonoBankClient(BaseModel):
         verbose_name="Токен клієнта",
         help_text="Токен клієнта, для взаємодії з API Монобанку",
     )
-    is_active = models.BooleanField(verbose_name="Діє", default=True)
 
     def __str__(self):
         return self.name

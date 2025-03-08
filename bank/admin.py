@@ -8,9 +8,8 @@ from .services.mono import MonobankService
 
 @admin.register(MonoBankClient)
 class MonoBankClientAdmin(admin.ModelAdmin):
-    list_display = ["id", "name", "client_token", "status_token", "is_active"]
+    list_display = ["id", "name", "client_token", "status_token"]
     list_display_links = ("id", "name")
-    list_filter = ["is_active"]
     search_fields = ["name", "client_token"]
     readonly_fields = ("id", "created_at", "updated_at")
     save_on_top = True
@@ -34,6 +33,7 @@ class MonoBankCardAdmin(admin.ModelAdmin):
     search_fields = ["client__name", "card_id"]
     actions = ["make_active", "make_inactive"]
     readonly_fields = ("id", "created_at", "updated_at")
+    list_editable = ["is_active"]
     save_as = True
     save_on_top = True
     save_as_continue = True
