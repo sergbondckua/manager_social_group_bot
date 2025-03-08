@@ -147,6 +147,8 @@ MEDIA_ROOT = os.path.join(BASE_DIR, "media").replace("\\", "/")
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
+AUTH_USER_MODEL = "profiles.ClubUser"  # User model
+
 # Telegram bot settings
 TELEGRAM_BOT_TOKEN = env.str("TELEGRAM_BOT_TOKEN")  # Bot token
 DEFAULT_CHAT_ID = env.int("DEFAULT_CHAT_ID")  # Default chat ID

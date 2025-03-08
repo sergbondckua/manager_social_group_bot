@@ -14,11 +14,10 @@ env.read_env()
 
 @dataclass
 class TgBot:
-    """ Створює об'єкт TGBOT із змінних середовищ. """
+    """Створює об'єкт TGBOT із змінних середовищ."""
 
     token: str
     admin_ids: list[int]
-
 
     @staticmethod
     def from_env(environment: Env) -> "TgBot":

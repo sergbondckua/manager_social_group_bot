@@ -1,9 +1,9 @@
-from django.contrib.auth.models import AbstractUser
+from django.contrib.auth.models import AbstractUser, Group, Permission
 from django.core.validators import RegexValidator
 from django.db import models
 
 
-class CustomUser(AbstractUser):
+class ClubUser(AbstractUser):
     """Внесення додаткових полів в модель користувача"""
 
     telegram_id = models.BigIntegerField(
@@ -31,7 +31,6 @@ class CustomUser(AbstractUser):
         validators=[phone_regex],
         help_text="Номер телефону користувача",
     )
-
     def __str__(self):
         return (
             f"{self.first_name} {self.last_name}: ({self.username})"
@@ -41,6 +40,5 @@ class CustomUser(AbstractUser):
 
     class Meta:
         ordering = ("username",)
-        verbose_name = "Користувач"
+        verbose_name = "Користувача"
         verbose_name_plural = "Користувачі"
-
