@@ -6,8 +6,9 @@ from django.conf import settings
 from celery import shared_task
 
 from bank.models import MonoBankClient
-from bank.services.mono import MonobankService, TelegramMessageSender
+from bank.services.mono import MonobankService
 from robot.config import ROBOT
+from robot.service.extend import TelegramService
 
 logger = logging.getLogger("monobank")
 
@@ -67,7 +68,7 @@ def send_telegram_message(
     async def main() -> None:
 
         async with ROBOT as bot:
-            sender = TelegramMessageSender(bot)
+            sender = TelegramService(bot)
             photo_payer = (
                 await sender.get_user_profile_photo(payer_user_id)
                 if payer_user_id

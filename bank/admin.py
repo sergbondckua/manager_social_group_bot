@@ -15,7 +15,7 @@ class MonoBankClientAdmin(admin.ModelAdmin):
     save_on_top = True
     save_as = True
     fieldsets = (
-        ("Основні дані", {"fields": ("name", "client_token", "is_active")}),
+        ("Основні дані", {"fields": ("name", "client_token")}),
     ) + BaseAdmin.fieldsets
 
     @admin.display(description="Статус токену")
