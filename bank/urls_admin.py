@@ -9,4 +9,4 @@ urlpatterns = [
     ),
 ]
 
-app_name = "bank"
+app_name = "bank_admin"

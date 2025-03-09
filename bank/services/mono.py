@@ -1,22 +1,49 @@
+import calendar
 import logging
 import re
-from datetime import datetime
-from typing import List, Tuple, Optional, Type
+from datetime import datetime, timedelta, date
+from typing import List, Tuple, Optional, Type, Any, Dict
 
 import monobank
 
 from bank.models import MonoBankCard
 import bank.resources.bot_msg_templates as bmt
+from bank.services.utils import retry_on_many_requests
 
 logger = logging.getLogger("monobank")
 
 
 class MonobankService:
-    def __init__(self, token: str):
-        """Ініціалізація класу MonobankService."""
+    """Клас для роботи з Monobank API."""
 
+    def __init__(self, token: str):
         self.token = token
         self.client = monobank.Client(token=token)
+
+    @retry_on_many_requests(retries=3, delay=15)
+    def get_account_statements(
+        self,
+        account: str,
+        date_from: Optional[date] = None,
+        date_to: Optional[date] = None,
+    ) -> List[dict]:
+        """
+        Отримує список транзакцій за вказаними параметрами.
+
+        :param account: Номер рахунку для отримання транзакцій.
+        :param date_from: Початкова дата у форматі datetime. Якщо не вказано, використовується -30 днів від поточної дати.
+        :param date_to: Кінцева дата у форматі datetime. Якщо не вказано, використовується поточна дата.
+        :return: Список транзакцій у вигляді словників.
+        """
+        # Значення за замовчуванням для timestamp
+        now = datetime.now()
+        if date_from is None:
+            date_from = now.replace(day=1)
+        if date_to is None:
+            _, last_day = calendar.monthrange(now.year, now.month)
+            date_to = now.replace(day=last_day)
+
+        return self.client.get_statements(account, date_from, date_to)
 
     def is_webhook_configured(self) -> Optional[str]:
         """Перевіряє, чи налаштований webhook."""
@@ -86,33 +113,49 @@ class MonobankService:
 class TransactionDataParser:
     """Клас для отримання та парсингу даних транзакції."""
 
+    DEFAULT_DESCRIPTION = "Не зазначено"
+    DEFAULT_COMMENT = "---"
+    DEFAULT_RECEIPT_ID = "-x-x-"
+
     def __init__(self, data: dict):
         self._data = data
-        self._statement_item = data["statementItem"]
+        self._statement_item = data.get("statementItem", {})
+
+    def _get_value(self, key: str, default=None, fallback_key: str = None):
+        """Отримання значення з основного або додаткового джерела."""
+        if self._statement_item:
+            return self._statement_item.get(key, default)
+        return self._data.get(fallback_key or key, default)
 
     @property
     def amount(self) -> float:
-        return self._statement_item["amount"] / 100
+        return float(self._get_value("amount", 0)) / 100
 
     @property
     def balance(self) -> float:
-        return self._statement_item["balance"] / 100
+        return float(self._get_value("balance", 0)) / 100
 
     @property
     def description(self) -> str:
-        return self._statement_item.get("description", "Не зазначено")
+        return self._get_value("description", self.DEFAULT_DESCRIPTION)
 
     @property
     def comment(self) -> str:
-        return self._statement_item.get("comment", "---")
+        return self._get_value("comment", self.DEFAULT_COMMENT)
 
     @property
     def receipt_id(self) -> str:
-        return self._statement_item.get("receiptId", "-x-x-")
+        return self._get_value(
+            "receiptId", self.DEFAULT_RECEIPT_ID, fallback_key="id"
+        )
+
+    @property
+    def commission_rate(self) -> float:
+        return float(self._get_value("commissionRate", 0))
 
     @property
     def timestamp(self) -> int:
-        return self._statement_item["time"]
+        return int(self._get_value("time", 0))
 
 
 class DateTimeFormatter:
@@ -128,6 +171,10 @@ class DateTimeFormatter:
     @property
     def formatted_time(self) -> str:
         return self._date_time.strftime("%H:%M:%S")
+
+    @property
+    def formatted_datetime(self) -> str:
+        return self._date_time.strftime("%d.%m.%Y %H:%M:%S")
 
 
 class MessageTemplate:
@@ -241,3 +288,44 @@ class MonoBankChatIDProvider:
         if match := self._USER_ID_PATTERN.search(comment):
             return int(match.group(1))
         return None
+
+
+class MonoBankContextFormatter:
+    """ Клас для форматування контексту. """
+
+    def __init__(self, data: List[Dict[str, Any]]):
+        self.data = data
+
+    def format_context(self) -> List[Dict[str, Any]]:
+        """
+        Форматує контекст, відфільтровуючи необхідні поля для кожної транзакції.
+
+        :return: Відформатований список транзакцій.
+        """
+        return [self._filtered_data(item) for item in self.data]
+
+    @staticmethod
+    def _filtered_data(transaction: dict[str, Any]) -> dict[str, Any]:
+        """
+        Форматує окрему транзакцію, залишаючи лише необхідні поля.
+
+        :param transaction: Дані однієї транзакції.
+        :return: Відфільтровані дані транзакції.
+        """
+        if not transaction:
+            return {}
+
+        # Ініціалізуємо парсер для обробки транзакції
+        trans = TransactionDataParser(transaction)
+
+        # Форматуємо час за допомогою DateTimeFormatter
+        dt_formatter = DateTimeFormatter(trans.timestamp)
+
+        return {
+            "time": dt_formatter.formatted_datetime,  # Форматований час
+            "description": trans.description,  # Опис транзакції
+            "comment": trans.comment,  # Коментар (якщо є)
+            "amount": trans.amount,  # Сума транзакції
+            "commission": trans.commission_rate,  # Комісія
+            "balance": trans.balance,  # Баланс
+        }

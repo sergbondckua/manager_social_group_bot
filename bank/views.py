@@ -15,6 +15,7 @@ from bank.services.mono import (
     MonobankService,
     MonoBankMessageFormatter,
     MonoBankChatIDProvider,
+    MonoBankContextFormatter,
 )
 from bank.tasks import send_telegram_message
 
@@ -90,17 +91,23 @@ class MonobankWebhookView(View):
 @method_decorator(staff_member_required, name="dispatch")
 class MonobankStatementView(TemplateView):
     template_name = "admin/monobank_statement.html"
+    model = MonoBankCard
+    try:
+        query = model.objects.all().first()
+        token = query.client.client_token
+        card_id = query.card_id
+    except model.DoesNotExist:
+        token = ""
+        card_id = ""
 
     def get_context_data(self, **kwargs):
-        # API логіка
-        data = [
-            {"date": "2025-03-08", "amount": 150, "description": "Переказ"},
-            {
-                "date": "2025-03-07",
-                "amount": 200,
-                "description": "Оплата послуг",
-            },
-        ]  # Замініть реальними даними
         context = super().get_context_data(**kwargs)
-        context["transactions"] = data
+        # API логіка
+        try:
+            data = MonobankService(self.token).get_account_statements(self.card_id)
+        except Exception as e:
+            logger.error("API error occurred: %s", e)
+            data = [{"error": str(e)}]
+        clear_data = MonoBankContextFormatter(data).format_context()
+        context["transactions"] = clear_data
         return context

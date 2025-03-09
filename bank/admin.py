@@ -1,12 +1,15 @@
 from django.contrib import admin
-from django.urls import reverse
-from django.utils.html import format_html
 
 from common.admin import BaseAdmin
 from .models import MonoBankClient, MonoBankCard, MonoBankStatement
 from .forms import MonoBankCardAdminForm
 from .services.mono import MonobankService
+from .services.utils import retry_on_many_requests
 
+
+class MonoCardInline(admin.StackedInline):
+    model = MonoBankCard
+    extra = 0
 
 @admin.register(MonoBankClient)
 class MonoBankClientAdmin(admin.ModelAdmin):
@@ -14,6 +17,7 @@ class MonoBankClientAdmin(admin.ModelAdmin):
     list_display_links = ("id", "name")
     search_fields = ["name", "client_token"]
     readonly_fields = ("id", "created_at", "updated_at")
+    # inlines = [MonoCardInline]
     save_on_top = True
     save_as = True
     fieldsets = (
@@ -21,6 +25,7 @@ class MonoBankClientAdmin(admin.ModelAdmin):
     ) + BaseAdmin.fieldsets
 
     @admin.display(description="Статус токену")
+    @retry_on_many_requests(retries=3, delay=10)
     def status_token(self, obj):
         if MonobankService(obj.client_token).is_token_valid():
             return "🟢 Дійсний"
@@ -58,7 +63,10 @@ class MonoBankCardAdmin(admin.ModelAdmin):
         js = ("adminpanel/js/admin.js",)
 
 
+@admin.register(MonoBankStatement)
 class CustomAdminLink(admin.ModelAdmin):
+    """ Admin-панель для виписки Monobank """
+
     def has_add_permission(self, request):
         return False
 
@@ -67,12 +75,3 @@ class CustomAdminLink(admin.ModelAdmin):
 
     def has_delete_permission(self, request, obj=None):
         return False
-
-    def monobank_statement_link(self):
-        url = reverse("bank:monobank_statement")
-        return format_html("<a href='{}'>📜 Виписка Monobank</a>", url)
-
-    monobank_statement_link.short_description = "Виписка Monobank"
-
-
-admin.site.register(MonoBankStatement, CustomAdminLink)
