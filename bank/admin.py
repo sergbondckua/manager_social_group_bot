@@ -1,8 +1,9 @@
 from django.contrib import admin
 from django.urls import reverse
+from django.utils.html import format_html
 
 from common.admin import BaseAdmin
-from .models import MonoBankClient, MonoBankCard
+from .models import MonoBankClient, MonoBankCard, MonoBankStatement
 from .forms import MonoBankCardAdminForm
 from .services.mono import MonobankService
 
@@ -55,3 +56,23 @@ class MonoBankCardAdmin(admin.ModelAdmin):
 
     class Media:
         js = ("adminpanel/js/admin.js",)
+
+
+class CustomAdminLink(admin.ModelAdmin):
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+    def monobank_statement_link(self):
+        url = reverse("bank:monobank_statement")
+        return format_html("<a href='{}'>📜 Виписка Monobank</a>", url)
+
+    monobank_statement_link.short_description = "Виписка Monobank"
+
+
+admin.site.register(MonoBankStatement, CustomAdminLink)

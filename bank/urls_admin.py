@@ -3,10 +3,10 @@ from .views import MonobankStatementView
 
 urlpatterns = [
     path(
-        route="monobank-statement/",
+        route="monobankstatement/",
         view=MonobankStatementView.as_view(),
         name="monobank_statement",
     ),
 ]
 
-app_name = "bank_admin"
+app_name = "bank"

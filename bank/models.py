@@ -54,3 +54,12 @@ class MonoBankCard(BaseModel):
     class Meta:
         verbose_name = "💳 Картка (monobank)"
         verbose_name_plural = "💳 Картки (monobank)"
+
+
+class MonoBankStatement(models.Model):
+    """Виписка клієнта Монобанку"""
+
+    class Meta:
+        managed = False
+        verbose_name = "📜 Виписка (monobank)"
+        verbose_name_plural = "📜 Виписки (monobank)"

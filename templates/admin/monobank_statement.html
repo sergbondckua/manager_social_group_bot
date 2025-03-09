@@ -1,23 +1,78 @@
 {% extends "admin/base_site.html" %}
+{% load i18n %}
+{% block extrastyle %}{{ block.super }}{% endblock %}
+{% block bodyclass %}{{ block.super }} monobank-statement{% endblock %}
+{% block extrahead %}
+  {{ block.super }}
+  <link rel="stylesheet" href="https://cdn.datatables.net/1.13.4/css/jquery.dataTables.min.css">
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
+  <script>
+      $(document).ready(function () {
+          $('#statement').DataTable({
+              paging: true,
+              searching: true,
+              order: [[1, 'desc']]
+          });
+      });
+  </script>
+{% endblock %}
+{% block title %}Виписка Monobank {{ block.super }}{% endblock %}
+{% block coltype %}flex{% endblock %}
+
+{% if not is_popup %}
+  {% block nav-breadcrumbs %}
+    <div class="breadcrumbs">
+      <a href="{% url 'admin:index' %}">{% translate 'Home' %}</a> &rsaquo;
+      <a href="../">{% translate 'Bank' %}</a> &rsaquo; Виписка Monobank
+    </div>
+  {% endblock %}
+{% endif %}
 
 {% block content %}
-<h1>Виписка Monobank</h1>
-<table>
-    <thead>
-        <tr>
+  <div class="container-fluid">
+    <div class="row">
+      <!-- Sidebar -->
+      <div class="col-md-3 col-lg-2">
+        {% block nav-sidebar %}{% endblock %}
+      </div>
+
+      <!-- Main content -->
+      <div class="col-md-9 col-lg-10">
+        <h1>Виписка Monobank</h1>
+        <table style="width:100%" class="order-column" id="statement">
+          <thead>
+          <tr>
+            <th>#</th>
             <th>Дата</th>
+            <th>Опис транзакції</th>
             <th>Сума</th>
-            <th>Опис</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for transaction in transactions %}
-        <tr>
-            <td>{{ transaction.date }}</td>
-            <td>{{ transaction.amount }}</td>
-            <td>{{ transaction.description }}</td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
+            <th>Комісія</th>
+            <th>Коментар</th>
+            <th>Баланс</th>
+          </tr>
+          </thead>
+          <tbody>
+          {% for item in transactions %}
+            <tr>
+              <td>{{ forloop.counter }}</td>
+              <td>{{ item.date }}</td>
+              <td>{{ item.description }}</td>
+              <td>{{ item.amount }}</td>
+              <td>{{ item.commission }}</td>
+              <td>{{ item.comment }}</td>
+              <td>{{ item.balance }}</td>
+            </tr>
+          {% endfor %}
+          </tbody>
+          <tfoot>
+          <tr>
+            <th colspan="6" style="text-align:right">Всього:</th>
+            <th>{{ transactions|length }}</th>
+          </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+  </div>
 {% endblock %}
