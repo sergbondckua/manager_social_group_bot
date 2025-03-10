@@ -4,15 +4,58 @@
 {% block bodyclass %}{{ block.super }} monobank-statement{% endblock %}
 {% block extrahead %}
   {{ block.super }}
-  <link rel="stylesheet" href="https://cdn.datatables.net/1.13.4/css/jquery.dataTables.min.css">
-  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-  <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/5.3.0/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdn.datatables.net/2.2.2/css/dataTables.bootstrap5.css">
+  <script src="https://code.jquery.com/jquery-3.7.1.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.datatables.net/2.2.2/js/dataTables.js"></script>
+  <script src="https://cdn.datatables.net/2.2.2/js/dataTables.bootstrap5.js"></script>
   <script>
       $(document).ready(function () {
           $('#statement').DataTable({
               paging: true,
+              pageLength: 50,
               searching: true,
-              order: [[1, 'desc']]
+              order: [[1, 'desc']],
+              language: {
+                  url: 'https://cdn.datatables.net/plug-ins/1.13.4/i18n/uk.json',
+                  decimal: ',',
+                  thousands: '.'
+              },
+              columnDefs: [
+                  {
+                      targets: 0,
+                      orderable: false,
+                      searchable: false
+                  },
+                  {
+                      targets: 3,
+                      render: function (data) {
+                          let num = parseFloat(data);
+                          let formattedNum = num.toLocaleString('uk-UA', {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2
+                          });
+
+                          // Додаємо стилі залежно від значення
+                          if (num < 0) {
+                              return `<span style="color: red;">${formattedNum}</span>`;
+                          } else if (num > 400) {
+                              return `<span style="color: green;">${formattedNum}</span>`;
+                          }
+                          return formattedNum;
+                      }
+                  },
+                  {
+                      targets: 6,
+                      render: function (data) {
+                          let num = parseFloat(data);
+                          return num.toLocaleString('uk-UA', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                      }
+                  },
+
+
+              ]
           });
       });
   </script>
@@ -33,12 +76,12 @@
   <div class="container-fluid">
     <div class="row">
       <!-- Sidebar -->
-      <div class="col-md-3 col-lg-2">
-        {% block nav-sidebar %}{% endblock %}
-      </div>
+{#      <div class="col-md-3 col-lg-2">#}
+{#        {% block nav-sidebar %}{% endblock %}#}
+{#      </div>#}
 
       <!-- Main content -->
-      <div class="col-md-9 col-lg-10">
+      <div class="col-md-9 col-lg-12">
         <h1>Виписка Monobank</h1>
         <table style="width:100%" class="order-column" id="statement">
           <thead>
@@ -59,7 +102,7 @@
               <td>{{ item.time }}</td>
               <td>{{ item.description }}</td>
               <td>{{ item.amount }}</td>
-              <td>{{ item.commission }}</td>
+              <td>{{ item.commission|floatformat:2 }}</td>
               <td>{{ item.comment }}</td>
               <td>{{ item.balance }}</td>
             </tr>

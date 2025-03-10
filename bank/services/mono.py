@@ -36,7 +36,7 @@ class MonobankService:
         :return: Список транзакцій у вигляді словників.
         """
         # Значення за замовчуванням для timestamp
-        now = datetime.now()
+        now = datetime.now().date()
         if date_from is None:
             date_from = now.replace(day=1)
         if date_to is None:

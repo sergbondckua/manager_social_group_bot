@@ -5,10 +5,10 @@ from django.conf import settings
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth.mixins import PermissionRequiredMixin
 from django.http import JsonResponse
+from django.shortcuts import render
 from django.utils.decorators import method_decorator
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
-from django.views.generic import TemplateView
 
 from bank.models import MonoBankClient, MonoBankCard
 from bank.services.mono import (
@@ -89,25 +89,24 @@ class MonobankWebhookView(View):
 
 
 @method_decorator(staff_member_required, name="dispatch")
-class MonobankStatementView(TemplateView):
+class MonobankStatementView(View):
     template_name = "admin/monobank_statement.html"
-    model = MonoBankCard
-    try:
-        query = model.objects.all().first()
-        token = query.client.client_token
-        card_id = query.card_id
-    except model.DoesNotExist:
-        token = ""
-        card_id = ""
 
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
+    def get(self, request, *args, **kwargs):
+        try:
+            query = MonoBankCard.objects.first()
+            token = query.client.client_token
+            card_id = query.card_id
+        except MonoBankCard.DoesNotExist:
+            token = ""
+            card_id = ""
+        context = {}
         # API логіка
         try:
-            data = MonobankService(self.token).get_account_statements(self.card_id)
+            data = MonobankService(token).get_account_statements(card_id)
         except Exception as e:
             logger.error("API error occurred: %s", e)
             data = [{"error": str(e)}]
         clear_data = MonoBankContextFormatter(data).format_context()
         context["transactions"] = clear_data
-        return context
+        return render(request, self.template_name, context)

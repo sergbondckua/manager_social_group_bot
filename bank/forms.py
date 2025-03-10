@@ -1,5 +1,5 @@
 from django import forms
-from .models import MonoBankCard
+from .models import MonoBankCard, MonoBankClient
 from bank.services.mono import MonobankService
 import logging
 
@@ -42,3 +42,27 @@ class MonoBankCardAdminForm(forms.ModelForm):
         else:
             # Якщо об'єкт новий або клієнт не визначений
             self.fields["card_id"].widget = forms.Select(choices=[])
+
+
+class MonobankStatementForm(forms.Form):
+    client_token = forms.ModelChoiceField(
+        queryset=MonoBankClient._default_manager.all(),
+        label="Клієнт",
+        help_text="Оберіть клієнта для взаємодії з API Монобанку",
+        widget=forms.Select(attrs={"onchange": "updateCards(this)"}),
+    )
+    card_id = forms.ChoiceField(
+        choices=[],
+        label="ID картки",
+        help_text="Оберіть картку для отримання виписки",
+    )
+    date_from = forms.DateField(
+        label="Дата початку",
+        widget=forms.DateInput(attrs={"type": "date"}),
+        help_text="Оберіть початкову дату виписки",
+    )
+    date_to = forms.DateField(
+        label="Дата завершення",
+        widget=forms.DateInput(attrs={"type": "date"}),
+        help_text="Оберіть кінцеву дату виписки",
+    )
