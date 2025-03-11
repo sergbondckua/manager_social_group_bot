@@ -107,66 +107,83 @@ class MonobankWebhookView(View):
             send_telegram_message.delay(payer_message, [payer_chat_id])
 
 
-@method_decorator(staff_member_required, name="dispatch")
 class MonobankStatementView(View):
     template_name = "admin/monobank_statement.html"
 
+    @staticmethod
+    def _get_initial_data():
+        """Отримання початкових даних для форми."""
+
+        try:
+            query = MonoBankCard.objects.first()
+            return {
+                "token": query.client.client_token if query else "",
+                "card_id": query.card_id if query else "",
+            }
+        except MonoBankCard.DoesNotExist:
+            return {"token": "", "card_id": ""}
+
+    @staticmethod
+    def _get_transactions(token, card_id, date_from=None, date_to=None):
+        """Отримання транзакцій через Monobank API."""
+
+        try:
+            return MonobankService(token).get_account_statements(
+                card_id, date_from, date_to
+            )
+        except monobank.TooManyRequests as e:
+            logger.error("Rate limit exceeded: %s", e)
+            raise Exception("Rate limit exceeded. Please try again later.")
+        except monobank.Error as e:
+            logger.error("API error occurred: %s", e)
+            raise Exception("API error: " + str(e))
+        except Exception as e:
+            logger.error("Unexpected error occurred: %s", e)
+            raise Exception("Unexpected error: " + str(e))
+
     def get(self, request, *args, **kwargs):
-        """Обробка GET-запиту (відображення форми)"""
-        form = MonobankStatementForm()
-        return render(request, self.template_name, {"form": form})
+        """Обробка GET-запиту (відображення форми)."""
+        initial_data = self._get_initial_data()
+        form = MonobankStatementForm(
+            initial={"client_token": initial_data.get("token", "")}
+        )
+        context = {"form": form}
+
+        if initial_data.get("token") and initial_data.get("card_id"):
+            try:
+                data = self._get_transactions(
+                    initial_data["token"], initial_data["card_id"]
+                )
+                context["transactions"] = MonoBankContextFormatter(
+                    data
+                ).format_context()
+            except Exception as e:
+                context["errors"] = str(e)
+
+        return render(request, self.template_name, context)
 
     def post(self, request, *args, **kwargs):
-        """Обробка POST-запиту (відправлення форми)"""
-        client_id = request.POST.get(
-            "client_token"
-        )  # Отримуємо client_id з POST-запиту
+        """Обробка POST-запиту (відправлення форми)."""
+        client_id = request.POST.get("client_token")
         form = MonobankStatementForm(request.POST, client_id=client_id)
         context = {"form": form}
-        data = []
 
         if form.is_valid():
-            # Якщо форма валідна, обробляємо дані
-            client_token = form.cleaned_data["client_token"].client_token
-            card_id = form.cleaned_data["card_id"]
-            date_from = form.cleaned_data["date_from"]
-            date_to = form.cleaned_data["date_to"]
-
-            # Логіка для отримання виписки через API Monobank
             try:
-                data = MonobankService(client_token).get_account_statements(
-                    card_id, date_from, date_to
-                )
-            except monobank.TooManyRequests as e:
-                logger.error("Rate limit exceeded: %s", e)
-                context["errors"] = str(e)
-            except monobank.Error as e:
-                logger.error("API error occurred: %s", e)
-                context["errors"] = str(e)
+                client_token = form.cleaned_data["client_token"].client_token
+                card_id = form.cleaned_data["card_id"]
+                date_from = form.cleaned_data["date_from"]
+                date_to = form.cleaned_data["date_to"]
 
-            clear_data = MonoBankContextFormatter(data).format_context()
-            context["transactions"] = clear_data
+                data = self._get_transactions(
+                    client_token, card_id, date_from, date_to
+                )
+                context["transactions"] = MonoBankContextFormatter(
+                    data
+                ).format_context()
+            except Exception as e:
+                context["errors"] = str(e)
         else:
             logger.warning("Форма не пройшла валідацію: %s", form.errors)
 
-        # Повертаємо шаблон з контекстом
         return render(request, self.template_name, context)
-
-    # def get(self, request, *args, **kwargs):
-    #     try:
-    #         query = MonoBankCard.objects.first()
-    #         token = query.client.client_token
-    #         card_id = query.card_id
-    #     except MonoBankCard.DoesNotExist:
-    #         token = ""
-    #         card_id = ""
-    #     context = {}
-    #     # API логіка
-    #     try:
-    #         data = MonobankService(token).get_account_statements(card_id)
-    #     except Exception as e:
-    #         logger.error("API error occurred: %s", e)
-    #         data = [{"error": str(e)}]
-    #     clear_data = MonoBankContextFormatter(data).format_context()
-    #     context["transactions"] = clear_data
-    #     return render(request, self.template_name, context)
