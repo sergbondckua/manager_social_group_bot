@@ -76,12 +76,22 @@
   <div class="container-fluid">
     <div class="row">
       <!-- Sidebar -->
-{#      <div class="col-md-3 col-lg-2">#}
-{#        {% block nav-sidebar %}{% endblock %}#}
-{#      </div>#}
+      {% if form.errors or errors %}
+        <div class="alert alert-danger">
+          {{ form.errors }}
+          {{ errors }}
+        </div>
+      {% endif %}
+      <div class="col-md-3 col-lg-2">
+        <form method="post">
+          {% csrf_token %}
+          {{ form.as_p }}
+          <button type="submit">Отримати виписку</button>
+        </form>
+      </div>
 
       <!-- Main content -->
-      <div class="col-md-9 col-lg-12">
+      <div class="col-md-9 col-lg-10">
         <h1>Виписка Monobank</h1>
         <table style="width:100%" class="order-column" id="statement">
           <thead>
@@ -118,4 +128,31 @@
       </div>
     </div>
   </div>
+  <script>
+      function updateCards(clientSelect) {
+          const clientId = clientSelect.value;
+          const cardField = document.getElementById("id_card_id");
+
+          if (!clientId) {
+              cardField.innerHTML = "<option value=''>--- Зпочатку оберіть клієнта ---</option>";
+              return;
+          }
+
+          fetch(`/bank/api/get-cards/${clientId}/`)
+              .then(response => response.json())
+              .then(data => {
+                  cardField.innerHTML = ""; // Очищаємо старі опції
+                  data.cards.forEach(card => {
+                      const option = document.createElement("option");
+                      option.value = card.card_id;
+                      option.textContent = card.card_id;
+                      cardField.appendChild(option);
+                  });
+              })
+              .catch(error => {
+                  console.error("Помилка при завантаженні карток:", error);
+              });
+      }
+  </script>
+
 {% endblock %}

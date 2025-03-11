@@ -89,3 +89,17 @@ class ProfileAdmin(UserAdmin):
         ),
         ("Дата", {"fields": ("last_login", "date_joined")}),
     )
+
+    add_fieldsets = (
+        (
+            None,
+            {
+                "classes": ("wide",),
+                "fields": (
+                    "telegram_id",
+                    "data_of_birth",
+                    "phone_number",
+                ),
+            },
+        ),
+    ) + UserAdmin.add_fieldsets

@@ -291,7 +291,7 @@ class MonoBankChatIDProvider:
 
 
 class MonoBankContextFormatter:
-    """ Клас для форматування контексту. """
+    """Клас для форматування контексту."""
 
     def __init__(self, data: List[Dict[str, Any]]):
         self.data = data
@@ -302,7 +302,11 @@ class MonoBankContextFormatter:
 
         :return: Відформатований список транзакцій.
         """
-        return [self._filtered_data(item) for item in self.data]
+        return (
+            [self._filtered_data(item) for item in self.data]
+            if self.data
+            else []
+        )
 
     @staticmethod
     def _filtered_data(transaction: dict[str, Any]) -> dict[str, Any]:

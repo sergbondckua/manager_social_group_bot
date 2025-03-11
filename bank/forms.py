@@ -45,16 +45,19 @@ class MonoBankCardAdminForm(forms.ModelForm):
 
 
 class MonobankStatementForm(forms.Form):
+    """Форма для отримання виписки з API Монобанку."""
+
     client_token = forms.ModelChoiceField(
-        queryset=MonoBankClient._default_manager.all(),
+        queryset=MonoBankClient.objects.all(),
         label="Клієнт",
         help_text="Оберіть клієнта для взаємодії з API Монобанку",
         widget=forms.Select(attrs={"onchange": "updateCards(this)"}),
     )
     card_id = forms.ChoiceField(
-        choices=[],
+        choices=[],  # Порожній список для ініціалізації
         label="ID картки",
         help_text="Оберіть картку для отримання виписки",
+        widget=forms.Select(),
     )
     date_from = forms.DateField(
         label="Дата початку",
@@ -66,3 +69,14 @@ class MonobankStatementForm(forms.Form):
         widget=forms.DateInput(attrs={"type": "date"}),
         help_text="Оберіть кінцеву дату виписки",
     )
+
+    def __init__(self, *args, **kwargs):
+        client_id = kwargs.pop("client_id", None)  # Отримуємо client_id
+        super().__init__(*args, **kwargs)
+        if client_id:
+            cards = MonoBankCard.objects.filter(
+                client_id=client_id, is_active=True
+            )
+            card_choices = [(card.card_id, card.card_id) for card in cards]
+            print(card_choices, flush=True)
+            self.fields["card_id"].choices = card_choices

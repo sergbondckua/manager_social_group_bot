@@ -7,7 +7,7 @@ document.addEventListener("DOMContentLoaded", function () {
             const clientId = this.value;
 
             if (clientId) {
-                fetch(`/bank/api/get_cards/${clientId}/`)
+                fetch(`/bank/api/get-api-cards/${clientId}/`)
                     .then((response) => response.json())
                     .then((data) => {
                         cardField.innerHTML = "";
