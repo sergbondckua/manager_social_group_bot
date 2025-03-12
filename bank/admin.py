@@ -64,7 +64,7 @@ class MonoBankCardAdmin(admin.ModelAdmin):
 
 
 @admin.register(MonoBankStatement)
-class CustomAdminLink(admin.ModelAdmin):
+class MonoBankStatementAdmin(admin.ModelAdmin):
     """ Admin-панель для виписки Monobank """
 
     def has_add_permission(self, request):

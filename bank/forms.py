@@ -68,12 +68,14 @@ class MonobankStatementForm(forms.Form):
         widget=forms.DateInput(
             attrs={"type": "date", "class": "inp vDateField"}
         ),
+        required=False,
     )
     date_to = forms.DateField(
         label="Дата завершення",
         widget=forms.DateInput(
             attrs={"type": "date", "class": "inp vDateField"}
         ),
+        required=False,
     )
 
     def __init__(self, *args, **kwargs):

@@ -68,8 +68,21 @@ function updateCards(clientSelect) {
                 option.textContent = card.card_id;
                 cardField.appendChild(option);
             });
+
+            // Якщо є початкове значення для card_id, вибираємо його
+            const initialCardId = cardField.dataset.initialValue;
+            if (initialCardId) {
+                cardField.value = initialCardId;
+            }
         })
         .catch(error => {
             console.error("Помилка при завантаженні карток:", error);
         });
 }
+
+document.addEventListener("DOMContentLoaded", function () {
+    const clientSelect = document.getElementById("id_client_token");
+    if (clientSelect && clientSelect.value) {
+        updateCards(clientSelect);
+    }
+});

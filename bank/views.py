@@ -113,15 +113,16 @@ class MonobankStatementView(View):
     @staticmethod
     def _get_initial_data():
         """Отримання початкових даних для форми."""
+        query = MonoBankCard.objects.select_related("client").first()
 
-        try:
-            query = MonoBankCard.objects.first()
-            return {
-                "token": query.client.client_token if query else "",
-                "card_id": query.card_id if query else "",
-            }
-        except MonoBankCard.DoesNotExist:
-            return {"token": "", "card_id": ""}
+        if not query:
+            return {"client_id": "", "token": "", "card_id": ""}
+
+        return {
+            "client_id": query.client_id,
+            "token": query.client.client_token,
+            "card_id": query.card_id,
+        }
 
     @staticmethod
     def _get_transactions(token, card_id, date_from=None, date_to=None):
@@ -145,7 +146,10 @@ class MonobankStatementView(View):
         """Обробка GET-запиту (відображення форми)."""
         initial_data = self._get_initial_data()
         form = MonobankStatementForm(
-            initial={"client_token": initial_data.get("token", "")}
+            initial={
+                "client_token": initial_data.get("client_id", ""),
+                "card_id": initial_data.get("card_id", ""),
+            }
         )
         context = {"form": form}
 
