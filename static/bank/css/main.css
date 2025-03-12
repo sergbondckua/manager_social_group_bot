@@ -18,12 +18,12 @@
 }
 
 /* Додаємо стилі для таблиці DataTables */
-/*table.dataTable thead th {*/
-/*  background-color: #417690; !* Колір заголовка *!*/
-/*  color: #ffffff; !* Білий текст *!*/
-/*  text-align: center; !* Вирівнювання тексту *!*/
-/*  font-weight: bold; !* Жирний текст *!*/
-/*}*/
+table.dataTable thead th {
+  background-color: #417690; /* Колір заголовка */
+  color: #ffffff; /* Білий текст */
+  text-align: center; /* Вирівнювання тексту */
+  font-weight: bold; /* Жирний текст */
+}
 
 /* Стиль для кнопок пагінації */
 .pagination .page-link {
