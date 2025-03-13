@@ -1,5 +1,7 @@
+import calendar
 import json
 import logging
+from datetime import datetime
 
 import monobank
 from django.conf import settings
@@ -107,6 +109,7 @@ class MonobankWebhookView(View):
             send_telegram_message.delay(payer_message, [payer_chat_id])
 
 
+@method_decorator(staff_member_required, name="dispatch")
 class MonobankStatementView(View):
     template_name = "admin/monobank_statement.html"
 
@@ -114,14 +117,32 @@ class MonobankStatementView(View):
     def _get_initial_data():
         """Отримання початкових даних для форми."""
         query = MonoBankCard.objects.select_related("client").first()
+        now = datetime.now().date()
+
+        def get_month_date_range(date):
+            """Отримати перший та останній день місяця."""
+            _, last_day = calendar.monthrange(date.year, date.month)
+            return date.replace(day=1), date.replace(day=last_day)
+
+        date_from, date_to = (
+            d.strftime("%Y-%m-%d") for d in get_month_date_range(now)
+        )
 
         if not query:
-            return {"client_id": "", "token": "", "card_id": ""}
+            return {
+                "client_id": "",
+                "token": "",
+                "card_id": "",
+                "date_from": "",
+                "date_to": "",
+            }
 
         return {
             "client_id": query.client_id,
             "token": query.client.client_token,
             "card_id": query.card_id,
+            "date_from": date_from,
+            "date_to": date_to,
         }
 
     @staticmethod
@@ -145,10 +166,13 @@ class MonobankStatementView(View):
     def get(self, request, *args, **kwargs):
         """Обробка GET-запиту (відображення форми)."""
         initial_data = self._get_initial_data()
+
         form = MonobankStatementForm(
             initial={
                 "client_token": initial_data.get("client_id", ""),
                 "card_id": initial_data.get("card_id", ""),
+                "date_from": initial_data.get("date_from", ""),
+                "date_to": initial_data.get("date_to", ""),
             }
         )
         context = {"form": form}
