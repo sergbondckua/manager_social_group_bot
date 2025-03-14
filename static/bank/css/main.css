@@ -6,48 +6,51 @@
     background: #F6F6f6;
     border-radius: 8px;
 }
+
 .custom-btn {
-  background-color: #205067;
-  color: #fff;
-  border: none;
+    background-color: #205067;
+    color: #fff;
+    border: none;
 }
 
 .custom-btn:hover {
-  background-color: #1a4054;
-  color: #eaeaea;
+    background-color: #1a4054;
+    color: #eaeaea;
 }
 
-/*!* Додаємо стилі для таблиці DataTables *!*/
-/*table.dataTable thead th {*/
-/*  background-color: #417690; !* Колір заголовка *!*/
-/*  color: #ffffff; !* Білий текст *!*/
-/*  text-align: center; !* Вирівнювання тексту *!*/
-/*  font-weight: bold; !* Жирний текст *!*/
-/*}*/
+/* Додаємо стилі для таблиці DataTables */
+table.dataTable thead th {
+    background-color: #417690; /* Колір заголовка */
+    color: #ffffff; /* Білий текст */
+    text-align: center; /* Вирівнювання тексту */
+    font-weight: bold; /* Жирний текст */
+}
 
 /* Стиль для кнопок пагінації */
 .pagination .page-link {
-  background-color: #417690; /* Колір фону кнопок */
-  color: #ffffff; /* Колір тексту */
-  border: 1px solid #417690; /* Обрамлення кнопок */
-  border-radius: 4px; /* Згладжені кути */
-  margin: 0 2px; /* Відступ між кнопками */
+    background-color: #417690; /* Колір фону кнопок */
+    color: #ffffff; /* Колір тексту */
+    border: 1px solid #417690; /* Обрамлення кнопок */
+    border-radius: 4px; /* Згладжені кути */
+    margin: 0 2px; /* Відступ між кнопками */
 }
 
 .pagination .page-link:hover {
-  background-color: #365c78; /* Колір при наведенні */
-  color: #ffffff; /* Колір тексту при наведенні */
+    background-color: #365c78; /* Колір при наведенні */
+    color: #ffffff; /* Колір тексту при наведенні */
 }
 
 .pagination .page-item.active .page-link {
-  background-color: #2e4b63; /* Колір активної кнопки */
-  color: #ffffff; /* Колір тексту активної кнопки */
-  border: 1px solid #2e4b63; /* Обрамлення активної кнопки */
+    background-color: #2e4b63; /* Колір активної кнопки */
+    color: #ffffff; /* Колір тексту активної кнопки */
+    border: 1px solid #2e4b63; /* Обрамлення активної кнопки */
 }
+
 /* Видалити маркер у пагінації */
 .pagination .page-item::marker {
-  content: none; /* Відключає маркер */
+    content: none; /* Відключає маркер */
 }
+
 /* SUBMIT ROW */
 
 .submit-row {
@@ -61,6 +64,7 @@
     gap: 10px;
     flex-wrap: wrap;
 }
+
 /* TOOLBAR */
 
 #toolbar {

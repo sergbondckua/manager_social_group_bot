@@ -20,8 +20,8 @@ class MonoBankClient(BaseModel):
         return self.name
 
     class Meta:
-        verbose_name = "🏦 Клієнт (monobank)"
-        verbose_name_plural = "🏦 Клієнти (monobank)"
+        verbose_name = "🏦 Клієнта"
+        verbose_name_plural = "🏦 Клієнти"
 
 
 class MonoBankCard(BaseModel):
@@ -52,8 +52,8 @@ class MonoBankCard(BaseModel):
         return f"{self.client.name} - {self.card_id or 'Без ID'}"
 
     class Meta:
-        verbose_name = "💳 Картка (monobank)"
-        verbose_name_plural = "💳 Картки (monobank)"
+        verbose_name = "💳 Картку"
+        verbose_name_plural = "💳 Картки"
 
 
 class MonoBankStatement(models.Model):
@@ -61,5 +61,5 @@ class MonoBankStatement(models.Model):
 
     class Meta:
         managed = False
-        verbose_name = "📜 Виписка (monobank)"
-        verbose_name_plural = "📜 Виписки (monobank)"
+        verbose_name = "📜 Операцію"
+        verbose_name_plural = "📜 Список операції"
