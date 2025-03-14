@@ -54,26 +54,26 @@ class MonobankStatementForm(forms.Form):
         widget=forms.Select(
             attrs={
                 "onchange": "updateCards(this)",
-                "class": "form-select form-select-sm",
+                "class": "form-select",
             }
         ),
     )
     card_id = forms.ChoiceField(
         choices=[("", "ID картки")],  # Порожній список для ініціалізації
         label="ID картки",
-        widget=forms.Select(attrs={"class": "form-select form-select-sm"}),
+        widget=forms.Select(attrs={"class": "form-select"}),
     )
     date_from = forms.DateField(
         label="Дата початку",
         widget=forms.DateInput(
-            attrs={"type": "date", "class": "inp vDateField"}
+            attrs={"type": "date", "class": "inp form-control"}
         ),
         required=False,
     )
     date_to = forms.DateField(
         label="Дата завершення",
         widget=forms.DateInput(
-            attrs={"type": "date", "class": "inp vDateField"}
+            attrs={"type": "date", "class": "inp form-control"}
         ),
         required=False,
     )
