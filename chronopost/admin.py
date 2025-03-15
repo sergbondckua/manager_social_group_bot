@@ -1,7 +1,5 @@
 from django.contrib import admin
-from django.db import models
 from django.utils.safestring import mark_safe
-from tinymce.widgets import TinyMCE
 
 from chronopost.models import ScheduledMessage, WeatherNotification
 from common.admin import BaseAdmin
@@ -11,9 +9,6 @@ from common.admin import BaseAdmin
 class ScheduledMessageAdmin(BaseAdmin):
     """Адмін-панель для моделі ScheduledMessage."""
 
-    formfield_overrides = {
-        models.TextField: {"widget": TinyMCE()},
-    }
     save_on_top = True
     save_as = True
     readonly_fields = ("get_image",) + BaseAdmin.readonly_fields
@@ -74,10 +69,6 @@ class ScheduledMessageAdmin(BaseAdmin):
 @admin.register(WeatherNotification)
 class WeatherNotificationAdmin(BaseAdmin):
     """Адмін-панель для моделі WeatherNotification."""
-
-    formfield_overrides = {
-        models.TextField: {"widget": TinyMCE()},
-    }
 
     list_display = ("chat_id", "title", "get_image", "is_active")
     list_editable = ("is_active",)

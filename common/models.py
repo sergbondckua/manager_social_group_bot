@@ -15,3 +15,18 @@ class BaseModel(models.Model):
 
     class Meta:
         abstract = True
+
+
+class Compliment(BaseModel):
+    """ Модель для збереження комплементів """
+
+    text = models.TextField(
+        verbose_name="Текст компліменту"
+    )
+
+    def __str__(self):
+        return f"{self.id}: {self.text[3:50]}"
+
+    class Meta:
+        verbose_name = "Комплімент"
+        verbose_name_plural = "Компліменти"

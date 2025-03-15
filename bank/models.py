@@ -62,4 +62,4 @@ class MonoBankStatement(models.Model):
     class Meta:
         managed = False
         verbose_name = "📜 Операцію"
-        verbose_name_plural = "📜 Список операції"
+        verbose_name_plural = "📜 Список операцій"

@@ -1,7 +1,11 @@
+import random
+
 import bleach
 import uuid
 
 import bleach
+
+from common.models import Compliment
 
 
 def clean_tag_message(
@@ -56,3 +60,12 @@ def generate_upload_filename(instance, filename):
     file_extension = filename.split(".")[-1]
     new_filename = f"{uuid.uuid4().hex}.{file_extension}"
     return new_filename
+
+
+def get_random_compliment():
+    """Функція для отримання випадкового комплементу з бази даних"""
+
+    compliments = Compliment.objects.all()
+    if compliments.exists():
+        return random.choice(compliments).text
+    return "Дякуємо, що ми разом! Ви чудові!"  # Значення за замовчуванням
