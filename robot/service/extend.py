@@ -84,3 +84,14 @@ class TelegramService:
                 e,
             )
             return False
+
+    # Функція для отримання інформації про користувача
+    async def get_user_full_name(self, user_id: int) -> str:
+        try:
+            user = await self.bot.get_chat(user_id)
+            return  user.full_name
+        except Exception as e:
+            logger.error(
+                "Помилка при отриманні інформацією про користувача: %s", e
+            )
+            return ""
