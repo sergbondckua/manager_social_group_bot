@@ -109,9 +109,11 @@ class MonobankWebhookView(View):
             payer_message = formatter.format_payer_message()
             compliment_payer_message = get_random_compliment()
             send_telegram_message.delay(payer_message, [payer_chat_id])
-            # send_telegram_message.delay(
-            #     compliment_payer_message, chat_ids, payer_chat_id
-            # )
+            send_telegram_message.delay(
+                compliment_payer_message,
+                [settings.DEFAULT_CHAT_ID],
+                payer_chat_id,
+            )
 
 
 @method_decorator(staff_member_required, name="dispatch")
