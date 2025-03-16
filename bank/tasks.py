@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from typing import List, NoReturn
+from typing import List, NoReturn, Tuple, Optional
 
 from django.conf import settings
 from celery import shared_task
@@ -56,25 +56,66 @@ def create_monobank_webhooks() -> NoReturn:
 
 @shared_task(expires=(24 * 60 * 60) * 28)
 def send_telegram_message(
-    message: str, chat_ids: List[int], payer_user_id: int = None
+    message: str, chat_ids: List[int], payer_user_id: Optional[int] = None
 ) -> NoReturn:
     """
     Завдання Celery для надсилання повідомлення.
-        param message: текст повідомлення
-        param chat_ids: список чатів, до яких треба надіслати повідомлення
-        param payer_chat_id: user_id платника
+
+    :param message: текст повідомлення
+    :param chat_ids: список чатів, до яких треба надіслати повідомлення
+    :param payer_user_id: user_id платника (необов'язковий)
     """
 
-    async def main() -> None:
+    async def get_payer_details(
+        user_id: int, sender
+    ) -> Tuple[Optional[str], Optional[str]]:
+        """
+        Отримує фото профілю та повне ім'я платника.
 
+        :param user_id: Telegram user_id платника
+        :param sender: TelegramService інстанс для взаємодії з API
+        :return: Кортеж (фото, повне ім'я)
+        """
+        try:
+            photo = await sender.get_user_profile_photo(user_id)
+            full_name = await sender.get_user_full_name(user_id)
+            return photo, full_name
+        except Exception as e:
+            logger.warning("Не вдалося отримати дані платника: %s", e)
+            return None, ""
+
+    async def main() -> None:
         async with ROBOT as bot:
             sender = TelegramService(bot)
-            photo_payer = (
-                await sender.get_user_profile_photo(payer_user_id)
-                if payer_user_id
-                else None
-            )
-            await sender.send_message(message, chat_ids, photo_payer)
 
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(main())
+            # Отримуємо дані платника, якщо user_id передано
+            photo_payer, full_name = (None, "")
+            if payer_user_id:
+                photo_payer, full_name = await get_payer_details(
+                    payer_user_id, sender
+                )
+
+            # Форматуємо повідомлення
+            formatted_message = (
+                message.format(full_name=full_name, userid=payer_user_id)
+                if payer_user_id
+                else message
+            )
+
+            # Логування для перевірки формату повідомлення
+            logger.debug("Надсилається повідомлення: %s", formatted_message)
+
+            # Надсилання повідомлення
+            try:
+                await sender.send_message(
+                    formatted_message, chat_ids, photo_payer
+                )
+                logger.info("Повідомлення успішно надіслано")
+            except Exception as e:
+                logger.error("Помилка під час надсилання повідомлення: %s", e)
+
+    try:
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(main())
+    except Exception as e:
+        logger.error("Помилка виконання основного циклу asyncio: %s", e)

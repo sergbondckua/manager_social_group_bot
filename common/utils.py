@@ -1,10 +1,9 @@
 import random
-
-import bleach
 import uuid
 
 import bleach
 
+from bank.resources.bot_msg_templates import compliment_text
 from common.models import Compliment
 
 
@@ -42,6 +41,7 @@ def clean_tag_message(
             "\u00a0": " ",
             "&ndash;": "-",
             "\u2013": "-",
+            "&quot;": '"',
         }
 
     # Очищення HTML-тегів
@@ -69,3 +69,17 @@ def get_random_compliment():
     if compliments.exists():
         return random.choice(compliments).text
     return "Дякуємо, що ми разом! Ви чудові!"  # Значення за замовчуванням
+
+
+def get_personalized_compliment_message() -> str:
+    """Функція для отримання персоналізованого повідомлення з компліментом
+    Функція повертає повідомлення з випадковим компліментом, взятим з бази даних.
+    """
+
+    # Отримуємо випадковий комплімент з бази даних
+    compliment = clean_tag_message(get_random_compliment())
+
+    # Формуємо повідомлення з компліментом
+    return compliment_text.format(
+        name="{full_name}", user_id="{userid}", compliment=compliment
+    )

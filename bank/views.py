@@ -22,7 +22,7 @@ from bank.services.mono import (
     MonoBankContextFormatter,
 )
 from bank.tasks import send_telegram_message
-from common.utils import get_random_compliment
+from common.utils import get_personalized_compliment_message
 
 logger = logging.getLogger("monobank-webhook")
 
@@ -71,26 +71,59 @@ class MonobankWebhookView(View):
 
     def post(self, request, *args, **kwargs):
         try:
-            body = request.body.decode("utf-8")
-            data = json.loads(body)
-            event_type = data.get("type")
+            data = self._parse_request_body(request)
+            self._validate_event_type(data)
 
-            if event_type == "StatementItem":
+            if data["type"] == "StatementItem":
                 self._handle_statement_item(data)
-            else:
-                logger.info("Невідповідний тип подій: %s", event_type)
+
             return JsonResponse({"status": "success"})
         except json.JSONDecodeError:
+            logger.error("Отримано некоректний JSON")
             return JsonResponse({"error": "Invalid JSON"}, status=400)
+        except ValueError as e:
+            logger.error("Помилка валідації даних: %s", e)
+            return JsonResponse({"error": str(e)}, status=400)
         except Exception as e:
+            logger.exception("Неочікувана помилка")
             return JsonResponse({"error": str(e)}, status=500)
 
     @staticmethod
-    def _handle_statement_item(data: dict) -> None:
+    def _parse_request_body(request) -> dict:
+        """Розбирає тіло запиту."""
+        try:
+            body = request.body.decode("utf-8")
+            return json.loads(body)
+        except UnicodeDecodeError:
+            raise ValueError("Не вдалося декодувати тіло запиту")
+
+    @staticmethod
+    def _validate_event_type(data: dict) -> None:
+        """Валідує тип події."""
+        if "type" not in data:
+            raise ValueError("Відсутній ключ 'type'")
+        if data["type"] not in ["StatementItem"]:
+            raise ValueError(f"Невідповідний тип події: {data['type']}")
+
+    def _handle_statement_item(self, data: dict) -> None:
         """Обробляє подію StatementItem."""
-        transaction_data = data.get("data", {})
+        transaction_data = self._extract_transaction_data(data)
         formatter = MonoBankMessageFormatter(transaction_data)
-        message = formatter.format_message()
+
+        chat_ids, payer_chat_id = self._get_chat_ids(transaction_data)
+        self._send_notifications(formatter, chat_ids, payer_chat_id)
+
+    @staticmethod
+    def _extract_transaction_data(data: dict) -> dict:
+        """Виділяє дані транзакції."""
+        transaction_data = data.get("data", {})
+        if "account" not in transaction_data or "statementItem" not in transaction_data:
+            raise ValueError("Некоректна структура даних транзакції")
+        return transaction_data
+
+    @staticmethod
+    def _get_chat_ids(transaction_data: dict):
+        """Отримує список ID чатів."""
         chat_id_provider = MonoBankChatIDProvider(
             account=transaction_data["account"],
             db_model=MonoBankCard,
@@ -100,14 +133,17 @@ class MonobankWebhookView(View):
         payer_chat_id = chat_id_provider.get_payer_chat_id(
             transaction_data["statementItem"].get("comment")
         )
+        return chat_ids, payer_chat_id
 
-        # Викликаємо Celery задачу для надсилання повідомлення
-        send_telegram_message.delay(message, chat_ids, payer_chat_id)
+    @staticmethod
+    def _send_notifications(formatter, chat_ids, payer_chat_id):
+        """Надсилає повідомлення через Celery."""
+        message = formatter.format_message()
+        send_telegram_message.delay(message, chat_ids)
 
-        # Відправляємо Celery задачу для повідомлення платникам
-        if payer_chat_id and chat_ids:
+        if payer_chat_id:
             payer_message = formatter.format_payer_message()
-            compliment_payer_message = get_random_compliment()
+            compliment_payer_message = get_personalized_compliment_message()
             send_telegram_message.delay(payer_message, [payer_chat_id])
             send_telegram_message.delay(
                 compliment_payer_message,
