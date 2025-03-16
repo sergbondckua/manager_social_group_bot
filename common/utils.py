@@ -81,5 +81,5 @@ def get_personalized_compliment_message() -> str:
 
     # Формуємо повідомлення з компліментом
     return compliment_text.format(
-        name="{full_name}", user_id="{userid}", compliment=compliment
+        name="{name}", compliment=compliment
     )

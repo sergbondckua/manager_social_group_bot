@@ -1,8 +1,8 @@
 import logging
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 from aiogram import Bot
-from aiogram.exceptions import TelegramAPIError
+from aiogram.exceptions import TelegramAPIError, TelegramBadRequest
 
 from common.utils import clean_tag_message
 from core.settings import DEFAULT_CHAT_ID
@@ -36,8 +36,9 @@ class TelegramService:
                     await self.bot.send_photo(
                         chat_id=chat_id,
                         photo=photo,
-                        caption=clean_tag_message(message)[:1024],
                         parse_mode="HTML",
+                        caption=clean_tag_message(message)[:1024],
+                        protect_content=True,
                     )
                 else:
                     await self.bot.send_chat_action(
@@ -46,8 +47,6 @@ class TelegramService:
                     await self.bot.send_message(
                         chat_id=chat_id,
                         text=clean_tag_message(message)[:4096],
-                        parse_mode="HTML",
-                        disable_web_page_preview=True,
                     )
                 success = True
             except TelegramAPIError as e:
@@ -86,12 +85,21 @@ class TelegramService:
             return False
 
     # Функція для отримання інформації про користувача
-    async def get_user_full_name(self, user_id: int) -> str:
+    async def get_username_and_fullname(
+        self, user_id: int
+    ) -> Optional[Tuple[str, str]]:
         try:
             user = await self.bot.get_chat(user_id)
-            return  user.full_name
+            username = user.username or ""
+            return user.full_name, username
+        except TelegramBadRequest as e:
+            logger.warning(
+                "Користувача %s не знайдено: %s",
+                user_id,
+                e,
+            )
         except Exception as e:
             logger.error(
                 "Помилка при отриманні інформацією про користувача: %s", e
             )
-            return ""
+            return "", ""

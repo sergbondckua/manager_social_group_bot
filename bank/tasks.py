@@ -68,7 +68,7 @@ def send_telegram_message(
 
     async def get_payer_details(
         user_id: int, sender
-    ) -> Tuple[Optional[str], Optional[str]]:
+    ) -> Tuple[Optional[str], str, str]:
         """
         Отримує фото профілю та повне ім'я платника.
 
@@ -78,28 +78,30 @@ def send_telegram_message(
         """
         try:
             photo = await sender.get_user_profile_photo(user_id)
-            full_name = await sender.get_user_full_name(user_id)
-            return photo, full_name
+            full_name, username = await sender.get_username_and_fullname(
+                user_id
+            )
+            return photo, full_name, username
         except Exception as e:
             logger.warning("Не вдалося отримати дані платника: %s", e)
-            return None, ""
+            return None, "", ""
 
     async def main() -> None:
         async with ROBOT as bot:
             sender = TelegramService(bot)
 
             # Отримуємо дані платника, якщо user_id передано
-            photo_payer, full_name = (None, "")
+            photo_payer, full_name, username = None, "", ""
             if payer_user_id:
-                photo_payer, full_name = await get_payer_details(
+                photo_payer, full_name, username = await get_payer_details(
                     payer_user_id, sender
                 )
 
             # Форматуємо повідомлення
+            formatted_username = f"@{username}" if username else ""
+            display_name = formatted_username or full_name
             formatted_message = (
-                message.format(full_name=full_name, userid=payer_user_id)
-                if payer_user_id
-                else message
+                message.format(name=display_name) if payer_user_id else message
             )
 
             # Логування для перевірки формату повідомлення

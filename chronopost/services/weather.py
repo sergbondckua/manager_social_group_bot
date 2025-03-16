@@ -195,6 +195,7 @@ class TelegramNotifier:
                         chat_id=self.chat_id,
                         photo=photo_file,
                         caption=clean_tag_message(text[:1024]),
+                        show_caption_above_media=True,
                     )
                 else:
                     await self.bot.send_chat_action(

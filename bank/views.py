@@ -2,6 +2,7 @@ import calendar
 import json
 import logging
 from datetime import datetime
+from typing import NoReturn, Tuple, Optional, List
 
 import monobank
 from django.conf import settings
@@ -98,14 +99,14 @@ class MonobankWebhookView(View):
             raise ValueError("Не вдалося декодувати тіло запиту")
 
     @staticmethod
-    def _validate_event_type(data: dict) -> None:
+    def _validate_event_type(data: dict):
         """Валідує тип події."""
         if "type" not in data:
             raise ValueError("Відсутній ключ 'type'")
         if data["type"] not in ["StatementItem"]:
             raise ValueError(f"Невідповідний тип події: {data['type']}")
 
-    def _handle_statement_item(self, data: dict) -> None:
+    def _handle_statement_item(self, data: dict) -> NoReturn:
         """Обробляє подію StatementItem."""
         transaction_data = self._extract_transaction_data(data)
         formatter = MonoBankMessageFormatter(transaction_data)
@@ -117,12 +118,17 @@ class MonobankWebhookView(View):
     def _extract_transaction_data(data: dict) -> dict:
         """Виділяє дані транзакції."""
         transaction_data = data.get("data", {})
-        if "account" not in transaction_data or "statementItem" not in transaction_data:
+        if (
+            "account" not in transaction_data
+            or "statementItem" not in transaction_data
+        ):
             raise ValueError("Некоректна структура даних транзакції")
         return transaction_data
 
     @staticmethod
-    def _get_chat_ids(transaction_data: dict):
+    def _get_chat_ids(
+        transaction_data: dict,
+    ) -> Tuple[List[int], Optional[int]]:
         """Отримує список ID чатів."""
         chat_id_provider = MonoBankChatIDProvider(
             account=transaction_data["account"],
@@ -136,7 +142,11 @@ class MonobankWebhookView(View):
         return chat_ids, payer_chat_id
 
     @staticmethod
-    def _send_notifications(formatter, chat_ids, payer_chat_id):
+    def _send_notifications(
+        formatter: MonoBankMessageFormatter,
+        chat_ids: List[int],
+        payer_chat_id: Optional[int],
+    ) -> NoReturn:
         """Надсилає повідомлення через Celery."""
         message = formatter.format_message()
         send_telegram_message.delay(message, chat_ids)
