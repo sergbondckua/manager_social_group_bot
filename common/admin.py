@@ -3,7 +3,7 @@ from django.db import models
 from django.utils.safestring import mark_safe
 from tinymce.widgets import TinyMCE
 
-from common.models import Compliment
+from common.models import Compliment, Greeting
 
 
 class BaseAdmin(admin.ModelAdmin):
@@ -49,3 +49,19 @@ class ComplimentAdmin(BaseAdmin):
         return mark_safe(obj.text)
 
     html_text.short_description = "Текст компліменту"
+
+
+@admin.register(Greeting)
+class GreetingAdmin(BaseAdmin):
+    list_display = ("text", "created_at", "is_active")
+    search_fields = ("text", "event_type")
+    list_editable = ("is_active",)
+    list_filter = ("is_active",)
+    save_as = True
+    save_on_top = True
+    fieldsets = (
+        (
+            "Основні дані",
+            {"fields": ("event_type", "text", "is_active")},
+        ),
+    ) + BaseAdmin.fieldsets
