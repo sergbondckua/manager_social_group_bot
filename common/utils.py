@@ -4,7 +4,7 @@ import uuid
 import bleach
 
 from bank.resources.bot_msg_templates import compliment_text
-from common.models import Compliment
+from common.models import Compliment, Greeting
 
 
 def clean_tag_message(
@@ -71,6 +71,20 @@ def get_random_compliment():
     return "Дякуємо, що ми разом! Ви чудові!"  # Значення за замовчуванням
 
 
+def get_random_greeting() -> str:
+    """Функція для отримання випадкового привітання з бази даних."""
+
+    # Отримуємо всі привітання з бази даних
+    greetings = Greeting.objects.all()
+
+    # Якщо є привітання, то повертаємо випадкове
+    if greetings.exists():
+        return random.choice(greetings).text
+
+    # Якщо немає привітань, то повертаємо за замовчуванням
+    return "Зі святом! Нехай цей день буде сповнений тепла, посмішок і незабутніх емоцій!"
+
+
 def get_personalized_compliment_message() -> str:
     """Функція для отримання персоналізованого повідомлення з компліментом
     Функція повертає повідомлення з випадковим компліментом, взятим з бази даних.
@@ -80,6 +94,4 @@ def get_personalized_compliment_message() -> str:
     compliment = clean_tag_message(get_random_compliment())
 
     # Формуємо повідомлення з компліментом
-    return compliment_text.format(
-        name="{name}", compliment=compliment
-    )
+    return compliment_text.format(name="{name}", compliment=compliment)
