@@ -54,7 +54,7 @@ def clean_tag_message(
     return cleaned_text
 
 
-def generate_upload_filename(instance, filename):
+def generate_upload_filename(instance, filename: str) -> str:
     """Функція для зміни ім'я завантаженого файлу"""
 
     file_extension = filename.split(".")[-1]
@@ -62,7 +62,7 @@ def generate_upload_filename(instance, filename):
     return new_filename
 
 
-def get_random_compliment():
+def get_random_compliment() -> str:
     """Функція для отримання випадкового комплементу з бази даних"""
 
     compliments = Compliment.objects.all()

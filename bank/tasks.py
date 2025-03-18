@@ -98,7 +98,7 @@ def send_telegram_message(
                 )
 
             # Форматуємо повідомлення
-            formatted_username = f"@{username}" if username else ""
+            formatted_username = f"{full_name} (@{username})" if username else ""
             display_name = formatted_username or full_name
             formatted_message = (
                 message.format(name=display_name) if payer_user_id else message

@@ -36,7 +36,6 @@ class TelegramService:
                     await self.bot.send_photo(
                         chat_id=chat_id,
                         photo=photo,
-                        parse_mode="HTML",
                         caption=clean_tag_message(message)[:1024],
                         protect_content=True,
                     )
