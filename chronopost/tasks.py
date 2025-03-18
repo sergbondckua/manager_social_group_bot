@@ -30,8 +30,11 @@ def send_scheduled_messages() -> None:
             scheduler = MessageScheduler(bot)
             await scheduler.process_messages()
 
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(main())
+    try:
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(main())
+    except Exception as e:
+        logger.error("Помилка виконання основного циклу asyncio: %s", e)
 
 
 @shared_task(expires=86000)
@@ -114,5 +117,8 @@ def send_weather_forecast():
             "message": "Повідомлення успішно надіслано",
         }
 
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(main())
+    try:
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(main())
+    except Exception as e:
+        logger.error("Помилка виконання основного циклу asyncio: %s", e)

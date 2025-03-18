@@ -1,10 +1,12 @@
 import asyncio
 import logging
 
+from asgiref.sync import sync_to_async
 from celery import shared_task
 from django.conf import settings
 from django.utils import timezone
 
+from common.resources.bot_msg_templates import greeting_text
 from common.utils import get_random_greeting, clean_tag_message
 from profiles.models import ClubUser
 from robot.config import ROBOT
@@ -15,17 +17,20 @@ logger = logging.getLogger("common")
 
 @shared_task
 def send_birthday_greetings():
-    today = timezone.now().date()
-    users = ClubUser.objects.filter(
-        data_of_birth__day=today.day,
-        data_of_birth__month=today.month,
-        is_active=True,
-    )
-    if not users.exists():
-        logger.info("Сьогодні іменинники відсутні.")
-        return
+    """Завдання Celery для надсилання вітання іменинникам."""
 
+    today = timezone.now().date()
     greeting = clean_tag_message(get_random_greeting())
+    print(today, flush=True)
+    @sync_to_async
+    def fetch_users():
+        return list(
+            ClubUser.objects.filter(
+                data_of_birth__day=today.day,
+                data_of_birth__month=today.month,
+                is_active=True,
+            )
+        )
 
     async def get_display_name(user: ClubUser, sender: TelegramService) -> str:
         """
@@ -56,9 +61,15 @@ def send_birthday_greetings():
         )
 
     async def main():
+        users = await fetch_users()
+
+        if not users:
+            logger.info("Сьогодні іменинники відсутні.")
+            return
+
         async with ROBOT as bot:
             sender = TelegramService(bot)
-            for user in users:
+            for user in await users:
                 try:
                     # Отримуємо фото і відображуване ім'я користувача
                     photo = await sender.get_user_profile_photo(
@@ -67,7 +78,7 @@ def send_birthday_greetings():
                     name = await get_display_name(user, sender)
 
                     # Формуємо текст привітання
-                    greeting_text = greeting_text.format(
+                    message = greeting_text.format(
                         today=today.strftime("%d.%m.%Y"),
                         name=name,
                         greeting=greeting,
@@ -75,7 +86,7 @@ def send_birthday_greetings():
                     # Відправляємо привітання
                     await sender.send_message(
                         chat_ids=[settings.DEFAULT_CHAT_ID],
-                        message=greeting_text,
+                        message=message,
                         photo=photo,
                     )
                     logger.info(
