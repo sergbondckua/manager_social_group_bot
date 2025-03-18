@@ -30,8 +30,8 @@ class Compliment(BaseModel):
         return f"{self.id}: {self.text[3:50]}..."
 
     class Meta:
-        verbose_name = "Комплімент"
-        verbose_name_plural = "Компліменти"
+        verbose_name = "💌 Комплімент"
+        verbose_name_plural = "💌 Компліменти"
 
 
 class Greeting(BaseModel):
@@ -55,5 +55,5 @@ class Greeting(BaseModel):
         return f"{self.event_type}: {self.text[3:50]}..."
 
     class Meta:
-        verbose_name = "Привітання"
-        verbose_name_plural = "Привітання"
+        verbose_name = "🎈 Привітання"
+        verbose_name_plural = "🎈 Привітання"
