@@ -67,11 +67,11 @@ def send_birthday_greetings():
                     name = await get_display_name(user, sender)
 
                     # Формуємо текст привітання
-                    # greeting_text = greeting_text.format(
-                    #     today=today.strftime("%d.%m.%Y"),
-                    #     name=name,
-                    #     greeting=greeting,
-                    # )
+                    greeting_text = greeting_text.format(
+                        today=today.strftime("%d.%m.%Y"),
+                        name=name,
+                        greeting=greeting,
+                    )
                     # Відправляємо привітання
                     await sender.send_message(
                         chat_ids=[settings.DEFAULT_CHAT_ID],
