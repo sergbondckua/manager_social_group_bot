@@ -70,3 +70,9 @@ class GreetingAdmin(BaseAdmin):
         return mark_safe(obj.text)
 
     html_text.short_description = "Текст привітання"
+
+
+# Змінюємо назву адміністративної панелі
+admin.site.site_header = "Адміністративна панель Клубу"
+admin.site.site_title = "Система управління Клубом"
+admin.site.index_title = "Головна сторінка адміністрування"

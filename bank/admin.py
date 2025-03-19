@@ -11,6 +11,7 @@ class MonoCardInline(admin.StackedInline):
     model = MonoBankCard
     extra = 0
 
+
 @admin.register(MonoBankClient)
 class MonoBankClientAdmin(admin.ModelAdmin):
     list_display = ["id", "name", "client_token", "status_token"]
@@ -65,7 +66,7 @@ class MonoBankCardAdmin(admin.ModelAdmin):
 
 @admin.register(MonoBankStatement)
 class MonoBankStatementAdmin(admin.ModelAdmin):
-    """ Admin-панель для виписки Monobank """
+    """Admin-панель для виписки Monobank"""
 
     def has_add_permission(self, request):
         return False
