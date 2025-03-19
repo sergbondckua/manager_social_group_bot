@@ -29,3 +29,7 @@ class QuizAnswerFormSet(forms.BaseInlineFormSet):
             raise ValidationError(
                 "Повинна бути тільки одна правильна відповідь."
             )
+
+        # Перевірка наявності хоча б однієї правильної відповіді
+        if correct_count < 1:
+            raise ValidationError("Повинна бути хоча б одна правильна відповідь.")

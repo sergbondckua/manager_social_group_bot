@@ -93,11 +93,14 @@ WSGI_APPLICATION = "core.wsgi.application"
 
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+        "ENGINE": os.environ.get("SQL_ENGINE", "django.db.backends.sqlite3"),
+        "NAME": os.environ.get("DATABASE", BASE_DIR / "db.sqlite3"),
+        "USER": os.environ.get("POSTGRES_USER", "user"),
+        "PASSWORD": os.environ.get("POSTGRES_PASSWORD", "password"),
+        "HOST": os.environ.get("SQL_HOST", "localhost"),
+        "PORT": os.environ.get("SQL_PORT", "5432"),
     }
 }
-
 
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
@@ -169,8 +172,22 @@ REDIS_PORT = "6379"
 
 # Celery connection
 REDIS_URL_TEMPLATE = "redis://{host}:{port}/{db}"
-REDIS_HOST = REDIS_HOST if DEBUG else "redis_container"
+REDIS_HOST = REDIS_HOST if DEBUG else "django_redis"
 REDIS_PORT = REDIS_PORT if DEBUG else "6379"
+
+CACHES = {
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": REDIS_URL_TEMPLATE.format(
+            host=REDIS_HOST, port=REDIS_PORT, db=3
+        ),  # Redis URL
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+        },
+    }
+}
+
+
 CELERY_BROKER_URL = REDIS_URL_TEMPLATE.format(
     host=REDIS_HOST, port=REDIS_PORT, db=0
 )
