@@ -78,12 +78,12 @@ def send_telegram_message(
         """
         try:
             photo = await sender.get_user_profile_photo(user_id)
-            full_name, username = await sender.get_username_and_fullname(
+            username, full_name = await sender.get_username_and_fullname(
                 user_id
             )
             return photo, full_name, username
-        except Exception as e:
-            logger.warning("Не вдалося отримати дані платника: %s", e)
+        except Exception as error:
+            logger.warning("Не вдалося отримати дані платника: %s", error)
             return None, "", ""
 
     async def main() -> None:

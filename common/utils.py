@@ -4,6 +4,7 @@ import uuid
 import bleach
 
 from bank.resources.bot_msg_templates import compliment_text
+from common.enums import GreetingTypeChoices
 from common.models import Compliment, Greeting
 
 
@@ -75,7 +76,9 @@ def get_random_greeting() -> str:
     """Функція для отримання випадкового привітання з бази даних."""
 
     # Отримуємо всі привітання з бази даних
-    greetings = Greeting.objects.all()
+    greetings = Greeting.objects.filter(
+        event_type=GreetingTypeChoices.BIRTHDAY, is_active=True
+    )
 
     # Якщо є привітання, то повертаємо випадкове
     if greetings.exists():

@@ -19,9 +19,9 @@ logger = logging.getLogger("common")
 def send_birthday_greetings():
     """Завдання Celery для надсилання вітання іменинникам."""
 
-    today = timezone.now().date()
+    today = timezone.localtime(timezone.now()).date()
     greeting = clean_tag_message(get_random_greeting())
-    print(today, flush=True)
+
     @sync_to_async
     def fetch_users():
         return list(
@@ -39,6 +39,7 @@ def send_birthday_greetings():
         - Використовує локальні дані (`first_name`, `last_name`) або дані Telegram (`username`, `full_name`).
         - Форматує ім'я з посиланням на Telegram-username, якщо він доступний.
         """
+
         # Отримуємо дані з Telegram
         username, tg_full_name = await sender.get_username_and_fullname(
             user.telegram_id
@@ -47,7 +48,7 @@ def send_birthday_greetings():
         # Локальне повне ім'я, якщо є
         full_name = (
             f"{user.first_name} {user.last_name}".strip()
-            if user.first_name or user.last_name
+            if user.first_name and user.last_name
             else ""
         )
 
@@ -57,7 +58,8 @@ def send_birthday_greetings():
         # Повертаємо відформатоване ім'я
         return (
             f"{full_name} {formatted_username}".strip()
-            or f"{tg_full_name} {formatted_username}".strip()
+            if full_name
+            else f"{tg_full_name} {formatted_username}".strip()
         )
 
     async def main():
@@ -69,7 +71,7 @@ def send_birthday_greetings():
 
         async with ROBOT as bot:
             sender = TelegramService(bot)
-            for user in await users:
+            for user in users:
                 try:
                     # Отримуємо фото і відображуване ім'я користувача
                     photo = await sender.get_user_profile_photo(
@@ -88,6 +90,7 @@ def send_birthday_greetings():
                         chat_ids=[settings.DEFAULT_CHAT_ID],
                         message=message,
                         photo=photo,
+                        above_media=True,
                     )
                     logger.info(
                         "Привітання успішно відправлено для користувача %s",

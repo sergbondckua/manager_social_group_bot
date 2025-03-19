@@ -27,7 +27,7 @@ class Compliment(BaseModel):
     )
 
     def __str__(self):
-        return f"{self.id}: {self.text[3:50]}..."
+        return f"{self.id} - ID: {self.id}..."
 
     class Meta:
         verbose_name = "💌 Комплімент"
@@ -52,7 +52,7 @@ class Greeting(BaseModel):
     )
 
     def __str__(self):
-        return f"{self.event_type}: {self.text[3:50]}..."
+        return f"{self.event_type} - ID: {self.id}"
 
     class Meta:
         verbose_name = "🎈 Привітання"

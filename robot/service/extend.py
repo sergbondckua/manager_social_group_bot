@@ -11,17 +11,25 @@ logger = logging.getLogger("robot")
 
 
 class TelegramService:
-    """Клас для відправлення повідомлень в Telegram"""
+    """ Клас для відправлення повідомлень в Telegram. """
 
     def __init__(self, bot: Bot):
         self.bot = bot
 
     async def send_message(
-        self, message: str, chat_ids: List[int], photo: Optional[str] = None
+        self,
+        message: str,
+        chat_ids: List[int],
+        photo: Optional[str] = None,
+        above_media: bool = False,
     ) -> bool:
         """
         Відправляє повідомлення в зазначені чати
         Повертає статус відправлення (True/False)
+        :param message: повідомлення
+        :param chat_ids: список чатів
+        :param photo: фото повідомлення
+        :param above_media: відображати повідомлення над зображенням
         """
         if not chat_ids:
             return False
@@ -38,6 +46,7 @@ class TelegramService:
                         photo=photo,
                         caption=clean_tag_message(message)[:1024],
                         protect_content=True,
+                        show_caption_above_media=above_media,
                     )
                 else:
                     await self.bot.send_chat_action(
@@ -90,7 +99,7 @@ class TelegramService:
         try:
             user = await self.bot.get_chat(user_id)
             username = user.username or ""
-            return user.full_name, username
+            return username, user.full_name
         except TelegramBadRequest as e:
             logger.warning(
                 "Користувача %s не знайдено: %s",

@@ -26,21 +26,20 @@ class MessageScheduler:
     @sync_to_async
     def fetch_scheduled_messages(self) -> List[ScheduledMessage]:
         """Отримує список активних запланованих повідомлень, час яких настав або минув."""
-
-        messages = list(
-            ScheduledMessage.objects.filter(
-                scheduled_time__lte=self.now, is_active=True
-            )
+        messages = ScheduledMessage.objects.filter(
+            scheduled_time__lte=self.now, is_active=True
         )
-        if messages:
-            logger.info("Fetched %d messages.", len(messages))
-        return messages
+        count = messages.count()
+        if count > 0:
+            logger.info("Отримано %d повідомлень.", count)
+        return list(messages)
 
     @staticmethod
     def _create_keyboard(
         message: ScheduledMessage,
     ) -> Optional[InlineKeyboardMarkup]:
         """Створює клавіатуру з кнопкою, якщо є текст і URL кнопки."""
+
         if message.button_text and message.button_url:
             return InlineKeyboardMarkup(
                 inline_keyboard=[
@@ -55,6 +54,7 @@ class MessageScheduler:
 
     async def _send_single_message(self, message: ScheduledMessage) -> bool:
         """Відправляє одне повідомлення та повертає успішність операції."""
+
         try:
             keyboard = self._create_keyboard(message)
             if message.photo:
@@ -66,7 +66,6 @@ class MessageScheduler:
                     chat_id=message.chat_id,
                     photo=photo_file,
                     caption=clean_tag_message(message.text)[:1024],
-                    parse_mode="HTML",
                     reply_markup=keyboard,
                 )
             else:
@@ -80,13 +79,20 @@ class MessageScheduler:
                 )
             return True
         except Exception as e:
-            logger.error("Error sending message ID %s: %s", message.id, e)
+            logger.error(
+                "Помилка надсилання повідомлення ID %s (chat ID: %s, text: %s): %s",
+                message.id,
+                message.chat_id,
+                message.text,
+                e,
+            )
             return False
 
     async def send_messages(
         self, messages: List[ScheduledMessage]
     ) -> List[ScheduledMessage]:
         """Асинхронно надсилає повідомлення через Telegram-бота."""
+
         tasks = [self._send_single_message(msg) for msg in messages]
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
@@ -98,9 +104,9 @@ class MessageScheduler:
         ]
 
         if successful:
-            logger.info("Successfully sent %d messages.", len(successful))
+            logger.info("Успішно надіслано %d повідомлень.", len(successful))
         if failed:
-            logger.error("Failed to send %d messages.", len(failed))
+            logger.error("Не вдалося надіслати %d повідомлень.", len(failed))
 
         return successful
 
@@ -147,7 +153,7 @@ class MessageScheduler:
             messages, ["scheduled_time"], batch_size=500
         )
         logger.info(
-            "Updated %d messages with new scheduled_time.", len(messages)
+            "Оновлено %d повідомлень з новими scheduled_time.", len(messages)
         )
 
     @sync_to_async
@@ -161,19 +167,19 @@ class MessageScheduler:
         ScheduledMessage.objects.filter(
             id__in=[msg.id for msg in messages]
         ).update(is_active=False)
-        logger.info("Deactivated %d one-time messages.", len(messages))
+        logger.info("Деактивовані %d разових повідомлень.", len(messages))
 
     async def process_messages(self) -> None:
         """Основний метод для обробки повідомлень."""
-        logger.info("Starting message processing...")
+        logger.info("Початок обробки повідомлень...")
         self.now = timezone.now()
         messages = await self.fetch_scheduled_messages()
         if not messages:
-            logger.info("No messages to process.")
+            logger.info("Немає повідомлень для обробки.")
             return
 
         successful_messages = await self.send_messages(messages)
         if successful_messages:
             await self.update_periodic_messages(successful_messages)
 
-        logger.info("Message processing completed.")
+        logger.info("Кінець обробки повідомлень.")

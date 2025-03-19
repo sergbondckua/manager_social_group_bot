@@ -56,7 +56,7 @@ def send_weather_forecast():
             logger.warning("No data from API")
             return None
 
-        processor = WeatherProcessor(filter_precipitation=True)
+        processor = WeatherProcessor(filter_precipitation=False)
         clear_data = processor.filter_weather_data(raw_data)
 
         if not clear_data:

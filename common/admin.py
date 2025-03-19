@@ -53,7 +53,7 @@ class ComplimentAdmin(BaseAdmin):
 
 @admin.register(Greeting)
 class GreetingAdmin(BaseAdmin):
-    list_display = ("text", "created_at", "is_active")
+    list_display = ("html_text", "created_at", "is_active")
     search_fields = ("text", "event_type")
     list_editable = ("is_active",)
     list_filter = ("is_active",)
@@ -65,3 +65,8 @@ class GreetingAdmin(BaseAdmin):
             {"fields": ("event_type", "text", "is_active")},
         ),
     ) + BaseAdmin.fieldsets
+
+    def html_text(self, obj):
+        return mark_safe(obj.text)
+
+    html_text.short_description = "Текст привітання"
