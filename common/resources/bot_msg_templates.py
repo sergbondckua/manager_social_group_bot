@@ -1,4 +1,4 @@
-from aiogram.utils.markdown import text, hbold, hlink
+from aiogram.utils.markdown import text, hbold
 
 
 greeting_text = text(

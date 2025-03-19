@@ -15,12 +15,11 @@ from robot.service.extend import TelegramService
 logger = logging.getLogger("common")
 
 
-@shared_task
+@shared_task(expires=86399)
 def send_birthday_greetings():
     """Завдання Celery для надсилання вітання іменинникам."""
 
     today = timezone.localtime(timezone.now()).date()
-    greeting = clean_tag_message(get_random_greeting())
 
     @sync_to_async
     def fetch_users():
@@ -32,21 +31,18 @@ def send_birthday_greetings():
             )
         )
 
-    async def get_display_name(user: ClubUser, sender: TelegramService) -> str:
-        """
-        Повертає відформатоване ім'я користувача.
-
-        - Використовує локальні дані (`first_name`, `last_name`) або дані Telegram (`username`, `full_name`).
-        - Форматує ім'я з посиланням на Telegram-username, якщо він доступний.
-        """
+    async def format_user_display_name(
+        user: ClubUser, telegram_service: TelegramService
+    ) -> str:
+        """Форматує ім'я користувача для відображення."""
 
         # Отримуємо дані з Telegram
-        username, tg_full_name = await sender.get_username_and_fullname(
-            user.telegram_id
+        username, telegram_full_name = (
+            await telegram_service.get_username_and_fullname(user.telegram_id)
         )
 
-        # Локальне повне ім'я, якщо є
-        full_name = (
+        # Локальне повне ім'я користувача, якщо воно задане
+        local_full_name = (
             f"{user.first_name} {user.last_name}".strip()
             if user.first_name and user.last_name
             else ""
@@ -56,11 +52,9 @@ def send_birthday_greetings():
         formatted_username = f"(@{username})" if username else ""
 
         # Повертаємо відформатоване ім'я
-        return (
-            f"{full_name} {formatted_username}".strip()
-            if full_name
-            else f"{tg_full_name} {formatted_username}".strip()
-        )
+        if local_full_name:
+            return f"{local_full_name} {formatted_username}".strip()
+        return f"{telegram_full_name} {formatted_username}".strip()
 
     async def main():
         users = await fetch_users()
@@ -68,6 +62,8 @@ def send_birthday_greetings():
         if not users:
             logger.info("Сьогодні іменинники відсутні.")
             return
+
+        greeting = get_random_greeting()
 
         async with ROBOT as bot:
             sender = TelegramService(bot)
@@ -77,7 +73,7 @@ def send_birthday_greetings():
                     photo = await sender.get_user_profile_photo(
                         user.telegram_id
                     )
-                    name = await get_display_name(user, sender)
+                    name = await format_user_display_name(user, sender)
 
                     # Формуємо текст привітання
                     message = greeting_text.format(
@@ -88,7 +84,7 @@ def send_birthday_greetings():
                     # Відправляємо привітання
                     await sender.send_message(
                         chat_ids=[settings.DEFAULT_CHAT_ID],
-                        message=message,
+                        message=clean_tag_message(message),
                         photo=photo,
                         above_media=True,
                     )

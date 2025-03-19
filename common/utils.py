@@ -69,7 +69,7 @@ def get_random_compliment() -> str:
     compliments = Compliment.objects.all()
     if compliments.exists():
         return random.choice(compliments).text
-    return "Дякуємо, що ми разом! Ви чудові!"  # Значення за замовчуванням
+    return "Дякуємо, що ми разом! Ви чудові!"
 
 
 def get_random_greeting() -> str:
