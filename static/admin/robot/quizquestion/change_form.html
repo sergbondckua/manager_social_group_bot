@@ -1,0 +1,14 @@
+# Створіть templates/admin/robot/quizquestion/change_form.html
+{% extends "admin/change_form.html" %}
+
+{% block extrahead %}
+{{ block.super }}
+<style>
+    .custom-validation-error {
+        margin: 10px 0;
+        padding: 10px;
+        background: #fff6f6;
+        border: 1px solid #ffc8c8;
+    }
+</style>
+{% endblock %}
