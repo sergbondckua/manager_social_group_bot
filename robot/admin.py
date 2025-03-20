@@ -32,7 +32,7 @@ class QuizQuestionAdmin(BaseAdmin):
     search_fields = ("text",)
     list_editable = ("is_active",)
     list_filter = ("is_active",)
-    ordering = ("created_at",)
+    ordering = ("-is_active",)
     save_on_top = True
     save_as = True
     fieldsets = (

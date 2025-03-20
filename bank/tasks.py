@@ -8,7 +8,7 @@ from celery import shared_task
 from bank.models import MonoBankClient
 from bank.services.mono import MonobankService
 from robot.config import ROBOT
-from robot.service.extend import TelegramService
+from robot.services.extend import TelegramService
 
 logger = logging.getLogger("monobank")
 

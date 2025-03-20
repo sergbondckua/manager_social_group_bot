@@ -10,7 +10,7 @@ from common.resources.bot_msg_templates import greeting_text
 from common.utils import get_random_greeting, get_random_birthday_sticker, clean_tag_message
 from profiles.models import ClubUser
 from robot.config import ROBOT
-from robot.service.extend import TelegramService
+from robot.services.extend import TelegramService
 
 logger = logging.getLogger("common")
 
