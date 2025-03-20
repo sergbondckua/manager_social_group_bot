@@ -1,42 +1,50 @@
 from aiogram.utils.markdown import text, hbold, hlink
 
-
+# Спільна частина для повідомлень
 common_part_text = text(
     "💬 {comment}",
-    "💰 Сума: " + hbold("{amount}"),
-    "💵 Баланс: " + hbold("{balance}"),
+    f"💰 Сума: {hbold('{amount}')}",
+    f"💵 Баланс: {hbold('{balance}')}",
     "〰〰〰〰〰〰〰",
     sep="\n",
 )
+
+# Повідомлення про надходження
 income_text = text(
-    text("✅ Зараз відбулось надходження!\n"),
+    "✅ Зараз відбулось надходження!\n",
     "📅 {dt} 🕘 {time}",
     "👤 {description}",
     "{common_part}",
-    "🤑 Радуйтеся новим надходженням! 🎉",
+    "🤑 Радійте новим надходженням! 🎉",
     sep="\n",
 )
+
+# Повідомлення про витрати
 expense_text = text(
-    text("🔻 Щойно були витрачені кошти!\n"),
+    "🔻 Щойно були витрачені кошти!\n",
     "📅 {dt} 🕘 {time}",
     "🛍 Кому: {description}",
-    "🧾 " + hlink("{title}", "{url}"),
+    f"🧾 {hlink('{title}', '{url}')}",
     "{common_part}",
     "💸 Будьте уважні з витратами, але не забувайте жити на повну! 😉",
     sep="\n",
 )
+
+# Повідомлення про внесок
 payer_text = text(
-    text("✅ Ваш внесок отримано!\n"),
+    "✅ Ваш внесок отримано!\n",
     "📅 {dt} 🕘 {time}",
     "👤 {description}",
-    "🧾 " + hlink("{title}", "{url}") + "\n",
-    "💰 Сума: {amount}",
+    f"🧾 {hlink('{title}', '{url}')}",
+    f"💰 Сума: {hbold('{amount}')}",
     "〰〰〰〰〰〰〰",
     "🏃‍♂️ Дякуємо, що біжите разом із нами! 💖",
     sep="\n",
 )
+
+# Комплімент
 compliment_text = text(
-    "📸 Шаленію від тебе, " + hbold("{name}") + " і вдячна тобі:",
+    f"📸 Шаленію від тебе, {hbold('{name}')} і вдячна тобі:",
     "🟡  🟢  🔴  🟣  🔵",
     "➖ {compliment}",
     sep="\n\n",
