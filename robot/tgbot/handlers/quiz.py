@@ -66,10 +66,9 @@ async def cmd_quiz(message: Message):
             await message.bot.send_chat_action(
                 chat_id=DEFAULT_CHAT_ID, action="upload_photo"
             )
-            photo_file = FSInputFile(image.path)
             await message.bot.send_photo(
                 chat_id=DEFAULT_CHAT_ID,
-                photo=photo_file,
+                photo=FSInputFile(image.path),
                 caption=f"{question_text}\n#quiz | #quiz{question.id}",
                 protect_content=True,
             )
