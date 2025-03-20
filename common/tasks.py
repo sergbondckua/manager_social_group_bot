@@ -7,7 +7,7 @@ from django.conf import settings
 from django.utils import timezone
 
 from common.resources.bot_msg_templates import greeting_text
-from common.utils import get_random_greeting, clean_tag_message
+from common.utils import get_random_greeting, clean_tag_message, get_random_birthday_sticker
 from profiles.models import ClubUser
 from robot.config import ROBOT
 from robot.service.extend import TelegramService
@@ -84,9 +84,14 @@ def send_birthday_greetings():
                     # Відправляємо привітання
                     await sender.send_message(
                         chat_ids=[settings.DEFAULT_CHAT_ID],
-                        message=clean_tag_message(message),
+                        message=message,
                         photo=photo,
                         above_media=True,
+                    )
+                    # Відправляємо наліпку до привітання
+                    await bot.send_sticker(
+                        chat_id=settings.DEFAULT_CHAT_ID,
+                        sticker=get_random_birthday_sticker(),
                     )
                     logger.info(
                         "Привітання успішно відправлено для користувача %s",

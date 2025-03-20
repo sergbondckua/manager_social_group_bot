@@ -1,4 +1,3 @@
-import random
 import uuid
 
 import bleach
@@ -57,34 +56,38 @@ def clean_tag_message(
 
 def generate_upload_filename(instance, filename: str) -> str:
     """Функція для зміни ім'я завантаженого файлу"""
-
     file_extension = filename.split(".")[-1]
     new_filename = f"{uuid.uuid4().hex}.{file_extension}"
     return new_filename
 
 
-def get_random_compliment() -> str:
-    """Функція для отримання випадкового комплементу з бази даних"""
+from django.db.models import Count
+import random
 
-    compliments = Compliment.objects.all()
-    if compliments.exists():
-        return random.choice(compliments).text
+
+def get_random_compliment() -> str:
+    """Функція для отримання випадкового компліменту з бази даних."""
+    count = Compliment.objects.aggregate(count=Count("id"))["count"]
+
+    if count and count > 0:
+        random_index = random.randint(0, count - 1)
+        compliment = Compliment.objects.all()[random_index]
+        return compliment.text
     return "Дякуємо, що ми разом! Ви чудові!"
 
 
 def get_random_greeting() -> str:
     """Функція для отримання випадкового привітання з бази даних."""
-
-    # Отримуємо всі привітання з бази даних
-    greetings = Greeting.objects.filter(
+    count = Greeting.objects.filter(
         event_type=GreetingTypeChoices.BIRTHDAY, is_active=True
-    )
+    ).aggregate(count=Count("id"))["count"]
 
-    # Якщо є привітання, то повертаємо випадкове
-    if greetings.exists():
-        return random.choice(greetings).text
-
-    # Якщо немає привітань, то повертаємо за замовчуванням
+    if count and count > 0:
+        random_index = random.randint(0, count - 1)
+        greeting = Greeting.objects.filter(
+            event_type=GreetingTypeChoices.BIRTHDAY, is_active=True
+        )[random_index]
+        return greeting.text
     return "Зі святом! Нехай цей день буде сповнений тепла, посмішок і незабутніх емоцій!"
 
 
@@ -98,3 +101,24 @@ def get_personalized_compliment_message() -> str:
 
     # Формуємо повідомлення з компліментом
     return compliment_text.format(name="{name}", compliment=compliment)
+
+
+def get_random_birthday_sticker() -> str:
+    """Функція для отримання випадкової наліпки телеграм з тематики 'День народження'."""
+    birthday_stickers = [
+        "CAACAgIAAxkBAAJa3Gfb3zHCiviF9uEWZhbUJ8qD1PxBAAIBDAACtumYS0paKO5WkCg-NgQ",
+        "CAACAgIAAxkBAAJa3Wfb33NFSU08r1cIDTVM7oI2wHSYAALhBQACP5XMChpOPHjFOhuHNgQ",
+        "CAACAgIAAxkBAAJa3mfb39EgWcoS9jroyFRBJd1FCqenAAJeAwACusCVBVx5KsFa_kfsNgQ",
+        "CAACAgIAAxkBAAJa32fb4GFej69pBqekS9LCJqjrOooWAAKnAAM7YCQU7Vl-HjapWug2BA",
+        "CAACAgIAAxkBAAJa4Gfb4LDltretLnUVAAEhb6OIB5qkmAACHwADlp-MDldYXcQNhO6MNgQ",
+        "CAACAgIAAxkBAAJa4Wfb4NXGE_-ahbVTj8sEmmY72GfmAAInAAP3AsgPS9klerRucBs2BA",
+        "CAACAgIAAxkBAAJa4mfb4R_p5MuYFFrk5if8B7tlRqvUAAJNAANZu_wlKIGgbd0bgvc2BA",
+        "CAACAgIAAxkBAAJa42fb4ZUzGTQNrIs4OhLHyllgn2PCAAIoAANZu_wl-CwR66M5Tks2BA",
+        "CAACAgIAAxkBAAJa5Gfb4oqT71u_mNGXMcXALcwpHb9KAAKlAAP3AsgP7F9kIPA4jks2BA",
+        "CAACAgIAAxkBAAJa5Wfb4tWerSMl919G9k5WHgJvyMs4AAIrAAN4qOYPJV9pEP5R6jo2BA",
+    ]
+
+    if not birthday_stickers:
+        raise ValueError("Список наліпок порожній!")
+
+    return random.choice(birthday_stickers)
