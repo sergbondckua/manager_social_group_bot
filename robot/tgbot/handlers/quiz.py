@@ -6,9 +6,11 @@ from asgiref.sync import sync_to_async
 
 from robot.models import QuizQuestion
 from common.utils import clean_tag_message
-from core.settings import DEFAULT_CHAT_ID
+from core.settings import DEFAULT_CHAT_ID, ADMINS_BOT
+from robot.tgbot.filters.admin import AdminFilter
 
 quiz_router = Router()
+quiz_router.message.filter(AdminFilter(ADMINS_BOT))
 
 
 # Допоміжна функція для отримання запитання

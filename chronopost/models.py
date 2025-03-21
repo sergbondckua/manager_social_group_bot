@@ -4,6 +4,7 @@ from django.conf import settings
 from django.db import models
 from django.utils import timezone
 
+from chronopost.services.url_validator import CustomURLValidator
 from common.models import BaseModel
 from chronopost.enums import PeriodicityChoices
 
@@ -53,11 +54,13 @@ class ScheduledMessage(BaseModel):
         verbose_name="Текст кнопки",
         help_text="Текст, який відображатиметься на кнопці",
     )
-    button_url = models.URLField(
+    button_url = models.CharField(
+        max_length=300,
         blank=True,
         null=True,
         verbose_name="Посилання для кнопки",
         help_text="Посилання, на яке буде вести кнопка",
+        validators=[CustomURLValidator()],
     )
     photo = models.ImageField(
         upload_to=get_upload_path,
