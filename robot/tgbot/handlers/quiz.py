@@ -2,7 +2,6 @@ import random
 from aiogram import Router
 from aiogram.types import Message, FSInputFile
 from aiogram.filters import Command
-from asgiref.sync import sync_to_async
 
 from robot.models import QuizQuestion
 from common.utils import clean_tag_message
@@ -13,29 +12,17 @@ quiz_router = Router()
 quiz_router.message.filter(AdminFilter(ADMINS_BOT))
 
 
-# Допоміжна функція для отримання запитання
-@sync_to_async
-def get_active_question():
-    return QuizQuestion.objects.filter(is_active=True).first()
-
-
-# Допоміжна функція для отримання відповідей
-@sync_to_async
-def get_answers(question):
-    return list(question.answers.all())
-
-
 # Обробник команди "/quiz"
 @quiz_router.message(Command("quiz"))
 async def cmd_quiz(message: Message):
-    question = await get_active_question()
+    question = await QuizQuestion.objects.filter(is_active=True).afirst()
 
     # Перевірка наявності активного запитання
     if not question:
         await message.answer("Наразі немає активних запитань.")
         return
 
-    answers = await get_answers(question)
+    answers = [answer async for answer in question.answers.all()]
 
     # Перевірка кількості відповідей
     if len(answers) < 2:

@@ -3,7 +3,7 @@ from django.db import IntegrityError
 
 from common.admin import BaseAdmin
 from robot.forms import QuizAnswerFormSet
-from robot.models import QuizQuestion, QuizAnswer
+from robot.models import QuizQuestion, QuizAnswer, DeepLink
 
 
 class QuizAnswerInline(admin.TabularInline):
@@ -61,3 +61,29 @@ class QuizQuestionAdmin(BaseAdmin):
     class Media:
         js = ("adminpanel/js/quiz_admin.js",)
         css = {"all": ("adminpanel/css/quiz_admin.css",)}
+
+
+@admin.register(DeepLink)
+class DeepLinkAdmin(BaseAdmin):
+    readonly_fields = ("id", "created_at", "updated_at")
+    list_display = ("command", "description", "created_at", "is_active")
+    search_fields = ("command", "description")
+    list_editable = ("is_active",)
+    list_filter = ("is_active",)
+    ordering = ("-created_at",)
+    save_on_top = True
+    save_as = True
+    fieldsets = (
+        (
+            "Основні дані",
+            {
+                "fields": (
+                    "command",
+                    "description",
+                    "text",
+                    "image",
+                    "is_active",
+                )
+            },
+        ),
+    ) + BaseAdmin.fieldsets

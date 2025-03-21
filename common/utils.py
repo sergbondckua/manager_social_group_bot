@@ -43,6 +43,7 @@ def clean_tag_message(
             "\u2013": "-",
             "&quot;": '"',
             "&rsquo;": "'",
+            "&bull;": "*",
         }
 
     # Очищення HTML-тегів

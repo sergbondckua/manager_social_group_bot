@@ -3,6 +3,7 @@ import uuid
 from django.db import models
 
 from common.models import BaseModel
+from robot.services.validator import validate_no_spaces_and_alnum
 
 
 class QuizQuestion(BaseModel):
@@ -80,3 +81,46 @@ class QuizAnswer(BaseModel):
         ]
         verbose_name = "Відповідь на запитання квізу"
         verbose_name_plural = "Відповіді на запитання квізу"
+
+
+class DeepLink(BaseModel):
+    """Модель посилання"""
+
+    def get_upload_path(self, filename):
+        # Генерируем уникальное имя файла и возвращаем путь к нему
+
+        file_extension = filename.split(".")[-1]
+        new_filename = f"{uuid.uuid4().hex}.{file_extension}"
+        return f"deep_links/images/{self.id}/{new_filename}"
+
+    command = models.CharField(
+        verbose_name="Команда",
+        max_length=10,
+        help_text="Максимум 10 символів",
+        validators=[validate_no_spaces_and_alnum],
+    )
+    description = models.CharField(
+        verbose_name="Опис",
+        max_length=100,
+        help_text="Опис команди. Цільове призначення.",
+    )
+    text = models.TextField(
+        verbose_name="Текст",
+        help_text="Текст повідомлення. "
+        + "Змінні: {user_id}, {full_name}, {username}, {today},"
+        + " - які можна використовувати в тексті.",
+    )
+    image = models.ImageField(
+        verbose_name="Зображення",
+        blank=True,
+        null=True,
+        upload_to=get_upload_path,
+    )
+    is_active = models.BooleanField(verbose_name="Активне", default=True)
+
+    def __str__(self):
+        return f"ID: {self.id} - {self.command}"
+
+    class Meta:
+        verbose_name = "🔗 Посилання"
+        verbose_name_plural = "🔗 Посилання"
