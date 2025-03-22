@@ -8,12 +8,18 @@ from common.utils import clean_tag_message
 from core.settings import DEFAULT_CHAT_ID, ADMINS_BOT
 from robot.tgbot.filters.admin import AdminFilter
 
-quiz_router = Router()
-quiz_router.message.filter(AdminFilter(ADMINS_BOT))
+admin_router = Router()
+admin_router.message.filter(AdminFilter())
+
+
+# Обробник команди "/start"
+@admin_router.message(Command("start"))
+async def cmd_start(message: Message):
+    await message.reply(f"Вітаю адміне, {message.from_user.first_name}!")
 
 
 # Обробник команди "/quiz"
-@quiz_router.message(Command("quiz"))
+@admin_router.message(Command("quiz"))
 async def cmd_quiz(message: Message):
     question = await QuizQuestion.objects.filter(is_active=True).afirst()
 

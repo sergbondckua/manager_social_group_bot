@@ -1,10 +1,12 @@
-from .deeplink import deep_link_router
+from .admin import admin_router
 from .echo import echo_router
-from .quiz import quiz_router
+from .member import member_router
+from .user import user_router
 
 routers_list = [
-    quiz_router,
-    deep_link_router,
+    admin_router,
+    member_router,
+    user_router,
     echo_router,  # echo_router must be last
 ]
 
