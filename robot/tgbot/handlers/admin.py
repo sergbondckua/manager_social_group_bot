@@ -5,7 +5,7 @@ from aiogram.filters import Command
 
 from robot.models import QuizQuestion
 from common.utils import clean_tag_message
-from core.settings import DEFAULT_CHAT_ID, ADMINS_BOT
+from core.settings import DEFAULT_CHAT_ID
 from robot.tgbot.filters.admin import AdminFilter
 
 admin_router = Router()
