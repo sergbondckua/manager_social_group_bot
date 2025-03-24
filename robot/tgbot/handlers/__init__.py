@@ -5,10 +5,10 @@ from .member.start import member_router
 from .user import user_router
 
 routers_list = [
-    admin_router,
     member_router,
     profile_router,
     user_router,
+    admin_router,
     echo_router,  # echo_router must be last
 ]
 

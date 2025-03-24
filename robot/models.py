@@ -106,9 +106,11 @@ class DeepLink(BaseModel):
     )
     text = models.TextField(
         verbose_name="Текст",
-        help_text="Текст повідомлення. "
-        + "Змінні: {user_id}, {full_name}, {username}, {today},"
-        + " - які можна використовувати в тексті.",
+        help_text=("Текст повідомлення. "
+                   "Ці змінні можуть бути використані в тексті: "
+                   "{user_id}, {full_name}, {username}, {today}, "
+                   "{current_month}, {first_name}, {last_name}."
+                   ),
     )
     image = models.ImageField(
         verbose_name="Зображення",
