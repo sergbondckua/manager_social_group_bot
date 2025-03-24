@@ -1,60 +1,17 @@
 import logging
-from datetime import datetime
 from typing import List, Dict
 
 from aiogram import types, Router
 from aiogram.fsm.context import FSMContext
-from django.utils import timezone
 
 from profiles.models import ClubUser
-from robot.tgbot.keyboards.member import contact_keyboard, cancel_keyboard
+from robot.tgbot.handlers.member.profile_field_configs import field_configs
 from robot.tgbot.services.member_service import update_user_field
 from robot.tgbot.states.member import ProfileStates
 import robot.tgbot.text.member_template as mt
 
 logger = logging.getLogger("robot")
 profile_router = Router()
-
-# ================= КОНФІГУРАЦІЯ ПОЛІВ =================
-# Кожне поле містить усі необхідні налаштування для обробки
-FIELD_CONFIGS = [
-    {
-        "name": "phone_number",  # Назва поля в моделі ClubUser
-        "request_text": mt.msg_phone,  # Текст запиту для користувача
-        "keyboard": contact_keyboard,  # Функція для створення клавіатури
-        "validation": lambda msg: (
-            msg.contact is not None and msg.contact.user_id == msg.from_user.id
-        ),  # Валідація
-        "processor": lambda msg: f"+{msg.contact.phone_number.lstrip('+')}",  # Обробка значення
-        "error_text": "Хибні дані. Будь ласка, скористайтесь кнопкою знизу 👇",  # Текст помилки
-    },
-    {
-        "name": "data_of_birth",
-        "request_text": mt.msg_dob,
-        "keyboard": cancel_keyboard,
-        "validation": lambda msg: validate_dob(
-            msg.text
-        ),  # Використання зовнішньої функції валідації
-        "processor": lambda msg: datetime.strptime(
-            msg.text, "%d.%m.%Y"
-        ).date(),
-        "error_text": "❗ Невірний формат або дата у майбутньому. Використовуйте DD.MM.YYYY",
-    },
-]
-
-
-def validate_dob(text: str) -> bool:
-    """Валідація дати народження.
-    Перевіряє:
-    - Коректність формату DD.MM.YYYY
-    - Дата не може бути у майбутньому
-    """
-    try:
-        dob = datetime.strptime(text, "%d.%m.%Y").date()
-        return dob < timezone.now().date()
-    except ValueError:
-        return False
-
 
 # ================= БАЗОВІ ФУНКЦІЇ =================
 
@@ -79,7 +36,7 @@ async def get_required_fields(user: ClubUser) -> List[Dict]:
     """
     return [
         config
-        for config in FIELD_CONFIGS
+        for config in field_configs
         if not getattr(user, config["name"])  # Перевіряємо, чи поле порожнє
     ]
 
@@ -119,7 +76,7 @@ async def process_next_field(message: types.Message, state: FSMContext):
     if not required_fields:
         # Усі поля заповнені - завершуємо процес
         await message.answer(
-            "✅ Всі дані успішно оновлені!",
+            "✅ Всі дані успішно оновлені! Дякую!",
             reply_markup=types.ReplyKeyboardRemove(),
         )
         await state.clear()
