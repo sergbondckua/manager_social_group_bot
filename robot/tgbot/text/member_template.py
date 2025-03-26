@@ -36,3 +36,9 @@ msg_last_name: str = text(
     " відповідно до паспортних даних:\n",
     f"{EXAMPLE_PREFIX} Кросранівська",
 )
+msg_press_pay_button: str = text(
+    "🎽 {full_name}",
+    "🆔 {user_id}",
+    "🔘👈 Натиснув(ла) кнопку оплати внеску",
+    sep="\n",
+)
