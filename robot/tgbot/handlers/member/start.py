@@ -46,5 +46,5 @@ async def handle_start(message: types.Message, command: types.BotCommand):
         )
     else:
         await message.answer(
-            f"Вітаю з поверненням, {message.from_user.first_name}!"
+            f"Вітаю, {message.from_user.first_name}!"
         )
