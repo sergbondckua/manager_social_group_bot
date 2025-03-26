@@ -1,45 +1,15 @@
 import logging
-from typing import List, Dict
 
 from aiogram import types, Router
 from aiogram.fsm.context import FSMContext
 
-from profiles.models import ClubUser
 from robot.tgbot.handlers.member.profile_field_configs import field_configs
-from robot.tgbot.services.member_service import update_user_field
+from robot.tgbot.services.member_service import update_user_field, get_user_or_error, get_required_fields
 from robot.tgbot.states.member import ProfileStates
 import robot.tgbot.text.member_template as mt
 
 logger = logging.getLogger("robot")
 profile_router = Router()
-
-# ================= БАЗОВІ ФУНКЦІЇ =================
-
-
-async def get_user_or_error(
-    user_id: int, message: types.Message
-) -> ClubUser | None:
-    """Отримання користувача з бази даних з обробкою помилок"""
-    try:
-        return await ClubUser.objects.aget(telegram_id=user_id)
-    except ClubUser.DoesNotExist:
-        logger.error(f"Користувача {user_id} не знайдено")
-        await message.answer(
-            "❌ Помилка профілю. Зверніться до адміністратора."
-        )
-        return None
-
-
-async def get_required_fields(user: ClubUser) -> List[Dict]:
-    """Фільтрація полів, які потребують заповнення.
-    Використовує FIELD_CONFIGS для визначення обов'язкових полів.
-    """
-    return [
-        config
-        for config in field_configs
-        if not getattr(user, config["name"])  # Перевіряємо, чи поле порожнє
-    ]
-
 
 # ================= ОБРОБНИКИ ПОВІДОМЛЕНЬ =================
 
@@ -53,7 +23,7 @@ async def handle_yes(message: types.Message, state: FSMContext):
         return
 
     # Отримуємо список полів, які потрібно заповнити
-    required_fields = await get_required_fields(user)
+    required_fields = await get_required_fields(user, field_configs)
 
     if not required_fields:
         await message.answer(

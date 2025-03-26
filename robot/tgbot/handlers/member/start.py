@@ -4,11 +4,10 @@ from aiogram.types import FSInputFile
 
 from common.utils import clean_tag_message
 from robot.models import DeepLink
+from robot.tgbot.handlers.member.profile_field_configs import field_configs
 from robot.tgbot.keyboards.member import yes_no_keyboard
 from robot.tgbot.services.member_service import (
-    get_or_create_user,
-    is_profile_complete,
-    update_user_field,
+    get_or_create_user, update_user_field, is_not_profile_complete,
 )
 from robot.tgbot.text.member_template import msg_handle_start
 
@@ -83,7 +82,7 @@ async def handle_start(message: types.Message, command: types.BotCommand):
                 )
 
         # Відповідь користувачу залежно від того, якщо в профілі вже заповнені дані або ні
-        if not await is_profile_complete(user):
+        if await is_not_profile_complete(user, field_configs):
             await message.answer(
                 msg_handle_start.format(name=message.from_user.first_name),
                 reply_markup=yes_no_keyboard(),
