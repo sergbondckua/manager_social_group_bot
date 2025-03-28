@@ -13,7 +13,7 @@ class ScheduledMessage(BaseModel):
     """Модель для збереження запланованих повідомлень."""
 
     def get_upload_path(self, filename):
-        # Генерируем уникальное имя файла и возвращаем путь к нему
+        """ Генеруємо унікальне ім'я файлу і повертаємо шлях до нього """
 
         file_extension = filename.split(".")[-1]
         new_filename = f"{uuid.uuid4().hex}.{file_extension}"

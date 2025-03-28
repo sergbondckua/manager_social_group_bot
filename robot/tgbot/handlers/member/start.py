@@ -23,16 +23,18 @@ async def handle_start(message: types.Message, command: types.BotCommand):
     # Отримуємо аргумент deep link з команди
     deep_link_param = command.args
     # Отримуємо фото користувача
-    photo_id = await fetch_user_photo(message)
+    photo = await fetch_user_photo(message)
     # Дані користувача
-    user_data = prepare_user_data(message, photo_id)
+    user_data = prepare_user_data(message)
     # Отримуємо / створюємо користувача
-    user, created = await get_or_create_user(message.from_user.id, user_data)
+    user, created = await get_or_create_user(
+        message.from_user.id, user_data, photo
+    )
 
     if not created:
         # Оновлюємо інформацію про користувача, якщо він вже існує
         for field, value in user_data.items():
-            await update_user_field(user, field, value)
+            await update_user_field(user, field, value, photo)
 
     # Якщо deep link параметр вказаний
     if deep_link_param:
@@ -45,6 +47,4 @@ async def handle_start(message: types.Message, command: types.BotCommand):
             reply_markup=yes_no_keyboard(),
         )
     else:
-        await message.answer(
-            f"Вітаю, {message.from_user.first_name}!"
-        )
+        await message.answer(f"Вітаю, {message.from_user.first_name}!")

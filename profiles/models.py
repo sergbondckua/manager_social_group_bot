@@ -1,3 +1,5 @@
+import uuid
+
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.core.validators import RegexValidator
@@ -6,6 +8,10 @@ from django.contrib.auth.models import AbstractUser
 
 class TelegramProfileMixin(models.Model):
     """Міксін для зберігання Telegram-даних"""
+
+    def get_upload_path(self, filename):
+        """ Шлях для завантаження фото """
+        return f"profiles/{abs(self.telegram_id)}/photo/{filename}"
 
     telegram_id = models.BigIntegerField(
         verbose_name="Telegram ID",
@@ -33,14 +39,15 @@ class TelegramProfileMixin(models.Model):
         blank=True,
         help_text="Прізвище користувача в Telegram",
     )
-    telegram_photo_id = models.CharField(
-        verbose_name="Фото ID в Telegram",
-        max_length=150,
+    telegram_photo = models.ImageField(
+        verbose_name="Фото в Telegram",
         null=True,
         blank=True,
+        upload_to=get_upload_path,
         help_text="Фото користувача в Telegram",
     )
     telegram_language_code = models.CharField(
+        verbose_name="Мова в Telegram",
         max_length=10,
         null=True,
         blank=True,
@@ -96,6 +103,5 @@ class ClubUser(AbstractUser, TelegramProfileMixin):
         ).strip()
 
     class Meta:
-        ordering = ("date_joined",)
         verbose_name = "Користувача"
         verbose_name_plural = "Користувачі"

@@ -1,8 +1,11 @@
+import os
 import logging
-from typing import Any, List, Dict
+from typing import Any, List, Dict, Union
 
 from aiogram import types
 from aiogram.types import FSInputFile
+from asgiref.sync import sync_to_async
+from django.core.files.base import ContentFile
 
 from common.utils import clean_tag_message
 from core.settings import ADMINS_BOT
@@ -14,17 +17,27 @@ logger = logging.getLogger("robot")
 
 
 async def get_or_create_user(
-    telegram_id: int, defaults: dict
+    telegram_id: int, defaults: dict, photo_file: ContentFile = None
 ) -> tuple[ClubUser, bool]:
     """Повертає користувача з Telegram ID або створює нового."""
-    return await ClubUser.objects.aget_or_create(
+
+    user, created = await ClubUser.objects.aget_or_create(
         telegram_id=telegram_id, defaults=defaults
     )
+
+    if photo_file:
+        # Асинхронно викликаємо синхронний метод .save() для ImageField
+        await sync_to_async(user.telegram_photo.save)(
+            photo_file.name,  # Ім'я файлу
+            photo_file,  # Об'єкт ContentFile
+            save=True,  # Зберегти модель після оновлення фото
+        )
+    return user, created
 
 
 async def get_user_or_error(
     user_id: int, message: types.Message
-) -> ClubUser | None:
+) -> Union[ClubUser, None]:
     """Отримання користувача з бази даних з обробкою помилок"""
     try:
         return await ClubUser.objects.aget(telegram_id=user_id)
@@ -39,9 +52,7 @@ async def get_user_or_error(
 async def get_required_fields(
     user: ClubUser, field_configs: List[Dict]
 ) -> List[Dict]:
-    """Фільтрація полів, які потребують заповнення.
-    Використовує FIELD_CONFIGS для визначення обов'язкових полів.
-    """
+    """Фільтрація полів, які потребують заповнення. Повертає список полів."""
     return [
         config
         for config in field_configs
@@ -49,10 +60,18 @@ async def get_required_fields(
     ]
 
 
-async def update_user_field(user: ClubUser, field: str, value: Any):
+async def update_user_field(
+    user: ClubUser, field: str, value: Any, photo_file: ContentFile = None
+):
     """Оновлює поля даних користувача."""
     setattr(user, field, value)
     await user.asave()
+
+    if photo_file:
+        # Асинхронно викликаємо синхронний метод .save() для ImageField
+        await sync_to_async(user.telegram_photo.save)(
+            photo_file.name, photo_file, save=True
+        )
 
 
 async def is_not_profile_complete(
@@ -65,24 +84,44 @@ async def is_not_profile_complete(
     return any(required_fields)
 
 
-async def fetch_user_photo(message: types.Message) -> str | None:
-    """Отримує ID фото профілю користувача."""
+async def fetch_user_photo(message: types.Message) -> Union[ContentFile, None]:
+    """Завантажує фото профілю користувача та повертає, як Django ContentFile."""
+
     try:
+        # Отримуємо фото профілю з Telegram
         photos = await message.bot.get_user_profile_photos(
             message.from_user.id
         )
         if photos.total_count > 0 and photos.photos[0]:
-            return photos.photos[0][-1].file_id
+            # Беремо найбільший доступний розмір фото
+            largest_photo = photos.photos[0][-1]
+            file_id = largest_photo.file_id
+
+            # Отримуємо інформацію про файл
+            telegram_file = await message.bot.get_file(file_id)
+            file_path = telegram_file.file_path
+
+            # Завантажуємо файл як bytes
+            file_bytes = await message.bot.download_file(file_path)
+            file_bytes.seek(0)  # Важливо для коректного читання
+
+            # Визначаємо розширення файлу
+            _, ext = os.path.splitext(file_path)
+            ext = ext or ".jpg"  # Резервне розширення
+
+            # Створюємо ContentFile з байтів
+            return ContentFile(file_bytes.read(), name=f"{file_id}{ext}")
+
     except Exception as e:
         logger.warning(
-            "Не вдалося отримати фото користувача %s: %s",
+            "Помилка завантаження фото для користувача %s: %s",
             message.from_user.id,
             e,
         )
     return None
 
 
-def prepare_user_data(message: types.Message, photo_id: str | None) -> dict:
+def prepare_user_data(message: types.Message) -> dict:
     """Формує словник з даними користувача."""
     return {
         "username": message.from_user.username,
@@ -90,7 +129,6 @@ def prepare_user_data(message: types.Message, photo_id: str | None) -> dict:
         "telegram_first_name": message.from_user.first_name,
         "telegram_last_name": message.from_user.last_name,
         "telegram_username": message.from_user.username,
-        "telegram_photo_id": photo_id,
         "telegram_language_code": message.from_user.language_code,
     }
 
@@ -131,13 +169,17 @@ async def process_deep_link(
 
         # Сповіщення адміністраторам що користувач натиснув посилання
         for admin in ADMINS_BOT:
-            await message.bot.send_message(
-                chat_id=admin,
-                text=msg_press_pay_button.format(
-                    full_name=message.from_user.full_name,
-                    user_id=message.from_user.id,
-                ),
-            ) if message.from_user.id not in ADMINS_BOT else None
+            (
+                await message.bot.send_message(
+                    chat_id=admin,
+                    text=msg_press_pay_button.format(
+                        full_name=message.from_user.full_name,
+                        user_id=message.from_user.id,
+                    ),
+                )
+                if message.from_user.id not in ADMINS_BOT
+                else None
+            )
 
     except DeepLink.DoesNotExist:
         await message.answer("Deep link не знайдено або він недійсний.")
