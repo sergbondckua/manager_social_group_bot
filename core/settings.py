@@ -170,7 +170,7 @@ MONOBANK_WEBHOOK_PATH = env.str("MONOBANK_WEBHOOK_PATH")
 REDIS_HOST = "0.0.0.0"
 REDIS_PORT = "6379"
 
-# Celery connection
+# Redis connection
 REDIS_URL_TEMPLATE = "redis://{host}:{port}/{db}"
 REDIS_HOST = REDIS_HOST if DEBUG else "django_redis"
 REDIS_PORT = REDIS_PORT if DEBUG else "6379"
@@ -194,6 +194,12 @@ CELERY_BROKER_URL = REDIS_URL_TEMPLATE.format(
 CELERY_RESULT_BACKEND = REDIS_URL_TEMPLATE.format(
     host=REDIS_HOST, port=REDIS_PORT, db=1
 )
+
+# Robot redis settings
+BOT_STORAGE_URL = REDIS_URL_TEMPLATE.format(
+    host=REDIS_HOST, port=REDIS_PORT, db=0
+)
+
 # Celery settings
 CELERY_BROKER_TRANSPORT_OPTIONS = {"visibility_timeout": 3600}
 CELERY_ACCEPT_CONTENT = ["application/json"]

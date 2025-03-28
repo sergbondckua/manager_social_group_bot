@@ -15,18 +15,17 @@ class ProfileAdmin(UserAdmin):
     def full_name(self, obj):
         return f"{obj.first_name} {obj.last_name}".strip()
 
-    # Список відображуваних полів у таблиці
     list_display = (
         "full_name",
         "username",
         "telegram_id",
         "phone_number",
+        "data_of_birth",
         "get_tg_photo",
-        "is_staff",
         "is_active",
     )
-    list_display_links = ("username", "full_name")  # Поля, що є посиланнями
-    list_editable = ("is_active",)  # Поля, які можна редагувати прямо у списку
+    list_display_links = ("username", "full_name")
+    list_editable = ("is_active",)
     ordering = ("-date_joined",)
     readonly_fields = (
         "telegram_username",
@@ -37,20 +36,19 @@ class ProfileAdmin(UserAdmin):
         "telegram_language_code",
         "last_login",
         "date_joined",
-    )  # Поля, які не можна редагувати
+    )
     search_fields = (
         "username",
         "email",
         "phone_number",
         "telegram_id",
-    )  # Поля для пошуку
+    )
     list_filter = (
         "is_staff",
         "is_superuser",
         "is_active",
-    )  # Фільтри для списку
+    )
 
-    # Групування полів у формі редагування
     fieldsets = (
         (None, {"fields": ("username", "password")}),
         (

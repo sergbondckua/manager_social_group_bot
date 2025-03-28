@@ -157,7 +157,7 @@ async def process_deep_link(
             current_month=message.date.strftime("%B-%Y").upper(),
         )
 
-        # Відправка фото або тексту
+        # Надсилання фото або тексту
         if deep_link_instance.image:
             await message.answer_photo(
                 photo=FSInputFile(deep_link_instance.image.path),
