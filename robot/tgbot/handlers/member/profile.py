@@ -3,8 +3,17 @@ import logging
 from aiogram import types, Router
 from aiogram.fsm.context import FSMContext
 
-from robot.tgbot.handlers.member.profile_field_configs import field_configs
-from robot.tgbot.services.member_service import update_user_field, get_user_or_error, get_required_fields
+from robot.tgbot.handlers.member.profile_field_configs import (
+    field_configs,
+    keyboard_factories,
+    validation_functions,
+    processor_functions,
+)
+from robot.tgbot.services.member_service import (
+    update_user_field,
+    get_user_or_error,
+    get_required_fields,
+)
 from robot.tgbot.states.member import ProfileStates
 import robot.tgbot.text.member_template as mt
 
@@ -54,11 +63,17 @@ async def process_next_field(message: types.Message, state: FSMContext):
 
     # Беремо перше поле зі списку та формуємо запит
     current_field = required_fields[0]
+
+    # Отримуємо реальну функцію для клавіатури
+    keyboard_func = keyboard_factories.get(current_field["keyboard"])
+    if not keyboard_func:
+        logger.error("Клавіатура не знайдена: %s", current_field["keyboard"])
+        await handle_cancel(message, state)
+        return
+
     await message.answer(
         current_field["request_text"],
-        reply_markup=current_field[
-            "keyboard"
-        ](),  # Викликаємо функцію створення клавіатури
+        reply_markup=keyboard_func(),  # Викликаємо функцію створення клавіатури
     )
     await state.set_state(ProfileStates.waiting_field_input)
 
@@ -82,16 +97,25 @@ async def process_field_input(message: types.Message, state: FSMContext):
     current_field = required_fields[0]
 
     # === ВАЛІДАЦІЯ ДАНИХ ===
-    if not current_field["validation"](message):
+    validation_func = validation_functions.get(current_field["validation"])
+    if not validation_func or not validation_func(message):
         await message.answer(current_field["error_text"])
         return
 
     # === ОБРОБКА ЗНАЧЕННЯ ===
-    try:
-        processed_value = current_field["processor"](message)
-    except Exception as e:
-        logger.error("Помилка обробки поля %s: %s", current_field["name"], e)
+    processor_func = processor_functions.get(current_field["processor"])
+    if not processor_func:
+        logger.error(
+            "Функція процесора не знайдена: %s", current_field["processor"]
+        )
         await message.answer("❌ Помилка обробки даних")
+        return
+
+    try:
+        processed_value = processor_func(message)
+    except Exception as e:
+        logger.error("Processing error: %s", e)
+        await message.answer(current_field["error_text"])
         return
 
     # === ОНОВЛЕННЯ БАЗИ ДАНИХ ===
@@ -146,16 +170,3 @@ async def handle_cancel(message: types.Message, state: FSMContext):
         "Шкода, що Ви передумали.",
         reply_markup=types.ReplyKeyboardRemove(),
     )
-
-
-# ================= ПРИКЛАД ДОДАВАННЯ НОВОГО ПОЛЯ =================
-# Для додавання нового поля додайте конфігурацію в FIELD_CONFIGS:
-#
-# {
-#     'name': 'email',
-#     'request_text': "📧 Введіть ваш email:",
-#     'keyboard': cancel_keyboard,
-#     'validation': lambda msg: '@' in msg.text and '.' in msg.text.split('@')[-1],
-#     'processor': lambda msg: msg.text.strip().lower(),
-#     'error_text': "❗ Невірний формат email"
-# }

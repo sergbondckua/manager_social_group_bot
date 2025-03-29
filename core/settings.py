@@ -197,8 +197,8 @@ CELERY_RESULT_BACKEND = REDIS_URL_TEMPLATE.format(
 
 # Robot redis settings
 BOT_STORAGE_URL = REDIS_URL_TEMPLATE.format(
-    host=REDIS_HOST, port=REDIS_PORT, db=0
-)
+    host=REDIS_HOST, port=REDIS_PORT, db=4
+) if os.environ.get("USE_REDIS_WITH_BOT") else None
 
 # Celery settings
 CELERY_BROKER_TRANSPORT_OPTIONS = {"visibility_timeout": 3600}
