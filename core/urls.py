@@ -8,6 +8,7 @@ urlpatterns = [
     path("admin/bank/", include("bank.urls_admin")),
     path("admin/", admin.site.urls),
     path("bank/", include("bank.urls")),
+    path("robot/", include("robot.urls")),
 ]
 
 if settings.DEBUG:

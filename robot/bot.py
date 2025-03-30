@@ -33,12 +33,13 @@ def get_storage():
         )
     return MemoryStorage()
 
+storage = get_storage()
+bot = ROBOT
+dp = Dispatcher(storage=storage)
+dp.include_routers(*routers_list)
+
 
 async def main():
-    storage = get_storage()
-    bot = ROBOT
-    dp = Dispatcher(storage=storage)
-    dp.include_routers(*routers_list)
 
     await on_startup(bot, ADMINS_BOT)
     await dp.start_polling(bot)
