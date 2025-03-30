@@ -1,6 +1,7 @@
 from aiogram import types, Router
 from aiogram.filters import CommandStart
 
+from robot.tgbot.filters.member import ClubMemberFilter
 from robot.tgbot.handlers.member.profile_field_configs import field_configs
 from robot.tgbot.keyboards.member import yes_no_keyboard
 from robot.tgbot.services.member_service import (
@@ -14,6 +15,7 @@ from robot.tgbot.services.member_service import (
 from robot.tgbot.text.member_template import msg_handle_start
 
 member_router = Router()
+member_router.message.filter(ClubMemberFilter())
 
 
 @member_router.message(CommandStart())

@@ -161,6 +161,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 TELEGRAM_BOT_TOKEN = env.str("TELEGRAM_BOT_TOKEN")  # Bot token
 DEFAULT_CHAT_ID = env.int("DEFAULT_CHAT_ID")  # Default chat ID
 ADMINS_BOT = env.list("ADMINS_BOT", subcast=int)
+TELEGRAM_WEBHOOK_URL = env.str("BASE_URL") + env.str("TELEGRAM_WEBHOOK_PATH")
 
 # Bank settings
 BASE_URL = env.str("BASE_URL")
