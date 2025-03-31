@@ -64,10 +64,11 @@ async def feed_update(update_data: dict):
 
 
 def process_update(update_data: dict):
-    """Синхронно обробляє оновлення від Telegram."""
     try:
-        loop = asyncio.get_event_loop()
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
         loop.run_until_complete(feed_update(update_data))
+        loop.close()
     except Exception as e:
         logger.error("Помилка при обробці оновлення: %s", e)
 
