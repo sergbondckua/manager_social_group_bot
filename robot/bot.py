@@ -1,6 +1,5 @@
 import asyncio
 import logging
-import nest_asyncio
 from typing import Union
 
 from aiogram import Dispatcher, Bot
@@ -12,9 +11,6 @@ from core.settings import ADMINS_BOT, BOT_STORAGE_URL, TELEGRAM_WEBHOOK_URL
 from robot.config import ROBOT
 from robot.tgbot.handlers import routers_list
 from robot.tgbot.services import broadcaster
-
-# Застосовуємо nest_asyncio для роботи asyncio всередині Django
-nest_asyncio.apply()
 
 logger = logging.getLogger("robot")
 
@@ -52,43 +48,28 @@ async def set_webhook():
 
 def setup_webhook():
     """Синхронно налаштовує webhook для бота."""
-    asyncio.run(set_webhook())
-
-
-# Створюємо або отримуємо існуючий цикл подій
-def get_event_loop():
     try:
-        return asyncio.get_event_loop()
-    except RuntimeError:
-        # Якщо циклу подій немає в поточному потоці
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        return loop
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(set_webhook())
+    except Exception as e:
+        logger.error("Не вдалося встановити webhook: %s", e)
 
 
-# Функція для обробки оновлень від Telegram
-def process_update(update_data):
-    """Обробляє оновлення від Telegram"""
-    loop = get_event_loop()
-    # Запускаємо обробку оновлення в існуючому циклі подій
-    if loop.is_running():
-        # Якщо цикл подій вже запущено, додаємо як завдання
-        asyncio.create_task(feed_update(update_data))
-    else:
-        # Інакше запускаємо нове виконання
-        loop.run_until_complete(feed_update(update_data))
-
-
-async def feed_update(update_data):
-    """Асинхронно передає оновлення диспетчеру бота"""
+async def feed_update(update_data: dict):
+    """Передає оновлення диспетчеру бота."""
     try:
-        # В aiogram 3.x потрібно використовувати feed_webhook_update
         await dp.feed_webhook_update(bot=bot, update=update_data)
     except Exception as e:
-        logger.error(f"Помилка при обробці оновлення: {e}")
-        import traceback
+        logger.error("Помилка при обробці оновлення: %s", e)
 
-        logger.error(traceback.format_exc())
+
+def process_update(update_data: dict):
+    """Синхронно обробляє оновлення від Telegram."""
+    try:
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(feed_update(update_data))
+    except Exception as e:
+        logger.error("Помилка при обробці оновлення: %s", e)
 
 
 # Ініціалізація диспетчера та бота
