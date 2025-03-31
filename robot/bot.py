@@ -51,17 +51,40 @@ def setup_webhook():
     asyncio.run(set_webhook())
 
 
-async def feed_update(update_data: dict):
-    """Передає оновлення диспетчеру бота."""
+# Створюємо або отримуємо існуючий цикл подій
+def get_event_loop():
     try:
+        return asyncio.get_event_loop()
+    except RuntimeError:
+        # Якщо циклу подій немає в поточному потоці
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        return loop
+
+
+# Функція для обробки оновлень від Telegram
+def process_update(update_data):
+    """Обробляє оновлення від Telegram"""
+    loop = get_event_loop()
+    # Запускаємо обробку оновлення в існуючому циклі подій
+    if loop.is_running():
+        # Якщо цикл подій вже запущено, додаємо як завдання
+        asyncio.create_task(feed_update(update_data))
+    else:
+        # Інакше запускаємо нове виконання
+        loop.run_until_complete(feed_update(update_data))
+
+
+async def feed_update(update_data):
+    """Асинхронно передає оновлення диспетчеру бота"""
+    try:
+        # В aiogram 3.x потрібно використовувати feed_webhook_update
         await dp.feed_webhook_update(bot=bot, update=update_data)
     except Exception as e:
-        logger.error("Помилка при обробці оновлення: %s", e)
+        logger.error(f"Помилка при обробці оновлення: {e}")
+        import traceback
 
-
-def process_update(update_data: dict):
-    """Синхронно обробляє оновлення від Telegram."""
-    asyncio.run(feed_update(update_data))
+        logger.error(traceback.format_exc())
 
 
 # Ініціалізація диспетчера та бота
