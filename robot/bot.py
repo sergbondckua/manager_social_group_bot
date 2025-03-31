@@ -1,5 +1,4 @@
 import asyncio
-import concurrent
 import logging
 from typing import Union
 
@@ -67,9 +66,8 @@ async def feed_update(update_data: dict):
 def process_update(update_data: dict):
     """Синхронно обробляє оновлення від Telegram."""
     try:
-        with concurrent.futures.ThreadPoolExecutor() as executor:
-            future = executor.submit(asyncio.run, feed_update(update_data))
-            future.result()  # Очікуємо завершення
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(feed_update(update_data))
     except Exception as e:
         logger.error("Помилка при обробці оновлення: %s", e)
 
