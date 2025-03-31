@@ -1,17 +1,27 @@
-import asyncio
 import logging
-from typing import Union
+import asyncio
+import os
+from typing import Union, NoReturn
+
+import django
+
+from robot.tgbot.services import broadcaster
+
+# Ініціалізація Django
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "core.settings")
+django.setup()
 
 from aiogram import Dispatcher, Bot
 from aiogram.fsm.storage.base import DefaultKeyBuilder
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.fsm.storage.redis import RedisStorage
 
-from core.settings import ADMINS_BOT, BOT_STORAGE_URL, TELEGRAM_WEBHOOK_URL
+
+from core.settings import BOT_STORAGE_URL, ADMINS_BOT
 from robot.config import ROBOT
 from robot.tgbot.handlers import routers_list
-from robot.tgbot.services import broadcaster
 
+# Логування
 logger = logging.getLogger("robot")
 
 
@@ -25,7 +35,7 @@ def get_storage() -> Union[RedisStorage, MemoryStorage]:
     return MemoryStorage()
 
 
-async def on_startup(bot: Bot, admin_ids: list[int]):
+async def on_startup(bot: Bot, admin_ids: list[int]) -> NoReturn:
     """Повідомляє адміністраторів про запуск бота."""
     try:
         await broadcaster.broadcast(bot, admin_ids, "Бот був запущений")
@@ -36,44 +46,19 @@ async def on_startup(bot: Bot, admin_ids: list[int]):
         )
 
 
-async def set_webhook():
-    """Встановлює webhook для бота."""
+async def main():
+    """Головна функція для запуску бота."""
+
+    # Ініціалізація бота та диспетчера
+    dp = Dispatcher(storage=get_storage())
+    dp.include_routers(*routers_list)
+
+    await dp.start_polling(ROBOT)
+    await on_startup(ROBOT, ADMINS_BOT)
+
+
+if __name__ == "__main__":
     try:
-        await bot.delete_webhook()
-        await bot.set_webhook(TELEGRAM_WEBHOOK_URL)
-        logger.info("Webhook встановлено на URL: %s", TELEGRAM_WEBHOOK_URL)
-    except Exception as e:
-        logger.error("Не вдалося встановити webhook: %s", e)
-
-
-def setup_webhook():
-    """Синхронно налаштовує webhook для бота."""
-    try:
-        loop = asyncio.get_event_loop()
-        loop.run_until_complete(set_webhook())
-    except Exception as e:
-        logger.error("Не вдалося встановити webhook: %s", e)
-
-
-async def feed_update(update_data: dict):
-    """Передає оновлення диспетчеру бота."""
-    try:
-        async with ROBOT as bot_instance:
-            await dp.feed_webhook_update(bot=bot_instance, update=update_data)
-    except Exception as e:
-        logger.error("Помилка при обробці оновлення: %s", e)
-
-
-def process_update(update_data: dict):
-    try:
-        loop = asyncio.get_event_loop()
-        loop.run_until_complete(feed_update(update_data))
-    except Exception as e:
-        logger.error("Помилка при обробці оновлення: %s", e)
-
-
-# Ініціалізація диспетчера та бота
-storage = get_storage()
-bot = ROBOT
-dp = Dispatcher(storage=storage)
-dp.include_routers(*routers_list)
+        asyncio.run(main())
+    except (KeyboardInterrupt, SystemExit):
+        logging.error("Бот був вимкнений!")

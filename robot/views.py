@@ -15,19 +15,17 @@ logger = logging.getLogger("robot")
 class WebhookView(View):
     """Обробляє webhook-запити від Telegram."""
 
-    def get(self, request: HttpRequest, *args, **kwargs) -> HttpResponse:
+    async def get(self, request: HttpRequest, *args, **kwargs) -> HttpResponse:
         return HttpResponse("OK", status=200)
 
-    def post(self, request: HttpRequest, *args, **kwargs) -> HttpResponse:
+    async def post(self, request: HttpRequest, *args, **kwargs) -> HttpResponse:
         try:
             update_data = json.loads(request.body)
             logger.info("Отримано оновлення: %s", update_data)
-
             # Асинхронно передаємо оновлення до диспетчера бота
-            robot.process_update(update_data)
+            await robot.feed_update(update_data)
             logger.debug("Отримано оновлення: %s", update_data)
 
-            robot.process_update(update_data)
             return HttpResponse(status=200)
         except json.JSONDecodeError as e:
             logger.error("Помилка декодування JSON: %s", e)
