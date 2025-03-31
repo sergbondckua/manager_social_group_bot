@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import nest_asyncio
 from typing import Union
 
 from aiogram import Dispatcher, Bot
@@ -11,6 +12,9 @@ from core.settings import ADMINS_BOT, BOT_STORAGE_URL, TELEGRAM_WEBHOOK_URL
 from robot.config import ROBOT
 from robot.tgbot.handlers import routers_list
 from robot.tgbot.services import broadcaster
+
+# Застосовуємо nest_asyncio для роботи asyncio всередині Django
+nest_asyncio.apply()
 
 logger = logging.getLogger("robot")
 
