@@ -1,17 +1,13 @@
 import asyncio
-import os
-import django
 import logging
+from typing import Union
 
 from aiogram import Dispatcher, Bot
 from aiogram.fsm.storage.base import DefaultKeyBuilder
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.fsm.storage.redis import RedisStorage
 
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "core.settings")
-django.setup()
-
-from core.settings import ADMINS_BOT, BOT_STORAGE_URL
+from core.settings import ADMINS_BOT, BOT_STORAGE_URL, TELEGRAM_WEBHOOK_URL
 from robot.config import ROBOT
 from robot.tgbot.handlers import routers_list
 from robot.tgbot.services import broadcaster
@@ -19,13 +15,8 @@ from robot.tgbot.services import broadcaster
 logger = logging.getLogger("robot")
 
 
-async def on_startup(bot: Bot, admin_ids: list[int]):
-    await broadcaster.broadcast(bot, admin_ids, "Бот був запущений")
-
-async def on_shutdown(bot: Bot, admin_ids: list[int]):
-    pass
-
-def get_storage():
+def get_storage() -> Union[RedisStorage, MemoryStorage]:
+    """Ініціалізує сховище для бота залежно від наявності Redis."""
     if BOT_STORAGE_URL:
         return RedisStorage.from_url(
             url=BOT_STORAGE_URL,
@@ -33,20 +24,48 @@ def get_storage():
         )
     return MemoryStorage()
 
+
+async def on_startup(bot: Bot, admin_ids: list[int]):
+    """Повідомляє адміністраторів про запуск бота."""
+    try:
+        await broadcaster.broadcast(bot, admin_ids, "Бот був запущений")
+        logger.info("Повідомлення адміністраторам успішно відправлено.")
+    except Exception as e:
+        logger.error(
+            "Помилка при надсиланні повідомлення адміністраторам: %s", e
+        )
+
+
+async def set_webhook():
+    """Встановлює webhook для бота."""
+    try:
+        await bot.delete_webhook()
+        await bot.set_webhook(TELEGRAM_WEBHOOK_URL)
+        logger.info("Webhook встановлено на URL: %s", TELEGRAM_WEBHOOK_URL)
+    except Exception as e:
+        logger.error("Не вдалося встановити webhook: %s", e)
+
+
+def setup_webhook():
+    """Синхронно налаштовує webhook для бота."""
+    asyncio.run(set_webhook())
+
+
+async def feed_update(update_data: dict):
+    """Передає оновлення диспетчеру бота."""
+    try:
+        await dp.feed_webhook_update(bot=bot, update=update_data)
+    except Exception as e:
+        logger.error("Помилка при обробці оновлення: %s", e)
+
+
+def process_update(update_data: dict):
+    """Синхронно обробляє оновлення від Telegram."""
+    asyncio.run(feed_update(update_data))
+
+
+# Ініціалізація диспетчера та бота
 storage = get_storage()
 bot = ROBOT
 dp = Dispatcher(storage=storage)
 dp.include_routers(*routers_list)
-
-
-async def main():
-
-    await on_startup(bot, ADMINS_BOT)
-    await dp.start_polling(bot)
-
-
-if __name__ == "__main__":
-    try:
-        asyncio.run(main())
-    except (KeyboardInterrupt, SystemExit):
-        logging.error("Бот був вимкнений!")

@@ -1,34 +1,37 @@
 import json
+import logging
 
 from django.utils.decorators import method_decorator
 from django.views import View
 from django.http import HttpResponse, HttpRequest
-from aiogram import types
 from django.views.decorators.csrf import csrf_exempt
 
-from robot.bot import dp, bot
+from robot import bot as robot
+
+logger = logging.getLogger("robot")
 
 
 @method_decorator(csrf_exempt, name="dispatch")
 class WebhookView(View):
-    """Клас для обробки вебхуків від Telegram"""
+    """Обробляє webhook-запити від Telegram."""
 
-    async def post(self, request: HttpRequest) -> HttpResponse:
-        # Обробка вхідного POST-запиту
+    def get(self, request: HttpRequest, *args, **kwargs) -> HttpResponse:
+        return HttpResponse("OK", status=200)
+
+    def post(self, request: HttpRequest, *args, **kwargs) -> HttpResponse:
         try:
-            json_data = json.loads(request.body.decode("utf-8"))
-            telegram_update = types.Update.model_validate(
-                json_data, context={"bot": bot}
-            )
-            await dp.feed_update(bot=bot, update=telegram_update)
-            return HttpResponse("OK")
+            update_data = json.loads(request.body)
+            logger.info("Отримано оновлення: %s", update_data)
 
-        except json.JSONDecodeError:
-            return HttpResponse("Invalid JSON", status=400)
+            # Асинхронно передаємо оновлення до диспетчера бота
+            robot.process_update(update_data)
+            logger.debug("Отримано оновлення: %s", update_data)
 
+            robot.process_update(update_data)
+            return HttpResponse(status=200)
+        except json.JSONDecodeError as e:
+            logger.error("Помилка декодування JSON: %s", e)
+            return HttpResponse("Невірний формат JSON", status=400)
         except Exception as e:
-            return HttpResponse(f"Error: {str(e)}", status=500)
-
-    async def get(self, request: HttpRequest) -> HttpResponse:
-        """Обробка GET-запитів для перевірки працездатності"""
-        return HttpResponse("Webhook is working!", status=200)
+            logger.exception("Неочікувана помилка при обробці webhook")
+            return HttpResponse("Внутрішня помилка сервера", status=500)

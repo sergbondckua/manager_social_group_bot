@@ -1,9 +1,11 @@
 from django.urls import path
 
-from robot.views import WebhookView
+from robot import views
 
 urlpatterns = [
-    path("webhook/", WebhookView.as_view(), name="telegram-webhook"),
+    path(
+        "webhook/", view=views.WebhookView.as_view(), name="telegram-webhook"
+    ),
 ]
 
 app_name = "robot"

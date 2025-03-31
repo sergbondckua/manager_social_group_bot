@@ -6,6 +6,7 @@ class RobotConfig(AppConfig):
     name = "robot"
     verbose_name = "Бот"
 
-    # def ready(self):
-    #     # Імпортуємо сигнали
-    #     from robot import signals
+    def ready(self):
+        # Імпортуємо та запускаємо налаштування бота при старті Django
+        from robot import bot
+        bot.setup_webhook()
