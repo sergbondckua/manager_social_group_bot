@@ -66,7 +66,8 @@ async def feed_update(update_data: dict):
 
 def process_update(update_data: dict):
     try:
-        asyncio.run(feed_update(update_data))
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(feed_update(update_data))
     except Exception as e:
         logger.error("Помилка при обробці оновлення: %s", e)
 
