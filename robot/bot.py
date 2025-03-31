@@ -58,17 +58,15 @@ def setup_webhook():
 async def feed_update(update_data: dict):
     """Передає оновлення диспетчеру бота."""
     try:
-        await dp.feed_webhook_update(bot=bot, update=update_data)
+        async with ROBOT as bot_instance:
+            await dp.feed_webhook_update(bot=bot_instance, update=update_data)
     except Exception as e:
         logger.error("Помилка при обробці оновлення: %s", e)
 
 
 def process_update(update_data: dict):
     try:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        loop.run_until_complete(feed_update(update_data))
-        loop.close()
+        asyncio.run(feed_update(update_data))
     except Exception as e:
         logger.error("Помилка при обробці оновлення: %s", e)
 
