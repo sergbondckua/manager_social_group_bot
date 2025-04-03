@@ -1,7 +1,7 @@
 import logging
 import asyncio
 import os
-from typing import Union, NoReturn
+from typing import Union
 
 import django
 
@@ -35,7 +35,7 @@ def get_storage() -> Union[RedisStorage, MemoryStorage]:
     return MemoryStorage()
 
 
-async def on_startup(bot: Bot, admin_ids: list[int]) -> NoReturn:
+async def on_startup(bot: Bot, admin_ids: list[int]):
     """Повідомляє адміністраторів про запуск бота."""
     try:
         await broadcaster.broadcast(bot, admin_ids, "Бот був запущений")
@@ -52,13 +52,14 @@ async def main():
     # Ініціалізація бота та диспетчера
     dp = Dispatcher(storage=get_storage())
     dp.include_routers(*routers_list)
-
-    await dp.start_polling(ROBOT)
     await on_startup(ROBOT, ADMINS_BOT)
+    await dp.start_polling(
+        ROBOT, allowed_updates=dp.resolve_used_update_types()
+    )
 
 
 if __name__ == "__main__":
     try:
         asyncio.run(main())
     except (KeyboardInterrupt, SystemExit):
-        logging.error("Бот був вимкнений!")
+        logger.error("Бот був вимкнений!")

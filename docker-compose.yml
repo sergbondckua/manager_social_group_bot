@@ -1,7 +1,27 @@
 services:
+  web:
+    build: .
+    container_name: web_msg_bot
+    restart: always
+    env_file:
+      - .env
+    volumes:
+      - ./:/app
+      - ./static:/app/static
+      - ./media:/app/media
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+      - redis
+    expose:
+      - 8000
+    command: gunicorn core.asgi:application --bind 0.0.0.0:8000 --workers 4
+    networks:
+      - default_network
   db:
     image: postgres:latest
-    container_name: django_postgres
+    container_name: postgres_msg_bot
     restart: always
     ports:
       - "5432:5432"
@@ -11,10 +31,23 @@ services:
       - postgres_data:/var/lib/postgresql/data
     networks:
       - default_network
-
+  pg_admin:
+    image: dpage/pgadmin4:latest
+    container_name: pgadmin_msg_bot
+    restart: always
+    env_file:
+      - .env
+    ports:
+      - "5050:5050"
+    depends_on:
+      - db
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    networks:
+      - default_network
   redis:
     image: redis:latest
-    container_name: django_redis
+    container_name: redis_msg_bot
     restart: always
     ports:
       - "6379:6379"
