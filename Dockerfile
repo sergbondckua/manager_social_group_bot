@@ -1,7 +1,7 @@
 FROM python:3.12.0-slim
 
 # Метадані
-LABEL authors="ninja"
+LABEL authors="sergbondckua"
 LABEL version="1.0"
 LABEL description="Django application container"
 
