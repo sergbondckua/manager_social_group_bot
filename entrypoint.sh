@@ -11,13 +11,17 @@ if [ -n "$DB_HOST" ] && [ -n "$DB_PORT" ]; then
 fi
 
 # Міграція бази даних (тільки для веб-сервісу)
-if [[ "$*" == *"gunicorn"* ]]; then
+if [[ "$*" == *"uvicorn"* ]]; then
   echo "Applying database migrations..."
   python manage.py migrate
 
   # Збирання статичних файлів
   echo "Collecting static files..."
   python manage.py collectstatic --noinput
+
+  # Запуск бота
+  echo "Starting bot..."
+  python manage.py startbot
 fi
 
 # Запуск команди

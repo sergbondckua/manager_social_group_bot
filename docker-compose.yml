@@ -6,7 +6,7 @@ services:
     env_file:
       - .env
     volumes:
-      - ./:/app
+      - .:/app
       - ./static:/app/static
       - ./media:/app/media
     ports:
@@ -16,7 +16,7 @@ services:
       - redis
     expose:
       - 8000
-    command: gunicorn core.asgi:application --bind 0.0.0.0:8000 --workers 4
+    command: uvicorn core.asgi:application --host 0.0.0.0 --port 8000 --workers 4
     networks:
       - default_network
   db:
@@ -56,30 +56,60 @@ services:
       - redis_data:/data
     networks:
       - default_network
-
-#  celery_worker:
-#    build: .
-#    container_name: celery_worker
-#    command: celery -A core worker --loglevel=info
-#    depends_on:
-#      - redis
-#      - db
+  nginx:
+    build:
+      dockerfile: ./Dockerfile
+      context: ./nginx/
+    container_name: nginx_msg_bot
+#    command: nginx -g "daemon off;"
+    restart: always
+    ports:
+      - "80:80"
+    volumes:
+      - ./static:/app/static
+      - ./media:/app/media
+#      - ./nginx/letsencrypt:/etc/letsencrypt
+#      - ./nginx/www:/var/www/certbot
+    depends_on:
+      - web
+#      - certbot
+    networks:
+      - default_network
+#  certbot:
+#    image: certbot/certbot:latest
+#    container_name: certbot_msg_bot
+#    restart: unless-stopped
 #    volumes:
-#      - .:/usr/src/app
+#      - ./nginx/letsencrypt:/etc/letsencrypt
+#      #      - ./nginx/log:/var/log/letsencrypt
+#      - ./nginx/www:/var/www/certbot
+#    entrypoint: /bin/sh -c 'trap exit TERM; while :; do certbot certonly --webroot -w /var/www/certbot -d club1.crossrunche.com --agree-tos --email admin@fregi.pp.ua --non-interactive --renew-by-default; sleep 12h & wait $${!}; done;'
+#    depends_on:
+#      - nginx
 #    networks:
 #      - default_network
-#
-#  celery_beat:
-#    build: .
-#    container_name: celery_beat
-#    command: celery -A core beat --loglevel=info
-#    depends_on:
-#      - redis
-#      - db
-#    volumes:
-#      - .:/usr/src/app
-#    networks:
-#      - default_network
+  celery_worker:
+    build: .
+    container_name: celery_worker_msg_bot
+    command: celery -A core worker --loglevel=info
+    depends_on:
+      - redis
+      - db
+    volumes:
+      - .:/app
+    networks:
+      - default_network
+  celery_beat:
+    build: .
+    container_name: celery_beat_msg_bot
+    command: celery -A core beat --loglevel=info
+    depends_on:
+      - redis
+      - db
+    volumes:
+      - .:/app
+    networks:
+      - default_network
 
 networks:
   default_network:

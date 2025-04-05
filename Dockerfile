@@ -30,8 +30,7 @@ WORKDIR /app
 # Встановлюємо залежності окремо для кешування шару
 COPY requirements.txt .
 RUN pip install --upgrade pip \
-    && pip install --no-cache-dir -r requirements.txt \
-    && pip install gunicorn
+    && pip install --no-cache-dir -r requirements.txt
 
 # Створюємо директорію для статичних файлів
 RUN mkdir -p /app/static /app/media
@@ -39,19 +38,11 @@ RUN mkdir -p /app/static /app/media
 # Копіюємо файли проекту
 COPY . .
 
-# Встановлюємо правильні права
-RUN chmod +x /app/entrypoint.sh
-
 # Порт, на якому запускається додаток
 EXPOSE 8000
-
-# Встановлюємо непривілейованого користувача
-RUN groupadd -r appuser && useradd -r -g appuser appuser
-RUN chown -R appuser:appuser /app
-USER appuser
 
 # Entrypoint скрипт для запуску додатку
 ENTRYPOINT ["/app/entrypoint.sh"]
 
 # Команда за замовчуванням, яку буде перевизначено в docker-compose
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "core.asgi:application"]
+CMD ["uvicorn", "core.asgi:application", "--host", "0.0.0.0", "--port", "8000"]

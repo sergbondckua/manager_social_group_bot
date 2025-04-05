@@ -173,7 +173,7 @@ REDIS_PORT = "6379"
 
 # Redis connection
 REDIS_URL_TEMPLATE = "redis://{host}:{port}/{db}"
-REDIS_HOST = REDIS_HOST if DEBUG else "django_redis"
+REDIS_HOST = REDIS_HOST if DEBUG else "redis_msg_bot"
 REDIS_PORT = REDIS_PORT if DEBUG else "6379"
 
 CACHES = {
