@@ -11,7 +11,7 @@ if [ -n "$DB_HOST" ] && [ -n "$DB_PORT" ]; then
 fi
 
 # Міграція бази даних (тільки для веб-сервісу)
-if [[ "$*" == *"uvicorn"* ]]; then
+if [[ "$*" == *"gunicorn"* ]]; then
   echo "Applying database migrations..."
   python manage.py migrate
 

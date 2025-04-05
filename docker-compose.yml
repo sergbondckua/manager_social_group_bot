@@ -2,25 +2,26 @@ services:
   web:
     build: .
     container_name: web_msg_bot
-    command: uvicorn core.asgi:application --host 0.0.0.0 --port 8000 --workers 4
+    command: bash -c "
+      ./manage.py collectstatic --noinput &&
+      ./manage.py migrate  &&
+      gunicorn core.asgi:application --workers 2 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:8001"
     restart: always
     env_file:
       - .env
     volumes:
-      - .:/app
+      - ./:/app
       - ./static:/app/static
       - ./media:/app/media
     ports:
-      - "8000:8000"
+      - "8001:8001"
     depends_on:
       - db
       - redis
-    expose:
-      - 8000
     networks:
       - default_network
   db:
-    image: postgres:latest
+    image: postgres:alpine
     container_name: postgres_msg_bot
     restart: always
     ports:
@@ -46,7 +47,7 @@ services:
     networks:
       - default_network
   redis:
-    image: redis:latest
+    image: redis:alpine
     container_name: redis_msg_bot
     restart: always
     ports:
@@ -61,33 +62,34 @@ services:
       dockerfile: ./Dockerfile
       context: ./nginx/
     container_name: nginx_msg_bot
-#    command: nginx -g "daemon off;"
+    command: nginx -g "daemon off;"
     restart: always
     ports:
       - "80:80"
+      - "443:443"
     volumes:
       - ./static:/app/static
       - ./media:/app/media
-#      - ./nginx/letsencrypt:/etc/letsencrypt
-#      - ./nginx/www:/var/www/certbot
+      - ./nginx/letsencrypt:/etc/letsencrypt
+      - ./nginx/www:/var/www/certbot
     depends_on:
       - web
 #      - certbot
     networks:
       - default_network
-#  certbot:
-#    image: certbot/certbot:latest
-#    container_name: certbot_msg_bot
-#    restart: unless-stopped
-#    volumes:
-#      - ./nginx/letsencrypt:/etc/letsencrypt
-#      #      - ./nginx/log:/var/log/letsencrypt
-#      - ./nginx/www:/var/www/certbot
-#    entrypoint: /bin/sh -c 'trap exit TERM; while :; do certbot certonly --webroot -w /var/www/certbot -d club1.crossrunche.com --agree-tos --email admin@fregi.pp.ua --non-interactive --renew-by-default; sleep 12h & wait $${!}; done;'
-#    depends_on:
-#      - nginx
-#    networks:
-#      - default_network
+  certbot:
+    image: certbot/certbot:latest
+    container_name: certbot_msg_bot
+    restart: unless-stopped
+    volumes:
+      - ./nginx/letsencrypt:/etc/letsencrypt
+#      - ./nginx/log:/var/log/letsencrypt
+      - ./nginx/www:/var/www/certbot
+    entrypoint: /bin/sh -c 'trap exit TERM; while :; do certbot certonly --webroot -w /var/www/certbot -d club1.crossrunche.com --agree-tos --email admin@fregi.pp.ua --non-interactive --renew-by-default; sleep 12h & wait $${!}; done;'
+    depends_on:
+      - nginx
+    networks:
+      - default_network
   celery_worker:
     build: .
     container_name: celery_worker_msg_bot
@@ -95,8 +97,9 @@ services:
     depends_on:
       - redis
       - db
+      - web
     volumes:
-      - .:/app
+      - ./:/app
     networks:
       - default_network
   celery_beat:
@@ -106,8 +109,24 @@ services:
     depends_on:
       - redis
       - db
+      - web
     volumes:
-      - .:/app
+      - ./:/app
+    networks:
+      - default_network
+  aiogram:
+    build: .
+    container_name: aiogram_msg_bot
+    command: bash -c "./manage.py startbot"
+    restart: always
+    env_file:
+      - .env
+    depends_on:
+      - redis
+      - db
+      - web
+    volumes:
+      - ./:/app
     networks:
       - default_network
 
