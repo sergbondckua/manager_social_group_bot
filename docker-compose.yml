@@ -2,6 +2,7 @@ services:
   web:
     build: .
     container_name: web_msg_bot
+    command: uvicorn core.asgi:application --host 0.0.0.0 --port 8000 --workers 4
     restart: always
     env_file:
       - .env
@@ -16,7 +17,6 @@ services:
       - redis
     expose:
       - 8000
-    command: uvicorn core.asgi:application --host 0.0.0.0 --port 8000 --workers 4
     networks:
       - default_network
   db:
