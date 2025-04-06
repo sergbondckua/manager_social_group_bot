@@ -10,7 +10,6 @@ part_forecast_text = text(
     text(
         "🔸 {weather_description}",
         "☂️ {precipitation_info}",
-        sep="\n",
     ),
     sep="\n",
 )
@@ -19,8 +18,8 @@ part_forecast_text = text(
 forecast_text = text(
     "{recipient_text}",
     "➖ ➖ ➖",
-    "🌆 {city}, {country}",
-    f"📆 {current_date}",
+    text("🌆 {city}, {country}", f" 📆 {current_date}"),
+    "➖ ➖ ➖ \n",
     "{formatted_data}",
     sep="\n",
 )

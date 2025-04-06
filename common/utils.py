@@ -44,6 +44,7 @@ def clean_tag_message(
             "&quot;": '"',
             "&rsquo;": "'",
             "&bull;": "*",
+            "&mdash;": "-",
         }
 
     # Очищення HTML-тегів

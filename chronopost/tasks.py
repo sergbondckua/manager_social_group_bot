@@ -1,7 +1,8 @@
 import asyncio
 import logging
 
-from asgiref.sync import sync_to_async
+from asgiref.sync import sync_to_async, async_to_sync
+from django.conf import settings
 
 from chronopost.models import WeatherNotification
 import chronopost.resources.bot_msg_templates as bmt
@@ -11,7 +12,6 @@ from chronopost.services.weather import (
     WeatherFormatter,
     TelegramNotifier,
 )
-from core.settings import WEATHER_API_KEY, CITY_COORDINATES
 from celery import shared_task
 
 
@@ -49,14 +49,16 @@ def send_weather_forecast():
     async def fetch_and_process_weather():
         """Отримання та обробка прогнозу погоди."""
 
-        api_client = OpenWeatherClient(WEATHER_API_KEY)
-        raw_data = await api_client.fetch_weather_data(CITY_COORDINATES)
+        api_client = OpenWeatherClient(settings.WEATHER_API_KEY)
+        raw_data = await api_client.fetch_weather_data(
+            settings.CITY_COORDINATES
+        )
 
         if not raw_data:
             logger.warning("No data from API")
             return None
 
-        processor = WeatherProcessor(filter_precipitation=False)
+        processor = WeatherProcessor(filter_precipitation=True)
         clear_data = processor.filter_weather_data(raw_data)
 
         if not clear_data:
@@ -87,7 +89,7 @@ def send_weather_forecast():
                 recipient_text=recipient.text,
                 city=weather_data["city"],
                 country=weather_data["country"],
-                formatted_data=" ".join(weather_data["formatted_data"]),
+                formatted_data="\n\n".join(weather_data["formatted_data"]),
             )
 
             try:
@@ -96,7 +98,11 @@ def send_weather_forecast():
                 )
             except Exception as e:
                 logger.error(
-                    f"Failed to send message to {recipient.chat_id}: {e}"
+                    f"Не вдалося надіслати повідомлення {recipient.chat_id}: {e}"
+                )
+                await ROBOT.send_message(
+                    chat_id=settings.ADMINS_BOT[0],
+                    text=f"Не вдалося надіслати повідомлення {recipient.chat_id}: {e}",
                 )
 
     async def main():
@@ -122,3 +128,9 @@ def send_weather_forecast():
         loop.run_until_complete(main())
     except Exception as e:
         logger.error("Помилка виконання основного циклу asyncio: %s", e)
+        asyncio.run(
+            ROBOT.send_message(
+                chat_id=settings.ADMINS_BOT[0],
+                text=f"Помилка виконання основного циклу asyncio: {e}",
+            )
+        )

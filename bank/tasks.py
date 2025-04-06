@@ -23,7 +23,7 @@ def create_monobank_webhooks() -> NoReturn:
 
     webhook_path = settings.MONOBANK_WEBHOOK_PATH
     webhook_url = f"{settings.BASE_URL}{webhook_path}"
-    active_clients = MonoBankClient.objects.filter(is_active=True)
+    active_clients = MonoBankClient.objects.filter(cards__is_active=True)
     total_clients = active_clients.count()
     clients_iterator = active_clients.iterator()
 

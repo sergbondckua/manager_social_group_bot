@@ -20,6 +20,7 @@ services:
       - redis
     networks:
       - default_network
+
   db:
     image: postgres:alpine
     container_name: postgres_msg_bot
@@ -32,6 +33,7 @@ services:
       - postgres_data:/var/lib/postgresql/data
     networks:
       - default_network
+
   pg_admin:
     image: dpage/pgadmin4:latest
     container_name: pgadmin_msg_bot
@@ -46,6 +48,7 @@ services:
       - pgadmin_data:/var/lib/pgadmin
     networks:
       - default_network
+
   redis:
     image: redis:alpine
     container_name: redis_msg_bot
@@ -57,12 +60,13 @@ services:
       - redis_data:/data
     networks:
       - default_network
+
   nginx:
     build:
       dockerfile: ./Dockerfile
       context: ./nginx/
     container_name: nginx_msg_bot
-    command: nginx -g "daemon off;"
+    #    command: nginx -g "daemon off;"
     restart: always
     ports:
       - "80:80"
@@ -70,30 +74,29 @@ services:
     volumes:
       - ./static:/app/static
       - ./media:/app/media
-      - ./nginx/letsencrypt:/etc/letsencrypt
-      - ./nginx/www:/var/www/certbot
+      - letsencrypt_volume:/etc/letsencrypt
+      - certbot_webroot_volume:/var/www/certbot
     depends_on:
       - web
-#      - certbot
+      - certbot
     networks:
       - default_network
+
   certbot:
     image: certbot/certbot:latest
     container_name: certbot_msg_bot
     restart: unless-stopped
-    volumes:
-      - ./nginx/letsencrypt:/etc/letsencrypt
-#      - ./nginx/log:/var/log/letsencrypt
-      - ./nginx/www:/var/www/certbot
     entrypoint: /bin/sh -c 'trap exit TERM; while :; do certbot certonly --webroot -w /var/www/certbot -d club1.crossrunche.com --agree-tos --email admin@fregi.pp.ua --non-interactive --renew-by-default; sleep 12h & wait $${!}; done;'
-    depends_on:
-      - nginx
+    volumes:
+      - letsencrypt_volume:/etc/letsencrypt
+      - certbot_webroot_volume:/var/www/certbot
     networks:
       - default_network
+
   celery_worker:
     build: .
     container_name: celery_worker_msg_bot
-    command: celery -A core worker --loglevel=info
+    command: celery -A core worker --uid=nobody --loglevel=info
     depends_on:
       - redis
       - db
@@ -102,6 +105,7 @@ services:
       - ./:/app
     networks:
       - default_network
+
   celery_beat:
     build: .
     container_name: celery_beat_msg_bot
@@ -114,6 +118,7 @@ services:
       - ./:/app
     networks:
       - default_network
+
   aiogram:
     build: .
     container_name: aiogram_msg_bot
@@ -141,3 +146,5 @@ volumes:
   postgres_data:
   redis_data:
   pgadmin_data:
+  letsencrypt_volume:
+  certbot_webroot_volume:

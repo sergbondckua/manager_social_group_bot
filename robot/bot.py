@@ -6,6 +6,7 @@ from typing import Union
 import django
 
 from robot.tgbot.services import broadcaster
+from robot.tgbot.services.set_bot_commands import set_default_commands
 
 # Ініціалізація Django
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "core.settings")
@@ -36,7 +37,9 @@ def get_storage() -> Union[RedisStorage, MemoryStorage]:
 
 
 async def on_startup(bot: Bot, admin_ids: list[int]):
-    """Повідомляє адміністраторів про запуск бота."""
+    """ Функція, яка виконується при запуску бота. """
+
+    await set_default_commands(bot)  # Встановлення звичайних команд
     try:
         await broadcaster.broadcast(bot, admin_ids, "Бот був запущений")
         logger.info("Повідомлення адміністраторам успішно відправлено.")
