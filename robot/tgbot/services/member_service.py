@@ -173,7 +173,9 @@ async def process_deep_link(
                 await message.bot.send_message(
                     chat_id=admin,
                     text=msg_press_deeplink_button.format(
-                        full_name=message.from_user.full_name,
+                        full_name=message.from_user.mention_html(
+                            message.from_user.full_name
+                        ),
                         user_id=message.from_user.id,
                         deep_link_text=deep_link_param,
                     ),
