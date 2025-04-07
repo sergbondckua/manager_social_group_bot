@@ -11,7 +11,7 @@ from common.utils import clean_tag_message
 from core.settings import ADMINS_BOT
 from profiles.models import ClubUser
 from robot.models import DeepLink
-from robot.tgbot.text.member_template import msg_press_pay_button
+from robot.tgbot.text.member_template import msg_press_deeplink_button
 
 logger = logging.getLogger("robot")
 
@@ -172,9 +172,10 @@ async def process_deep_link(
             (
                 await message.bot.send_message(
                     chat_id=admin,
-                    text=msg_press_pay_button.format(
+                    text=msg_press_deeplink_button.format(
                         full_name=message.from_user.full_name,
                         user_id=message.from_user.id,
+                        deep_link_text=deep_link_param,
                     ),
                 )
                 if message.from_user.id not in ADMINS_BOT

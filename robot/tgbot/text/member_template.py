@@ -57,9 +57,9 @@ msg_last_name_error: str = text(
     "❗ Прізвище повинно містити {name_min_len}-{name_max_len} літер."
 )
 
-msg_press_pay_button: str = text(
+msg_press_deeplink_button: str = text(
     "🎽 {full_name}",
     "🆔 {user_id}",
-    "🔘👈 Натиснув(ла) кнопку оплати внеску",
+    f"🔘👈 Натиснув(ла) кнопку {hbold('{deep_link_text}')}",
     sep="\n",
 )
