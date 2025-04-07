@@ -9,7 +9,7 @@ routers_list = [
     profile_router,
     user_router,
     admin_router,
-    echo_router,  # echo_router must be last
+    # echo_router,  # echo_router must be last
 ]
 
 __all__ = ["routers_list"]
