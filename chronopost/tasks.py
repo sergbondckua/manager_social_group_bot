@@ -3,6 +3,7 @@ import logging
 
 from asgiref.sync import sync_to_async, async_to_sync
 from django.conf import settings
+from django.utils import timezone
 
 from chronopost.models import WeatherNotification
 import chronopost.resources.bot_msg_templates as bmt
@@ -83,12 +84,18 @@ def send_weather_forecast():
     async def send_notifications(receivers, weather_data):
         """Надсилання повідомлень користувачам."""
 
+        # Форматування часу
+        current_date = (
+            timezone.localtime(timezone.now()).date().strftime("%d.%m.%Y")
+        )
+
         for recipient in receivers:
             notifier = TelegramNotifier(ROBOT, recipient.chat_id)
             message = bmt.forecast_text.format(
                 recipient_text=recipient.text,
                 city=weather_data["city"],
                 country=weather_data["country"],
+                current_date=current_date,
                 formatted_data="\n\n".join(weather_data["formatted_data"]),
             )
 

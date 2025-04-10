@@ -1,8 +1,4 @@
 from aiogram.utils.markdown import text, hbold
-from django.utils import timezone
-
-# Форматування часу
-current_date = timezone.localtime(timezone.now()).date().strftime("%d.%m.%Y")
 
 # Текст для часткового прогнозу
 part_forecast_text = text(
@@ -18,7 +14,7 @@ part_forecast_text = text(
 forecast_text = text(
     "{recipient_text}",
     "➖ ➖ ➖",
-    text("🌆 {city}, {country}", f" 📆 {current_date}"),
+    text("🌆 {city}, {country}, 📆 {current_date}"),
     "➖ ➖ ➖ \n",
     "{formatted_data}",
     sep="\n",
