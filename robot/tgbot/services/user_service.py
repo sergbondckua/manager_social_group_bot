@@ -44,7 +44,12 @@ class WeatherNowHandler:
     async def format_weather_data(self, clear_data):
         """Форматує дані для відображення."""
         try:
-            return self.weather_formatter.format_weather_report(clear_data)
+            if formatted_data := self.weather_formatter.format_weather_report(
+                clear_data
+            ):
+                return formatted_data
+            else:
+                return ["Прогноз погода не доступний в даний час доби"]
         except Exception as e:
             await self.message.answer(
                 "Помилка форматування даних: {}".format(e)
