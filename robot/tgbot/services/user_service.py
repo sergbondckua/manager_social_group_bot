@@ -49,7 +49,7 @@ class WeatherNowHandler:
             ):
                 return formatted_data
             else:
-                return ["Прогноз погода не доступний в даний час доби"]
+                return ("Прогноз погода не доступний в даний час доби",)
         except Exception as e:
             await self.message.answer(
                 "Помилка форматування даних: {}".format(e)
@@ -58,6 +58,7 @@ class WeatherNowHandler:
 
     async def send_weather_report(self, weather_data, formatted_data):
         """Надсилає користувачеві повідомлення про погоду."""
+        print(formatted_data)
         try:
             weather_message = bmt.forecast_text.format(
                 recipient_text="Погода зараз",
