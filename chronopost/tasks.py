@@ -57,26 +57,29 @@ def send_weather_forecast():
 
         if not raw_data:
             logger.warning("No data from API")
-            return None
+            return
 
         processor = WeatherProcessor(filter_precipitation=True)
         clear_data = processor.filter_weather_data(raw_data)
 
         if not clear_data:
             logger.warning("No data after filtration")
-            return None
+            return
 
         presenter = WeatherFormatter(include_today_only=True)
         formatted_data = presenter.format_weather_report(clear_data)
 
         if not formatted_data:
             logger.warning("No data after formatting")
-            return None
+            return
 
         return {
             "city": raw_data.get("city", {}).get("name", "Unknown City"),
             "country": raw_data.get("city", {}).get(
                 "country", "Unknown Country"
+            ),
+            "current_date": (
+                timezone.localtime(timezone.now()).date().strftime("%d.%m.%Y")
             ),
             "formatted_data": formatted_data,
         }
@@ -84,18 +87,13 @@ def send_weather_forecast():
     async def send_notifications(receivers, weather_data):
         """Надсилання повідомлень користувачам."""
 
-        # Форматування часу
-        current_date = (
-            timezone.localtime(timezone.now()).date().strftime("%d.%m.%Y")
-        )
-
         for recipient in receivers:
             notifier = TelegramNotifier(ROBOT, recipient.chat_id)
             message = bmt.forecast_text.format(
                 recipient_text=recipient.text,
                 city=weather_data["city"],
                 country=weather_data["country"],
-                current_date=current_date,
+                current_date=weather_data["current_date"],
                 formatted_data="\n\n".join(weather_data["formatted_data"]),
             )
 

@@ -17,7 +17,10 @@ async def set_default_commands(bot: Bot):
                     command="start", description="Актувуйте бота"
                 ),
                 types.BotCommand(command="help", description="Довідка"),
-                types.BotCommand(command="myid", description="Ваші ID дані"),
+                types.BotCommand(command="my_id", description="Ваші ID дані"),
+                types.BotCommand(
+                    command="weather_now", description="Поточна погода"
+                ),
             ],
             scope=types.BotCommandScopeDefault(),
             language_code="uk",
