@@ -49,7 +49,7 @@ class WeatherNowHandler:
             ):
                 return formatted_data
             else:
-                return ("Прогноз погода не доступний в даний час доби",)
+                return ("Прогноз погоди не доступний в даний час доби",)
         except Exception as e:
             await self.message.answer(
                 "Помилка форматування даних: {}".format(e)
