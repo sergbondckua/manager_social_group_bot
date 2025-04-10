@@ -148,7 +148,9 @@ class WeatherFormatter:
             forecast_time=forecast_time,
             weather_description=weather_description,
             temperature=temperature,
-            precipitation_info=precipitation_info,
+            precipitation_info=(
+                f"☂️ {precipitation_info}" if precipitation_info else ""
+            ),
         )
 
     @staticmethod

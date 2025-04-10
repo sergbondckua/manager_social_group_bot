@@ -40,13 +40,13 @@ async def on_startup(bot: Bot, admin_ids: list[int]):
     """ Функція, яка виконується при запуску бота. """
 
     await set_default_commands(bot)  # Встановлення звичайних команд
-    try:
-        await broadcaster.broadcast(bot, admin_ids, "Бот був запущений")
-        logger.info("Повідомлення адміністраторам успішно відправлено.")
-    except Exception as e:
-        logger.error(
-            "Помилка при надсиланні повідомлення адміністраторам: %s", e
-        )
+    # try:
+    #     await broadcaster.broadcast(bot, admin_ids, "Бот був запущений")
+    #     logger.info("Повідомлення адміністраторам успішно відправлено.")
+    # except Exception as e:
+    #     logger.error(
+    #         "Помилка при надсиланні повідомлення адміністраторам: %s", e
+    #     )
 
 
 async def main():

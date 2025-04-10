@@ -5,7 +5,7 @@ part_forecast_text = text(
     f"🕗 {hbold('{forecast_time} 🌡 {temperature}°C')}",
     text(
         "🔸 {weather_description}",
-        "☂️ {precipitation_info}",
+        "{precipitation_info}",
     ),
     sep="\n",
 )
