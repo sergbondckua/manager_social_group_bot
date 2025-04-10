@@ -148,9 +148,7 @@ class WeatherFormatter:
             forecast_time=forecast_time,
             weather_description=weather_description,
             temperature=temperature,
-            precipitation_info=(
-                f"☂️ {precipitation_info}" if precipitation_info else ""
-            ),
+            precipitation_info=precipitation_info,
         )
 
     @staticmethod
@@ -168,7 +166,7 @@ class WeatherFormatter:
     def _extract_precipitation(entry: Dict) -> str:
         """Отримує інформацію про опади у форматі тексту."""
         precipitation = []
-        for precip_type, label in {"rain": "Дощ", "snow": "Сніг"}.items():
+        for precip_type, label in {"rain": "🌧 Дощ", "snow": "🌨 Сніг"}.items():
             if precip_data := entry.get(precip_type):
                 precipitation.append(f"{label}: {precip_data.get('3h', 0)} мм")
         return ", ".join(precipitation)
