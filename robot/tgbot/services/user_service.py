@@ -84,11 +84,11 @@ class WeatherNowHandler:
         if not raw_data:
             return
 
-        clear_data = self.process_weather_data(raw_data)
+        clear_data = await self.process_weather_data(raw_data)
         if not clear_data:
             return
 
-        formatted_data = self.format_weather_data(clear_data)
+        formatted_data = await self.format_weather_data(clear_data)
         if not formatted_data:
             return
 
