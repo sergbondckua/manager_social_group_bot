@@ -31,7 +31,7 @@ class WeatherNowHandler:
             await self.message.answer(
                 "Помилка під час запиту до API: {}".format(e)
             )
-            return None
+            return
 
     async def process_weather_data(self, raw_data):
         """Обробляє сирі дані погоди."""
@@ -39,7 +39,7 @@ class WeatherNowHandler:
             return self.weather_processor.filter_weather_data(raw_data)
         except Exception as e:
             await self.message.answer("Помилка обробки даних: {}".format(e))
-            return None
+            return
 
     async def format_weather_data(self, clear_data):
         """Форматує дані для відображення."""
@@ -54,11 +54,11 @@ class WeatherNowHandler:
             await self.message.answer(
                 "Помилка форматування даних: {}".format(e)
             )
-            return None
+            return
 
     async def send_weather_report(self, weather_data, formatted_data):
         """Надсилає користувачеві повідомлення про погоду."""
-        print(formatted_data)
+        
         try:
             weather_message = bmt.forecast_text.format(
                 recipient_text="Погода зараз",
