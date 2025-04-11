@@ -99,6 +99,6 @@ class WeatherNowHandler:
             ),
             "current_date": timezone.localtime(timezone.now())
             .date()
-            .strftime("%d.%B.%Y"),
+            .strftime("%d.%m.%Y"),
         }
         await self.send_weather_report(weather_data, formatted_data)
