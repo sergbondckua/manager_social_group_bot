@@ -4,7 +4,7 @@ from aiogram.utils.markdown import text, hbold
 part_forecast_text = text(
     f"🕗 {hbold('{forecast_time} 🌡 {temperature}°C')}",
     text(
-        "🔸 {weather_description}",
+        "▫️ {weather_description}",
         "{precipitation_info}",
     ),
     sep="\n",
