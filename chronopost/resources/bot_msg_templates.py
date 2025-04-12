@@ -13,7 +13,6 @@ part_forecast_text = text(
 # Основний текст прогнозу
 forecast_text = text(
     "{recipient_text}",
-    "➖ ➖ ➖",
     text("🌆 {city}, {country}, 📆 {current_date}"),
     "➖ ➖ ➖ \n",
     "{formatted_data}",

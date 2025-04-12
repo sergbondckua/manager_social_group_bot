@@ -49,7 +49,7 @@ class WeatherNowHandler:
             ):
                 return formatted_data
             else:
-                return ("Прогноз погоди не доступний в даний час доби",)
+                return ("🕙 У цей час доби прогноз погоди не відображається",)
         except Exception as e:
             await self.message.answer(
                 "Помилка форматування даних: {}".format(e)
@@ -61,7 +61,7 @@ class WeatherNowHandler:
         
         try:
             weather_message = bmt.forecast_text.format(
-                recipient_text="Погода зараз",
+                recipient_text="🔹 Погода зараз 🔹",
                 city=weather_data["city"],
                 country=weather_data["country"],
                 current_date=weather_data["current_date"],
