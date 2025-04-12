@@ -1,6 +1,13 @@
-from aiogram import types, Router
-from aiogram.filters import CommandStart
+import os
+from pathlib import Path
 
+from aiogram import types, Router, F, Bot
+from aiogram.filters import CommandStart
+from django.conf import settings
+
+from robot.config import ROBOT
+from robot.services.gpx_vizualizer import GPXVisualizer
+from robot.tasks import visualize_gpx
 from robot.tgbot.filters.member import ClubMemberFilter
 from robot.tgbot.handlers.member.profile_field_configs import field_configs
 from robot.tgbot.keyboards.member import yes_no_keyboard
@@ -50,3 +57,42 @@ async def handle_start(message: types.Message, command: types.BotCommand):
         )
     else:
         await message.answer(f"Вітаю, {message.from_user.first_name}!")
+
+
+@member_router.message(F.document.file_name.endswith(".gpx"))
+async def handle_gpx_file(message: types.Message, bot: Bot = ROBOT):
+    # Отримуємо інформацію про файл
+    try:
+        document = message.document
+        file_name = document.file_name
+        file_id = document.file_id
+
+        # Використовуємо pathlib для створення директорії
+        Path(settings.MEDIA_ROOT, "gpx").mkdir(parents=True, exist_ok=True)
+
+        # Шлях для збереження файлу
+        file_path = os.path.join(settings.MEDIA_ROOT, "gpx", file_name)
+
+        # Завантажуємо файл
+        file = await bot.get_file(file_id)
+        await bot.download_file(file.file_path, destination=file_path)
+
+        # Перевіряємо, чи файл збережено
+        if os.path.exists(file_path):
+            file_size = os.path.getsize(file_path)
+            await message.answer(
+                f"GPX-файл '{file_name}' успішно збережено! Розмір: {file_size} байт"
+            )
+        else:
+            await message.answer(
+                f"Файл завантажено, але не знайдено за шляхом {file_path}"
+            )
+
+        # Обробка GPX-файлу і візуалізація маршруту за допомогою Celery
+        visualize_gpx.delay(file_path)
+
+    except Exception as e:
+        # Детальна обробка помилок
+        error_message = f"Помилка при обробці файлу: {str(e)}"
+        await message.answer(error_message)
+        return
