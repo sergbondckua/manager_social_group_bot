@@ -16,6 +16,7 @@ geopy~=2.4.1
 gpxpy~=1.6.2
 gunicorn~=23.0.0
 matplotlib~=3.10.1
+matplotlib-scalebar~=0.9.0
 monobank~=0.4.4
 Pillow~=11.1.0
 psycopg2-binary~=2.9.10
