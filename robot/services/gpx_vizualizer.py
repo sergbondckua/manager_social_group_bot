@@ -24,11 +24,15 @@ class GPXVisualizer:
                 settings.MEDIA_ROOT, "gpx", gpx_file.replace(".gpx", ".png")
             )
         )
-        self.points: List[Tuple[float, float]] = []  # Список точок (lon, lat)
+        self.points: List[Tuple[float, float, float]] = (
+            []
+        )  # Список точок (lon, lat, elevation)
         self.km_markers: List[Tuple[float, float, float]] = (
             []
         )  # Список маркерів (lat, lon, dist)
         self.total_distance: float = 0.0  # Загальна відстань
+        self.total_elevation_gain: float = 0.0  # Загальний набір висоти
+        self.total_elevation_descent: float = 0.0  # Загальний спуск
         self.gdf_track = None
         self.gdf_markers = None
         self.gdf_track_webmerc = None
@@ -42,7 +46,7 @@ class GPXVisualizer:
         return geopy.distance.geodesic(point1, point2).kilometers
 
     def parse_gpx(self) -> None:
-        """Парсить GPX-файл і збирає точки маршруту з треків або маршрутів"""
+        """Парсить GPX-файл і збирає точки маршруту з треків або маршрутів, включаючи висоту"""
         try:
             with open(self.gpx_file, "r") as f:
                 gpx = gpxpy.parse(f)
@@ -52,7 +56,11 @@ class GPXVisualizer:
                     for segment in track.segments:
                         for point in segment.points:
                             self.points.append(
-                                (point.longitude, point.latitude)
+                                (
+                                    point.longitude,
+                                    point.latitude,
+                                    point.elevation,
+                                )
                             )
 
                 # Якщо точок у треках не знайдено, спробуємо отримати точки з маршрутів
@@ -60,15 +68,47 @@ class GPXVisualizer:
                     for route in gpx.routes:
                         for point in route.points:
                             self.points.append(
-                                (point.longitude, point.latitude)
+                                (
+                                    point.longitude,
+                                    point.latitude,
+                                    point.elevation,
+                                )
                             )
 
                 if not self.points:
                     raise ValueError("Не знайдено точок у GPX файлі.")
+
+                # Обчислюємо набір висоти та спуск
+                self.calculate_elevation_stats()
+
         except FileNotFoundError:
             raise FileNotFoundError(f"Файл '{self.gpx_file}' не знайдено.")
         except Exception as e:
             raise RuntimeError(f"Помилка при парсингу GPX-файлу: {e}")
+
+    def calculate_elevation_stats(self) -> None:
+        """Обчислює загальний набір висоти та спуск вздовж маршруту"""
+        if not self.points or len(self.points) < 2:
+            return
+
+        elevation_gain = 0.0
+        elevation_descent = 0.0
+
+        for i in range(1, len(self.points)):
+            # Перевіряємо, чи є дані про висоту
+            if (
+                self.points[i - 1][2] is not None
+                and self.points[i][2] is not None
+            ):
+                # Обчислюємо різницю висот
+                elevation_diff = self.points[i][2] - self.points[i - 1][2]
+                if elevation_diff > 0:
+                    elevation_gain += elevation_diff
+                else:
+                    elevation_descent += abs(elevation_diff)
+
+        self.total_elevation_gain = elevation_gain
+        self.total_elevation_descent = elevation_descent
 
     def create_kilometer_markers(self, step: float = 1.0) -> None:
         """Створює кілометрові маркери вздовж маршруту"""
@@ -122,7 +162,9 @@ class GPXVisualizer:
 
     def prepare_geodataframes(self) -> None:
         """Готує геодатафрейми для маршруту та маркерів"""
-        track_line = LineString(self.points)
+        # Беремо тільки координати з точок (без висоти) для LineString
+        track_coords = [(p[0], p[1]) for p in self.points]
+        track_line = LineString(track_coords)
         self.gdf_track = gpd.GeoDataFrame(
             geometry=[track_line], crs="EPSG:4326"
         )
@@ -180,6 +222,21 @@ class GPXVisualizer:
                 zorder=6,
             )
 
+        # Додаємо інформацію про набір висоти і спуск на карту
+        elevation_info = f"Набір висоти: {self.total_elevation_gain:.1f} м | Спуск: {self.total_elevation_descent:.1f} м"
+        ax.text(
+            0.02,
+            0.02,
+            elevation_info,
+            transform=ax.transAxes,
+            fontsize=10,
+            fontweight="bold",
+            bbox=dict(
+                boxstyle="round,pad=0.5", fc="white", ec="gray", alpha=0.8
+            ),
+            zorder=10,
+        )
+
         ctx.add_basemap(ax, source=ctx.providers.OpenStreetMap.Mapnik)
         bounds = self.gdf_track_webmerc.geometry.total_bounds
         buffer = max((bounds[2] - bounds[0]), (bounds[3] - bounds[1])) * 0.05
@@ -189,15 +246,19 @@ class GPXVisualizer:
         ax.add_artist(ScaleBar(dx=1.0, location="lower right"))
         ax.set_title(
             f"GPX Track: {os.path.basename(self.gpx_file)}\n"
-            f"Загальна відстань: {self.total_distance:.2f} км",
+            f"Відстань: {self.total_distance:.2f} км | "
+            f"Набір висоти: {self.total_elevation_gain:.1f} м | "
+            f"Спуск: {self.total_elevation_descent:.1f} м",
             fontsize=12,
         )
         plt.savefig(self.output_file, bbox_inches="tight", dpi=300)
         plt.close()
         logger.info(
-            "Карту збережено як %s. Загальна відстань: %d км",
+            "Карту збережено як %s. Відстань: %.2f км, Набір висоти: %.1f м, Спуск: %.1f м",
             self.output_file,
-            round(self.total_distance, 2),
+            self.total_distance,
+            self.total_elevation_gain,
+            self.total_elevation_descent,
         )
 
     def visualize(self, step: float = 1.0) -> None:

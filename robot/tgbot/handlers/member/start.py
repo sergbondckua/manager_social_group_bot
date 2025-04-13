@@ -1,16 +1,12 @@
-import asyncio
 import os
 from pathlib import Path
 
 import logging
 from aiogram import types, Router, F, Bot
 from aiogram.filters import CommandStart
-from aiogram.types import FSInputFile
-from celery.result import AsyncResult
 from django.conf import settings
 
 from robot.config import ROBOT
-from robot.services.gpx_vizualizer import GPXVisualizer
 from robot.tasks import visualize_gpx
 from robot.tgbot.filters.member import ClubMemberFilter
 from robot.tgbot.handlers.member.profile_field_configs import field_configs
@@ -72,7 +68,8 @@ async def handle_start(message: types.Message, command: types.BotCommand):
 
 @member_router.message(F.document.file_name.endswith(".gpx"))
 async def handle_gpx_file(message: types.Message, bot: Bot = ROBOT):
-    """ Обробка GPX-файлу. """
+    """Відправляємо повідомлення візуалізації маршруту з GPX-файл."""
+
     try:
         # Отримуємо інформацію про GPX-файл
         document = message.document
@@ -97,14 +94,14 @@ async def handle_gpx_file(message: types.Message, bot: Bot = ROBOT):
                 f"Помилка: GPX-файл не знайдено за шляхом {file_path}",
             )
 
+        # Надсилаємо повідомлення про обробку файлу з його розміром
         file_size = os.path.getsize(file_path)
-        # Надсилаємо повідомлення про обробку файлу
         processing_msg = await message.answer(
             f"GPX-файл '{file_name}' завантажено ({file_size / 1024:.1f} КБ). "
             f"Обробляємо дані, це може зайняти деякий час..."
         )
 
-        # Запускаємо задачу
+        # Запускаємо задачу Celery для візуалізації маршруту
         task = visualize_gpx.delay(file_path)
 
         try:
@@ -121,11 +118,16 @@ async def handle_gpx_file(message: types.Message, bot: Bot = ROBOT):
 
             # Видаляємо службові повідомлення
             await processing_msg.delete()
+            # Видаляємо повідомлення з GPX-файлом
             # await message.delete()
 
             # Відправляємо результати
             await send_visualization_results(
-                message, file_path, image_path, file_name
+                message,
+                gpx_path=file_path,
+                image_path=image_path,
+                original_filename=file_name,
+                is_send_gpx_file=False,
             )
 
             # Прибираємо за собою
@@ -134,9 +136,7 @@ async def handle_gpx_file(message: types.Message, bot: Bot = ROBOT):
         except Exception as task_error:
             # Обробка помилок задачі
             error_msg = f"Помилка при обробці GPX-файлу: {str(task_error)}"
-            logger.error(
-                "Помилка обробки GPX-файлу: %s", error_msg, exc_info=task_error
-            )
+            logger.error("Помилка обробки GPX-файлу: %s", error_msg)
             await processing_msg.edit_text(error_msg)
             cleanup_files([file_path])
     except Exception as e:

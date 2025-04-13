@@ -56,8 +56,17 @@ async def send_visualization_results(
     gpx_path: str,
     image_path: str,
     original_filename: str,
+    is_send_gpx_file: bool = True,
 ) -> None:
-    """Відправка результатів візуалізації"""
+    """Відправка результатів візуалізації маршруту
+
+    Args:
+        message (types.Message): Об'єкт повідомлення
+        gpx_path (str): Повний шлях до GPX-файлу
+        image_path (str): Повний шлях до зображення
+        original_filename (str): Повне ім'я GPX-файлу
+        is_send_gpx_file (bool, optional): Відправляти GPX-файл. За замовчуванням True
+    """
 
     # Підготовка файлів
     gpx_file = FSInputFile(gpx_path, filename=original_filename)
@@ -70,11 +79,12 @@ async def send_visualization_results(
                f"#неділя #треки #маршрут #{sanitized_filename}")
     await message.answer_photo(photo=image_file, caption=caption)
 
-    # Відправка GPX файлу
-    # await message.bot.send_chat_action(message.chat.id, "upload_document")
-    # await message.answer_document(
-    #     document=gpx_file, caption=f"#{sanitized_filename}"
-    # )
+    if is_send_gpx_file:
+        # Відправка GPX файлу
+        await message.bot.send_chat_action(message.chat.id, "upload_document")
+        await message.answer_document(
+            document=gpx_file, caption=f"#{sanitized_filename}"
+        )
 
 
 def cleanup_files(file_paths: list) -> None:
