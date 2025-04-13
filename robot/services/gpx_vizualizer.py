@@ -223,7 +223,10 @@ class GPXVisualizer:
             )
 
         # Додаємо інформацію про набір висоти і спуск на карту
-        elevation_info = f"Набір висоти: {self.total_elevation_gain:.1f} м | Спуск: {self.total_elevation_descent:.1f} м"
+        elevation_info = (
+            f"Набір висоти: {self.total_elevation_gain:.1f} м | "
+            f"Спуск: {self.total_elevation_descent:.1f} м"
+        )
         ax.text(
             0.02,
             0.02,
