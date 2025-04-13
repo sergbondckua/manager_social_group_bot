@@ -96,7 +96,7 @@ services:
   celery_worker:
     build: .
     container_name: celery_worker_msg_bot
-    command: celery -A core worker --uid=nobody --loglevel=info
+    command: celery -A core worker --loglevel=info
     depends_on:
       - redis
       - db
