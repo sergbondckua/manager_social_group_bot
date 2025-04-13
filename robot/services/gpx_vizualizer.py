@@ -1,3 +1,5 @@
+import logging
+
 import gpxpy
 import matplotlib.pyplot as plt
 import contextily as ctx
@@ -9,6 +11,8 @@ import geopandas as gpd
 import geopy.distance
 from typing import List, Tuple
 
+logger = logging.getLogger("GPXVisualizer")
+
 
 class GPXVisualizer:
     def __init__(self, gpx_file: str, output_file: str = None):
@@ -17,7 +21,7 @@ class GPXVisualizer:
             output_file
             if output_file
             else os.path.join(
-                settings.MEDIA_ROOT, "gpx", gpx_file.split(".")[0] + ".png"
+                settings.MEDIA_ROOT, "gpx", gpx_file.replace(".gpx", ".png")
             )
         )
         self.points: List[Tuple[float, float]] = []  # Список точок (lon, lat)
@@ -184,14 +188,17 @@ class GPXVisualizer:
         ax.set_axis_off()
         ax.add_artist(ScaleBar(dx=1.0, location="lower right"))
         ax.set_title(
-            f"CrossRunChe GPX Track: {os.path.basename(self.gpx_file)}\n"
+            f"GPX Track: {os.path.basename(self.gpx_file)}\n"
             f"Загальна відстань: {self.total_distance:.2f} км",
             fontsize=12,
         )
         plt.savefig(self.output_file, bbox_inches="tight", dpi=300)
         plt.close()
-        print(f"Карту збережено як '{self.output_file}'")
-        print(f"Загальна відстань: {self.total_distance:.2f} км")
+        logger.info(
+            "Карту збережено як %s. Загальна відстань: %d км",
+            self.output_file,
+            round(self.total_distance, 2),
+        )
 
     def visualize(self, step: float = 1.0) -> None:
         """Головний метод для візуалізації маршруту"""
