@@ -65,14 +65,14 @@ async def send_visualization_results(
     sanitized_filename = re.sub(r'\W', '', original_filename)  # Очищаємо ім'я файлу
 
     # Відправка зображення з підписом
-    caption = (f"Візуалізація маршруту з файлу '{original_filename}'\n\n"
+    caption = (f"Візуалізація маршруту '{original_filename}'\n\n"
                f"#неділя #треки #маршрут #{sanitized_filename}")
     await message.answer_photo(photo=image_file, caption=caption)
 
     # Відправка GPX файлу
-    await message.answer_document(
-        document=gpx_file, caption=f"#{sanitized_filename}"
-    )
+    # await message.answer_document(
+    #     document=gpx_file, caption=f"#{sanitized_filename}"
+    # )
 
 
 def cleanup_files(file_paths: list) -> None:

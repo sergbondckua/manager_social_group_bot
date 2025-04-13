@@ -9,8 +9,7 @@ LABEL authors="sergbondckua" \
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=off \
-    PIP_DISABLE_PIP_VERSION_CHECK=on \
-    MPLCONFIGDIR=/tmp/matplotlib
+    PIP_DISABLE_PIP_VERSION_CHECK=on
 
 # Встановлюємо необхідні системні пакети
 RUN apt-get update && apt-get install -y --no-install-recommends \

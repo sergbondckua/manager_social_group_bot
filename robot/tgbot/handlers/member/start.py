@@ -121,7 +121,7 @@ async def handle_gpx_file(message: types.Message, bot: Bot = ROBOT):
 
             # Видаляємо службові повідомлення
             await processing_msg.delete()
-            await message.delete()
+            # await message.delete()
 
             # Відправляємо результати
             await send_visualization_results(
