@@ -65,11 +65,13 @@ async def send_visualization_results(
     sanitized_filename = re.sub(r'\W', '', original_filename)  # Очищаємо ім'я файлу
 
     # Відправка зображення з підписом
+    await message.bot.send_chat_action(message.chat.id, "upload_photo")
     caption = (f"Візуалізація маршруту '{original_filename}'\n\n"
                f"#неділя #треки #маршрут #{sanitized_filename}")
     await message.answer_photo(photo=image_file, caption=caption)
 
     # Відправка GPX файлу
+    # await message.bot.send_chat_action(message.chat.id, "upload_document")
     # await message.answer_document(
     #     document=gpx_file, caption=f"#{sanitized_filename}"
     # )
