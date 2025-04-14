@@ -97,6 +97,7 @@ services:
     build: .
     container_name: celery_worker_msg_bot
     command: celery -A core worker --loglevel=info
+    restart: always
     depends_on:
       - redis
       - db
@@ -110,6 +111,7 @@ services:
     build: .
     container_name: celery_beat_msg_bot
     command: celery -A core beat --loglevel=info
+    restart: always
     depends_on:
       - redis
       - db
