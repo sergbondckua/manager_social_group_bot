@@ -4,6 +4,7 @@ services:
     container_name: web_msg_bot
     command: bash -c "
       ./manage.py collectstatic --noinput &&
+      ./manage.py makemigrations &&
       ./manage.py migrate  &&
       gunicorn core.asgi:application --workers 2 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:8001"
     restart: always
