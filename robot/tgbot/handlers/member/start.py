@@ -58,12 +58,16 @@ async def handle_start(message: types.Message, command: types.BotCommand):
 
     # Відповідь користувачу залежно від того, якщо в профілі вже заповнені дані або ні
     if await is_not_profile_complete(user, field_configs):
-        await message.answer(
-            msg_handle_start.format(name=message.from_user.first_name),
+        await message.bot.send_message(
+            chat_id=message.from_user.id,
+            text=msg_handle_start.format(name=message.from_user.first_name),
             reply_markup=yes_no_keyboard(),
         )
     else:
-        await message.answer(f"Вітаю, {message.from_user.first_name}!")
+        await message.bot.send_message(
+            chat_id=message.from_user.id,
+            text=f"Вітаю, {message.from_user.first_name}!",
+        )
 
 
 @member_router.message(F.document.file_name.endswith(".gpx"))
