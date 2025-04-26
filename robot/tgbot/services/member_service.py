@@ -159,13 +159,16 @@ async def process_deep_link(
 
         # Надсилання фото або тексту
         if deep_link_instance.image:
-            await message.answer_photo(
+            await message.bot.send_photo(
+                chat_id=message.from_user.id,
                 photo=FSInputFile(deep_link_instance.image.path),
                 caption=msg[:1024],
                 show_caption_above_media=True,
             )
         else:
-            await message.answer(msg[:4096])
+            await message.bot.send_message(
+                chat_id=message.from_user.id, text=msg[:4096]
+            )
 
         # Сповіщення адміністраторам що користувач натиснув посилання
         for admin in ADMINS_BOT:
