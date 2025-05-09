@@ -261,7 +261,10 @@ class MonoBankChatIDProvider:
     """
 
     # Компілюємо регулярний вираз
-    _USER_ID_PATTERN = re.compile(r"user_id:\s*(\d+)", re.IGNORECASE)
+    _USER_ID_PATTERN = re.compile(
+        r"(?:(?:telegram|tg|user)[_\s-]*id[_\s:]*)?(\b\d{6,10}\b)",
+        re.IGNORECASE,
+    )
 
     def __init__(
         self, account: str, db_model: Type[MonoBankCard], admins: List[int]
