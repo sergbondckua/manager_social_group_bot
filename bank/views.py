@@ -78,7 +78,7 @@ class MonobankWebhookView(View):
             if data["type"] == "StatementItem":
                 self._handle_statement_item(data)
 
-            return JsonResponse({"status": "success"})
+            return JsonResponse({"status": "success"}, status=200)
         except json.JSONDecodeError:
             logger.error("Отримано некоректний JSON")
             return JsonResponse({"error": "Invalid JSON"}, status=400)
