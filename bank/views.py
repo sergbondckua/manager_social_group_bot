@@ -68,7 +68,7 @@ class MonobankWebhookView(View):
     """Обробляє webhook від Monobank."""
 
     def get(self, request, *args, **kwargs):
-        return JsonResponse({"status": "method not allowed"}, status=200)
+        return JsonResponse({"status": "method not allowed"}, status=405)
 
     def post(self, request, *args, **kwargs):
         try:
