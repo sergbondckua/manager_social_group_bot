@@ -79,7 +79,7 @@ services:
       - certbot_webroot_volume:/var/www/certbot
     depends_on:
       - web
-      - certbot
+#      - certbot
     networks:
       - default_network
 
