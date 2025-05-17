@@ -63,8 +63,6 @@ def send_birthday_greetings():
             logger.info("Сьогодні іменинники відсутні.")
             return
 
-        greeting = sync_to_async(get_random_greeting)()
-
         async with ROBOT as bot:
             sender = TelegramService(bot)
             for user in users:
@@ -74,12 +72,15 @@ def send_birthday_greetings():
                         user.telegram_id
                     )
                     name = await format_user_display_name(user, sender)
+                    # Для кожного користувача генеруємо нове привітання
+                    get_greeting = sync_to_async(get_random_greeting)
+                    greeting_text_value = await get_greeting()
 
                     # Формуємо текст привітання
                     message = greeting_text.format(
                         today=today.strftime("%d.%m.%Y"),
                         name=name,
-                        greeting=clean_tag_message(await greeting),
+                        greeting=clean_tag_message(greeting_text_value),
                     )
                     # Відправляємо привітання
                     await sender.send_message(
