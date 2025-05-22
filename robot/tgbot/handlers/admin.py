@@ -21,12 +21,19 @@ async def cmd_start(message: Message):
 # Обробник команди "/quiz"
 @admin_router.message(Command("quiz"))
 async def cmd_quiz(message: Message):
-    question = await QuizQuestion.objects.filter(is_active=True).afirst()
+    # Отримуємо всі активні запитання
+    active_questions = [
+        question
+        async for question in QuizQuestion.objects.filter(is_active=True)
+    ]
 
     # Перевірка наявності активного запитання
-    if not question:
+    if not active_questions:
         await message.answer("Наразі немає активних запитань.")
         return
+
+    # Випадковий вибір запитання
+    question = random.choice(active_questions)
 
     answers = [answer async for answer in question.answers.all()]
 
