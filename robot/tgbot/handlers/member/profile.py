@@ -1,6 +1,6 @@
 import logging
 
-from aiogram import types, Router
+from aiogram import types, Router, F
 from aiogram.fsm.context import FSMContext
 
 from robot.tgbot.handlers.member.profile_field_configs import (
@@ -24,7 +24,7 @@ profile_router = Router()
 
 
 # Обробник погодження на заповнення профілю
-@profile_router.message(lambda message: message.text == mt.btn_yes)
+@profile_router.message(F.text == mt.btn_yes)
 async def handle_yes(message: types.Message, state: FSMContext):
     """Початок процесу заповнення профілю"""
     user = await get_user_or_error(message.from_user.id, message)
@@ -147,7 +147,7 @@ async def process_field_input(message: types.Message, state: FSMContext):
 
 
 # Обробник відмови
-@profile_router.message(lambda message: message.text == mt.btn_no)
+@profile_router.message(F.text == mt.btn_no)
 async def handle_no(message: types.Message):
     """Обробник відмови заповнювати дані"""
     await message.answer(
@@ -157,7 +157,7 @@ async def handle_no(message: types.Message):
 
 
 # Обробник скасування
-@profile_router.message(lambda message: message.text == mt.btn_cancel)
+@profile_router.message(F.text == mt.btn_cancel)
 async def handle_cancel(message: types.Message, state: FSMContext):
     """Обробник скасування процесу"""
 

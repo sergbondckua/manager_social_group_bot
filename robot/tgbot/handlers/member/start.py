@@ -136,6 +136,7 @@ async def handle_gpx_file(message: types.Message, bot: Bot = ROBOT):
 
             # Прибираємо за собою
             cleanup_files([image_path, file_path])
+            return None
 
         except Exception as task_error:
             # Обробка помилок задачі
@@ -143,8 +144,10 @@ async def handle_gpx_file(message: types.Message, bot: Bot = ROBOT):
             logger.error("Помилка обробки GPX-файлу: %s", error_msg)
             await processing_msg.edit_text(error_msg)
             cleanup_files([file_path])
+            return None
     except Exception as e:
         logger.error("Загальна помилка обробника GPX-файлу: %s", e)
         await message.bot.send_message(
             settings.ADMINS_BOT[0], f"Помилка при обробці файлу: {str(e)}"
         )
+        return None

@@ -54,6 +54,7 @@ INSTALLED_APPS = [
     "chronopost",
     "profiles",
     "robot",
+    "training_events",
 ]
 
 MIDDLEWARE = [
