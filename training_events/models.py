@@ -51,7 +51,7 @@ class TrainingEvent(BaseModel):
     )
 
     def __str__(self):
-        return f"{self.title} - {self.date.strftime('%d.%m.%Y %H:%M')}"
+        return f"{self.title} - {self.date.strftime('%d %B %Y %H:%M')}"
 
     @property
     def is_past(self):
