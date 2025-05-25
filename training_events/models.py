@@ -1,7 +1,10 @@
+import uuid
 from datetime import timedelta
 
+from django.core.validators import FileExtensionValidator
 from django.db import models
 from django.utils import timezone
+from django.utils.timezone import localtime
 
 from common.models import BaseModel
 from profiles.models import ClubUser
@@ -12,15 +15,12 @@ class TrainingEvent(BaseModel):
 
     def get_upload_path(self, filename):
         """Генеруємо унікальне ім'я файлу і повертаємо шлях до нього"""
-        return f"trainings/{self.created_by.id}/images/{filename}"
+        file_extension = filename.split(".")[-1]
+        new_filename = f"{uuid.uuid4().hex}.{file_extension}"
+        return f"trainings/{self.created_by.id}/images/{new_filename}"
 
     title = models.CharField(
         verbose_name="Назва тренування", max_length=200, unique=True
-    )
-    slug = models.SlugField(
-        verbose_name="name",
-        unique=True,
-        help_text="Назва тільки маленькими латинськими літерами",
     )
     description = models.TextField(
         verbose_name="Опис тренування", blank=True, null=True
@@ -36,7 +36,11 @@ class TrainingEvent(BaseModel):
         verbose_name="Постер тренування",
         null=True,
         blank=True,
-        help_text="Постер тренування",
+        validators=[
+            FileExtensionValidator(
+                allowed_extensions=["jpg", "jpeg", "png", "svg", "webp"]
+            )
+        ],
         upload_to=get_upload_path,
     )
     created_by = models.ForeignKey(
@@ -51,7 +55,16 @@ class TrainingEvent(BaseModel):
     )
 
     def __str__(self):
-        return f"{self.title} - {self.date.strftime('%d %B %Y %H:%M')}"
+        local_date = localtime(
+            self.date
+        )  # Конвертуємо дату в локальну часову зону
+        distances = ", ".join(
+            [f"{d.distance} км" for d in self.available_distances]
+        )
+        return (
+            f"{self.title} - {local_date.strftime('%d %B %Y %H:%M')}: "
+            f"{self.location}, {distances}"
+        )
 
     @property
     def is_past(self):
@@ -88,9 +101,17 @@ class TrainingDistance(BaseModel):
 
     def get_upload_path(self, filename: str) -> str:
         """Генеруємо унікальне ім'я файлу і повертаємо шлях до нього"""
+
         if self.training and self.training.created_by:
-            return f"trainings/{self.training.created_by.id}/gpx/{filename}"
-        return f"trainings/unknown-{self.id}/gpx/{filename}"
+            file_extension = filename.split(".")[-1]
+            new_filename = (
+                f"{self.distance}km_"
+                f"{self.training.date.strftime('%d%B%Y_%H%M')}.{file_extension}"
+            )
+            return (
+                f"trainings/{self.training.created_by.id}/gpx/{new_filename}"
+            )
+        return f"trainings/unknown/gpx/{filename}"
 
     training = models.ForeignKey(
         verbose_name="Тренування",
@@ -121,16 +142,20 @@ class TrainingDistance(BaseModel):
     route_gpx = models.FileField(
         verbose_name="Маршрут",
         upload_to=get_upload_path,
+        validators=[FileExtensionValidator(allowed_extensions=["gpx"])],
         null=True,
         blank=True,
-        help_text="GPX файл маршруту",
+        help_text="GPX файл маршруту: .gpx",
     )
 
     def __str__(self):
-        return f"{self.training.title} - {self.distance} км"
+
+        name = "".join(
+            s[0].upper() for s in self.training.title.split(" ") if s.isalpha()
+        )
+        return f"{self.distance} км - {name}"
 
     class Meta:
-        abstract = False
         ordering = ["distance"]
         unique_together = ("training", "distance")
         verbose_name = "️📏 Дистанція"
