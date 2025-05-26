@@ -485,6 +485,14 @@ async def add_another_distance(
 ):
     """Додавання ще однієї дистанції."""
 
+    await state.update_data(
+        current_distance=None,
+        current_max_participants=None,
+        current_pace_min=None,
+        current_pace_max=None,
+        current_route_gpx=None,
+        current_source_filename_gpx=None,
+    )
     await state.set_state(CreateTraining.waiting_for_distance)
     await callback.message.edit_text(
         "Введіть наступну дистанцію (у кілометрах):"
