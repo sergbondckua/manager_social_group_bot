@@ -11,7 +11,7 @@ from django.core.exceptions import ValidationError
 
 from profiles.models import ClubUser
 from robot.tgbot.filters.staff import ClubStaffFilter
-from robot.tgbot.keyboards.staff import add_distance_or_finish_keyboard
+from robot.tgbot.keyboards import staff as kb
 from robot.tgbot.states.staff import CreateTraining
 from robot.tgbot.text import staff_create_training as mt
 from training_events.models import TrainingEvent, TrainingDistance
@@ -19,9 +19,12 @@ from training_events.models import TrainingEvent, TrainingDistance
 staff_router = Router()
 staff_router.message.filter(ClubStaffFilter())
 
+SKIP_AND_CANCEL_BUTTONS = kb.skip_and_cancel_keyboard()
+CANCEL_BUTTON = kb.cancel_keyboard()
+
 
 # Додатковий обробник для скасування створення тренування
-@staff_router.message(Command("cancel"))
+@staff_router.message(F.text == mt.btn_cancel)
 async def cancel_training_creation(message: types.Message, state: FSMContext):
     """Скасування створення тренування."""
 
@@ -31,7 +34,10 @@ async def cancel_training_creation(message: types.Message, state: FSMContext):
         return
 
     await state.clear()
-    await message.answer("❌ Створення тренування скасовано.")
+    await message.answer(
+        "❌ Створення тренування скасовано.",
+        reply_markup=types.ReplyKeyboardRemove(),
+    )
 
 
 @staff_router.message(Command("create_training"))
@@ -39,7 +45,9 @@ async def cmd_create_training(message: types.Message, state: FSMContext):
     """Обробник команди "/create_training"."""
 
     await state.set_state(CreateTraining.waiting_for_title)
-    await message.answer("Введіть назву тренування:")
+    await message.answer(
+        "Введіть назву тренування:", reply_markup=CANCEL_BUTTON
+    )
 
 
 @staff_router.message(CreateTraining.waiting_for_title)
@@ -56,18 +64,25 @@ async def process_title(message: types.Message, state: FSMContext):
 
     await state.update_data(title=message.text.strip())
     await state.set_state(CreateTraining.waiting_for_description)
-    await message.answer("Введіть опис тренування (або /skip для пропуску):")
+    await message.answer(
+        "Введіть опис тренування (або /skip для пропуску):",
+        reply_markup=SKIP_AND_CANCEL_BUTTONS,
+    )
 
 
 @staff_router.message(
-    CreateTraining.waiting_for_description, F.text == "/skip"
+    CreateTraining.waiting_for_description,
+    lambda message: message.text in {"/skip", mt.btn_skip},
 )
 async def skip_description(message: types.Message, state: FSMContext):
     """Пропуск опису тренування."""
 
     await state.update_data(description="")
     await state.set_state(CreateTraining.waiting_for_date)
-    await message.answer("Введіть дату тренування у форматі ДД.ММ.РРРР:")
+    await message.answer(
+        "Введіть дату тренування у форматі ДД.ММ.РРРР:",
+        reply_markup=CANCEL_BUTTON,
+    )
 
 
 @staff_router.message(CreateTraining.waiting_for_description)
@@ -78,7 +93,10 @@ async def process_training_description(
 
     await state.update_data(description=message.text.strip())
     await state.set_state(CreateTraining.waiting_for_date)
-    await message.answer("Введіть дату тренування у форматі ДД.ММ.РРРР:")
+    await message.answer(
+        "Введіть дату тренування у форматі ДД.ММ.РРРР:",
+        reply_markup=CANCEL_BUTTON,
+    )
 
 
 @staff_router.message(CreateTraining.waiting_for_date)
@@ -169,10 +187,16 @@ async def process_training_location(message: types.Message, state: FSMContext):
 
     await state.update_data(location=location, distances=[])
     await state.set_state(CreateTraining.waiting_for_poster)
-    await message.answer("Завантажте постер тренування (фото) або /skip:")
+    await message.answer(
+        "Завантажте постер тренування (фото) або /skip:",
+        reply_markup=SKIP_AND_CANCEL_BUTTONS,
+    )
 
 
-@staff_router.message(CreateTraining.waiting_for_poster, F.text == "/skip")
+@staff_router.message(
+    CreateTraining.waiting_for_poster,
+    lambda message: message.text in {"/skip", mt.btn_skip},
+)
 async def skip_poster(message: types.Message, state: FSMContext):
     """Пропуск додавання постеру тренування."""
 
@@ -180,7 +204,8 @@ async def skip_poster(message: types.Message, state: FSMContext):
     await state.set_state(CreateTraining.waiting_for_distance)
     await message.answer(
         "Тепер додамо дистанції для тренування.\n"
-        "Введіть першу дистанцію (у кілометрах):"
+        "Введіть першу дистанцію (у кілометрах):",
+        reply_markup=CANCEL_BUTTON,
     )
 
 
@@ -192,7 +217,10 @@ async def process_training_poster(message: types.Message, state: FSMContext):
         file_id = message.photo[-1].file_id
         await state.update_data(poster_file_id=file_id)
         await state.set_state(CreateTraining.waiting_for_distance)
-        await message.answer("Введіть першу дистанцію (у кілометрах):")
+        await message.answer(
+            "Введіть першу дистанцію (у кілометрах):",
+            reply_markup=CANCEL_BUTTON,
+        )
     except Exception as e:
         await message.answer(
             "Неможливо завантажити постер. Спробуйте ще раз:{}".format(e)
@@ -205,7 +233,8 @@ async def process_invalid_message(message: types.Message):
     """Обробник для повідомлень, що не є фото."""
     await message.answer(
         "Будь ласка, завантажте фото для постеру або /skip. "
-        "Інші типи повідомлень не приймаються."
+        "Інші типи повідомлень не приймаються.",
+        reply_markup=SKIP_AND_CANCEL_BUTTONS,
     )
 
 
@@ -273,8 +302,9 @@ async def process_max_participants(message: types.Message, state: FSMContext):
         await state.update_data(current_max_participants=max_participants)
         await state.set_state(CreateTraining.waiting_for_pace_min)
         await message.answer(
-            "Введіть мінімальний (швидкий) темп у форматі ХХ:СС "
-            "(наприклад, 03:30) або /skip для пропуску:"
+            "Введіть мінімальний (повільний) темп у форматі ХХ:СС "
+            "(наприклад, 07:30) або /skip для пропуску:",
+            reply_markup=SKIP_AND_CANCEL_BUTTONS,
         )
     except ValueError:
         await message.answer(
@@ -282,15 +312,18 @@ async def process_max_participants(message: types.Message, state: FSMContext):
         )
 
 
-@staff_router.message(CreateTraining.waiting_for_pace_min, F.text == "/skip")
+@staff_router.message(
+    CreateTraining.waiting_for_pace_min,
+    lambda message: message.text in {"/skip", mt.btn_skip},
+)
 async def skip_pace_min(message: types.Message, state: FSMContext):
     """Пропуск мінімального темпу."""
 
     await state.update_data(current_pace_min=None)
     await state.set_state(CreateTraining.waiting_for_pace_max)
     await message.answer(
-        "Введіть максимальний (повільний) темп у форматі ХХ:СС "
-        "(наприклад, 06:30) або /skip для пропуску:"
+        "Введіть максимальний (швидкий) темп у форматі ХХ:СС "
+        "(наприклад, 03:30) або /skip для пропуску:"
     )
 
 
@@ -299,7 +332,12 @@ async def process_pace_min(message: types.Message, state: FSMContext):
     """Обробник введення мінімального темпу."""
 
     try:
-        pace_str = message.text.strip().replace(".", ":").replace(",", ":")
+        pace_str = (
+            message.text.strip()
+            .replace(".", ":")
+            .replace(",", ":")
+            .replace(" ", ":")
+        )
         parsed_pace = datetime.strptime(pace_str, "%M:%S").time()
 
         # Перевіряємо розумність темпу (від 3:00 до 15:00 хв/км)
@@ -313,17 +351,20 @@ async def process_pace_min(message: types.Message, state: FSMContext):
         await state.update_data(current_pace_min=pace_str)
         await state.set_state(CreateTraining.waiting_for_pace_max)
         await message.answer(
-            "Введіть максимальний (повільний) темп у форматі ХХ:СС "
-            "(наприклад, 06:30) або /skip для пропуску:"
+            "Введіть максимальний (швидкий) темп у форматі ХХ:СС "
+            "(наприклад, 03:30) або /skip для пропуску:"
         )
     except ValueError:
         await message.answer(
             "Некоректний формат темпу. "
-            "Введіть темп у форматі ХХ:СС (наприклад, 05:30) або /skip:"
+            "Введіть темп у форматі ХХ:СС (наприклад, 07:30) або /skip:"
         )
 
 
-@staff_router.message(CreateTraining.waiting_for_pace_max, F.text == "/skip")
+@staff_router.message(
+    CreateTraining.waiting_for_pace_max,
+    lambda message: message.text in {"/skip", mt.btn_skip},
+)
 async def skip_pace_max(message: types.Message, state: FSMContext):
     """Пропуск максимального темпу."""
 
@@ -339,7 +380,12 @@ async def process_pace_max(message: types.Message, state: FSMContext):
     """Обробник введення максимального темпу."""
 
     try:
-        pace_str = message.text.strip().replace(".", ":").replace(",", ":")
+        pace_str = (
+            message.text.strip()
+            .replace(".", ":")
+            .replace(",", ":")
+            .replace(" ", ":")
+        )
         parsed_pace = datetime.strptime(pace_str, "%M:%S").time()
 
         # Перевіряємо розумність темпу
@@ -357,10 +403,10 @@ async def process_pace_max(message: types.Message, state: FSMContext):
                 data["current_pace_min"], "%M:%S"
             ).time()
             min_seconds = min_pace.minute * 60 + min_pace.second
-            if total_seconds < min_seconds:
+            if total_seconds > min_seconds:
                 await message.answer(
-                    f"Максимальний (повільний) темп ({pace_str}) не може бути "
-                    f"швидшим за мінімальний (швидкий) ({data['current_pace_min']}). "
+                    f"Максимальний (швидкий) темп ({pace_str}) не може бути "
+                    f"повільше за мінімальний (повільний) ({data['current_pace_min']}). "
                     "Спробуйте ще раз:"
                 )
                 return
@@ -376,12 +422,19 @@ async def process_pace_max(message: types.Message, state: FSMContext):
         )
 
 
-@staff_router.message(CreateTraining.waiting_for_route_gpx, F.text == "/skip")
+@staff_router.message(
+    CreateTraining.waiting_for_route_gpx,
+    lambda message: message.text in {"/skip", mt.btn_skip},
+)
 async def skip_route_gpx(message: types.Message, state: FSMContext):
     """Пропуск додавання файлу маршруту."""
 
     await state.update_data(
         сurrent_route_gpx=None, current_source_filename_gpx=None
+    )
+    await message.answer(
+        "Додавання маршруту скасовано.",
+        reply_markup=CANCEL_BUTTON,
     )
     await save_current_distance_and_ask_next(message, state)
 
@@ -409,6 +462,9 @@ async def process_route_gpx(message: types.Message, state: FSMContext):
         await state.update_data(
             current_route_gpx=message.document.file_id,
             current_source_filename_gpx=message.document.file_name,
+        )
+        await message.answer(
+            "Маршрут успішно додано.", reply_markup=CANCEL_BUTTON
         )
         await save_current_distance_and_ask_next(message, state)
     except ValueError:
@@ -468,13 +524,13 @@ async def save_current_distance_and_ask_next(
     )
 
     # Створюємо клавіатуру
-    keyboard = add_distance_or_finish_keyboard()
+    keyboard = kb.add_distance_or_finish_keyboard()
 
     await state.update_data(distances=distances)
     await message.answer(
         f"✅ Дистанція {current_distance['distance']} км додана!\n\n"
         f"📏 Додані дистанції:\n{distances_text}\n\n"
-        "Що робити далі?",
+        f"Що робимо далі?",
         reply_markup=keyboard,
     )
 
@@ -485,15 +541,20 @@ async def add_another_distance(
 ):
     """Додавання ще однієї дистанції."""
 
-    await state.update_data(
-        current_distance=None,
-        current_max_participants=None,
-        current_pace_min=None,
-        current_pace_max=None,
-        current_route_gpx=None,
-        current_source_filename_gpx=None,
-    )
+    # Отримуємо поточний стан даних
+    data = await state.get_data()
+
+    # Очищуємо ключі, які починаються з "current_"
+    updated_data = {
+        key: value if not key.startswith("current_") else None
+        for key, value in data.items()
+    }
+
+    # Оновлюємо стан даних та встановлюємо новий стан
+    await state.set_data(updated_data)
     await state.set_state(CreateTraining.waiting_for_distance)
+
+    # Редагуємо повідомлення та відповідаємо користувачу
     await callback.message.edit_text(
         "Введіть наступну дистанцію (у кілометрах):"
     )
@@ -665,6 +726,10 @@ async def create_training_final(message: types.Message, state: FSMContext):
         )
 
         await message.edit_text(success_message)
+        await message.answer(
+            "Дякую, вдалого тренування!",
+            reply_markup=types.ReplyKeyboardRemove(),
+        )
         await state.clear()
 
     except ClubUser.DoesNotExist:
