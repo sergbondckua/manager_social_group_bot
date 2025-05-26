@@ -1,9 +1,11 @@
+import os
 from datetime import datetime
+from pathlib import Path
 
-from aiogram import Router, F
-from aiogram import types
+from aiogram import types, Router, F
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
+from django.conf import settings
 from django.utils import timezone
 from django.core.exceptions import ValidationError
 
@@ -45,15 +47,10 @@ async def process_title(message: types.Message, state: FSMContext):
     """Обробник введення назви тренування."""
 
     # Перевіряємо довжину назви
-    if len(message.text.strip()) < 3:
+    if 200 < len(message.text.strip()) < 3:
         await message.answer(
-            "Назва тренування занадто коротка. Введіть принаймні 3 символи:"
-        )
-        return
-
-    if len(message.text.strip()) > 200:
-        await message.answer(
-            "Назва тренування занадто довга. Максимум 200 символів:"
+            "Назва тренування не відповідає вимогам (3-200 символів). "
+            "Спробуєте ще раз:"
         )
         return
 
@@ -175,37 +172,41 @@ async def process_training_location(message: types.Message, state: FSMContext):
     await message.answer("Завантажте постер тренування (фото) або /skip:")
 
 
-@staff_router.message(
-    CreateTraining.waiting_for_poster, F.photo | F.document | F.text == "/skip"
-)
+@staff_router.message(CreateTraining.waiting_for_poster, F.text == "/skip")
+async def skip_poster(message: types.Message, state: FSMContext):
+    """Пропуск додавання постеру тренування."""
+
+    await state.update_data(poster=None)
+    await state.set_state(CreateTraining.waiting_for_distance)
+    await message.answer(
+        "Тепер додамо дистанції для тренування.\n"
+        "Введіть першу дистанцію (у кілометрах):"
+    )
+
+
+@staff_router.message(CreateTraining.waiting_for_poster, F.photo)
 async def process_training_poster(message: types.Message, state: FSMContext):
     """Обробник введення постеру тренування."""
 
-    if message.text == "/skip":
-        await state.set_state(CreateTraining.waiting_for_distance)
-        await message.answer(
-            "Тепер додамо дистанції для тренування.\n"
-            "Введіть першу дистанцію (у кілометрах):"
-        )
-        return
-
-    file_id = None
-    # Обробка фото
-    if message.photo:
+    try:
         file_id = message.photo[-1].file_id
-    # Обробка документу-зображення
-    elif message.document and message.document.mime_type.startswith("image/"):
-        file_id = message.document.file_id
-
-    if not file_id:
+        await state.update_data(poster_file_id=file_id)
+        await state.set_state(CreateTraining.waiting_for_distance)
+        await message.answer("Введіть першу дистанцію (у кілометрах):")
+    except Exception as e:
         await message.answer(
-            "Будь ласка, завантажте зображення у підтримуваному форматі."
+            "Неможливо завантажити постер. Спробуйте ще раз:{}".format(e)
         )
         return
 
-    await state.update_data(poster_file_id=file_id)
-    await state.set_state(CreateTraining.waiting_for_distance)
-    await message.answer("Введіть першу дистанцію (у кілометрах):")
+
+@staff_router.message(CreateTraining.waiting_for_poster)
+async def process_invalid_message(message: types.Message):
+    """Обробник для повідомлень, що не є фото."""
+    await message.answer(
+        "Будь ласка, завантажте фото для постеру або /skip. "
+        "Інші типи повідомлень не приймаються."
+    )
 
 
 @staff_router.message(CreateTraining.waiting_for_distance)
@@ -328,7 +329,9 @@ async def skip_pace_max(message: types.Message, state: FSMContext):
 
     await state.update_data(current_pace_max=None)
     await state.set_state(CreateTraining.waiting_for_route_gpx)
-    await message.answer("Введіть маршрут у форматі GPX або /skip для пропуску:")
+    await message.answer(
+        "Введіть маршрут у форматі GPX або /skip для пропуску:"
+    )
 
 
 @staff_router.message(CreateTraining.waiting_for_pace_max)
@@ -377,26 +380,51 @@ async def process_pace_max(message: types.Message, state: FSMContext):
 async def skip_route_gpx(message: types.Message, state: FSMContext):
     """Пропуск додавання файлу маршруту."""
 
-    await state.update_data(сurrent_route_gpx=None)
+    await state.update_data(
+        сurrent_route_gpx=None, current_source_filename_gpx=None
+    )
     await save_current_distance_and_ask_next(message, state)
 
 
-@staff_router.message(CreateTraining.waiting_for_route_gpx, F.document)
+@staff_router.message(
+    CreateTraining.waiting_for_route_gpx, F.document.file_name.endswith(".gpx")
+)
 async def process_route_gpx(message: types.Message, state: FSMContext):
     """Обробник введення файлу маршруту."""
 
-    try:
-        if message.document and message.document.file_name.endswith(".gpx"):
-            await state.update_data(сurrent_route_gpx=message.document.file_id)
-        else:
-            await message.answer("Будь ласка, завантажте файл у форматі .gpx")
-            return
+    data = await state.get_data()
+    existing_route_gpx = [
+        d.get("source_filename_gpx") for d in data.get("distances", [])
+    ]
 
+    try:
+        # Перевіряємо, що маршрут не повторюється
+        filename = message.document.file_name
+        if filename in existing_route_gpx:
+            await message.answer(
+                f"Цей файл {filename} маршруту вже був доданий до цього тренування."
+                f"Спробуйте ще раз або /skip для пропуску:"
+            )
+            return
+        await state.update_data(
+            current_route_gpx=message.document.file_id,
+            current_source_filename_gpx=message.document.file_name,
+        )
         await save_current_distance_and_ask_next(message, state)
     except ValueError:
         await message.answer(
-            "Некоректний формат файлу маршруту. Спробуйте ще раз:"
+            "Некоректний формат файлу маршруту. Спробуйте ще раз або /skip:"
         )
+
+
+@staff_router.message(CreateTraining.waiting_for_route_gpx)
+async def invalid_route_gpx(message: types.Message, state: FSMContext):
+    """Обробник некоректного файлу маршруту."""
+    await message.answer(
+        "Некоректний формат файлу маршруту. "
+        "Файл повинен бути у форматі .GPX. Спробуйте ще раз "
+        "або /skip для пропуску:"
+    )
 
 
 async def save_current_distance_and_ask_next(
@@ -414,6 +442,7 @@ async def save_current_distance_and_ask_next(
         "pace_min": data.get("current_pace_min"),
         "pace_max": data.get("current_pace_max"),
         "route_gpx": data.get("current_route_gpx"),
+        "source_filename_gpx": data.get("current_source_filename_gpx"),
     }
     distances.append(current_distance)
 
@@ -470,6 +499,10 @@ async def finish_training_creation(
     """Завершення створення тренування."""
 
     await callback.message.edit_text("⏳ Створюю тренування...")
+    # Надсилання дії "набираю текст"
+    await callback.bot.send_chat_action(
+        callback.message.chat.id, action="typing"
+    )
     await create_training_final(callback.message, state)
     await callback.answer()
 
@@ -505,14 +538,21 @@ async def create_training_final(message: types.Message, state: FSMContext):
         if data.get("poster_file_id"):
             try:
                 file = await message.bot.get_file(data["poster_file_id"])
-                poster_path = TrainingEvent.get_upload_path(
-                    TrainingEvent(), file.file_path.split("/")[-1]
+                file_name = file.file_path.split("/")[-1]
+                # Шлях до збереження постера
+                save_path = os.path.join(
+                    settings.MEDIA_ROOT, f"trainings/{club_user.id}/images"
                 )
+                # Створюємо директорію
+                Path(save_path).mkdir(parents=True, exist_ok=True)
+                # Зберігаємо постер
+                poster_path = os.path.join(save_path, file_name)
+
                 await message.bot.download_file(
-                    file.file_path, f"media/{poster_path}"
+                    file_path=file.file_path, destination=poster_path
                 )
             except Exception as e:
-                await message.answer(f"Помилка завантаження постера: {e}")
+                await message.answer(f"❌ Помилка завантаження постера: {e}")
 
         # Створюємо тренування
         training = await TrainingEvent.objects.acreate(
@@ -534,11 +574,23 @@ async def create_training_final(message: types.Message, state: FSMContext):
                     file = await message.bot.get_file(
                         distance_data["route_gpx"]
                     )
-                    route_path = TrainingDistance.get_upload_path(
-                        TrainingDistance(), file.file_path.split("/")[-1]
+                    file_extension = file.file_path.split("/")[-1].split(".")[
+                        -1
+                    ]
+                    file_name = (
+                        f"{distance_data['distance']}km_"
+                        f"{training.date.strftime('%d%B%Y_%H%M')}.{file_extension}"
                     )
+                    # Шлях до збереження постера
+                    save_path = os.path.join(
+                        settings.MEDIA_ROOT, f"trainings/{club_user.id}/gpx"
+                    )
+                    # Створюємо директорію
+                    Path(save_path).mkdir(parents=True, exist_ok=True)
+                    # Зберігаємо постер
+                    route_path = os.path.join(save_path, file_name)
                     await message.bot.download_file(
-                        file.file_path, f"media/{route_path}"
+                        file_path=file.file_path, destination=route_path
                     )
                 except Exception as e:
                     await message.answer(f"Помилка завантаження маршруту: {e}")
@@ -597,13 +649,14 @@ async def create_training_final(message: types.Message, state: FSMContext):
         success_message = (
             f"✅ Тренування успішно створено!\n\n"
             f"📋 Назва: {data['title']}\n"
+            f"📸 Постер: {'🖼' if data.get('poster_file_id') else '-'}\n"
             f"📝 Опис: {data.get('description', 'Без опису')}\n"
             f"📅 Дата: {training_datetime.strftime('%d.%m.%Y %H:%M')}\n"
             f"📍 Місце: {data['location']}\n\n"
             f"Дистанції:\n{distances_info}"
         )
 
-        await message.answer(success_message)
+        await message.edit_text(success_message)
         await state.clear()
 
     except ClubUser.DoesNotExist:
