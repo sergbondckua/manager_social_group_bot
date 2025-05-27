@@ -20,7 +20,7 @@ class TrainingEvent(BaseModel):
         return f"trainings/{self.created_by.id}/images/{new_filename}"
 
     title = models.CharField(
-        verbose_name="Назва тренування", max_length=200, unique=True
+        verbose_name="Назва тренування", max_length=100, unique=True
     )
     description = models.TextField(
         verbose_name="Опис тренування", blank=True, null=True
@@ -29,7 +29,7 @@ class TrainingEvent(BaseModel):
         verbose_name="Дата та час", help_text="Дата та час тренування"
     )
     location = models.CharField(
-        verbose_name="Місце", max_length=300, help_text="Місце тренування"
+        verbose_name="Місце", max_length=150, help_text="Місце тренування"
     )
 
     poster = models.ImageField(
