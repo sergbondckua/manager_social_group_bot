@@ -150,6 +150,7 @@ class TrainingDistance(BaseModel):
     route_gpx_map = models.ImageField(
         verbose_name="Карта маршруту",
         upload_to=get_upload_path,
+        max_length=255,
         validators=[
             FileExtensionValidator(
                 allowed_extensions=["jpg", "jpeg", "png", "svg", "webp"]

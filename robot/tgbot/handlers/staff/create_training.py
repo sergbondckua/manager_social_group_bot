@@ -670,9 +670,12 @@ async def create_training_final(message: types.Message, state: FSMContext):
 
                     # Перевіряємо завантаження маршруту
                     if os.path.exists(route_path):
-                        route_gpx_map = visualize_gpx.delay(
-                            gpx_file=route_path,
-                            output_file=route_path.replace(".gpx", ".png"),
+                        # Генеруємо шлях для мапи
+                        map_image_path = route_path.replace(".gpx", ".png")
+
+                        # Запускаємо Celery-задачу асинхронно
+                        visualize_gpx.delay(
+                            gpx_file=route_path, output_file=map_image_path
                         )
 
                 except Exception as e:
@@ -697,7 +700,7 @@ async def create_training_final(message: types.Message, state: FSMContext):
                 ),
                 max_participants=distance_data["max_participants"],
                 route_gpx=route_path,
-                route_gpx_map=route_gpx_map,
+                route_gpx_map=map_image_path,
             )
             distances_created.append(distance)
 
