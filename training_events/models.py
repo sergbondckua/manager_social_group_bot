@@ -147,6 +147,18 @@ class TrainingDistance(BaseModel):
         blank=True,
         help_text="GPX файл маршруту: .gpx",
     )
+    route_gpx_map = models.ImageField(
+        verbose_name="Карта маршруту",
+        upload_to=get_upload_path,
+        validators=[
+            FileExtensionValidator(
+                allowed_extensions=["jpg", "jpeg", "png", "svg", "webp"]
+            )
+        ],
+        null=True,
+        blank=True,
+        help_text="Карта маршруту: .jpg, .jpeg, .png, .svg, .webp",
+    )
 
     def __str__(self):
 

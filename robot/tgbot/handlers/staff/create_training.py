@@ -1,3 +1,4 @@
+import asyncio
 import os
 from datetime import datetime
 from pathlib import Path
@@ -5,11 +6,13 @@ from pathlib import Path
 from aiogram import types, Router, F
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
+from aiogram.types import ForceReply
 from django.conf import settings
 from django.utils import timezone
 from django.core.exceptions import ValidationError
 
 from profiles.models import ClubUser
+from robot.tasks import visualize_gpx
 from robot.tgbot.filters.staff import ClubStaffFilter
 from robot.tgbot.keyboards import staff as kb
 from robot.tgbot.states.staff import CreateTraining
@@ -46,7 +49,8 @@ async def cmd_create_training(message: types.Message, state: FSMContext):
 
     await state.set_state(CreateTraining.waiting_for_title)
     await message.answer(
-        "Введіть назву тренування:", reply_markup=CANCEL_BUTTON
+        "Введіть назву тренування:",
+        reply_markup=CANCEL_BUTTON,
     )
 
 
@@ -474,7 +478,7 @@ async def process_route_gpx(message: types.Message, state: FSMContext):
 
 
 @staff_router.message(CreateTraining.waiting_for_route_gpx)
-async def invalid_route_gpx(message: types.Message, state: FSMContext):
+async def invalid_route_gpx(message: types.Message):
     """Обробник некоректного файлу маршруту."""
     await message.answer(
         "Некоректний формат файлу маршруту. "
@@ -597,7 +601,8 @@ async def create_training_final(message: types.Message, state: FSMContext):
         if await TrainingEvent.objects.filter(title=data["title"]).aexists():
             await message.answer(
                 f"❌ Тренування з назвою '{data['title']}' вже існує. "
-                "Оберіть іншу назву і спробуйте ще раз."
+                "Оберіть іншу назву і спробуйте ще раз.",
+                reply_markup=types.ReplyKeyboardRemove(),
             )
             await state.clear()
             return
@@ -638,6 +643,7 @@ async def create_training_final(message: types.Message, state: FSMContext):
         for distance_data in data["distances"]:
             # Завантаження маршруту
             route_path = None
+            route_gpx_map = None
             if distance_data.get("route_gpx"):
                 try:
                     file = await message.bot.get_file(
@@ -650,7 +656,7 @@ async def create_training_final(message: types.Message, state: FSMContext):
                         f"{distance_data['distance']}km_"
                         f"{training.date.strftime('%d%B%Y_%H%M')}.{file_extension}"
                     )
-                    # Шлях до збереження постера
+                    # Шлях до збереження маршруту
                     save_path = os.path.join(
                         settings.MEDIA_ROOT, f"trainings/{club_user.id}/gpx"
                     )
@@ -661,6 +667,14 @@ async def create_training_final(message: types.Message, state: FSMContext):
                     await message.bot.download_file(
                         file_path=file.file_path, destination=route_path
                     )
+
+                    # Перевіряємо завантаження маршруту
+                    if os.path.exists(route_path):
+                        route_gpx_map = visualize_gpx.delay(
+                            gpx_file=route_path,
+                            output_file=route_path.replace(".gpx", ".png"),
+                        )
+
                 except Exception as e:
                     await message.answer(f"Помилка завантаження маршруту: {e}")
 
@@ -683,6 +697,7 @@ async def create_training_final(message: types.Message, state: FSMContext):
                 ),
                 max_participants=distance_data["max_participants"],
                 route_gpx=route_path,
+                route_gpx_map=route_gpx_map,
             )
             distances_created.append(distance)
 
@@ -735,16 +750,21 @@ async def create_training_final(message: types.Message, state: FSMContext):
     except ClubUser.DoesNotExist:
         await message.answer(
             "❌ Помилка: Ваш обліковий запис не знайдено в системі. "
-            "Зверніться до адміністратора."
+            "Зверніться до адміністратора.",
+            reply_markup=types.ReplyKeyboardRemove(),
         )
         await state.clear()
 
     except ValidationError as e:
-        await message.answer(f"❌ Помилка валідації: {str(e)}")
+        await message.answer(
+            f"❌ Помилка валідації: {str(e)}",
+            reply_markup=types.ReplyKeyboardRemove(),
+        )
         await state.clear()
 
     except Exception as e:
         await message.answer(
-            f"❌ Сталася помилка при створенні тренування: {str(e)}"
+            f"❌ Сталася помилка при створенні тренування: {str(e)}",
+            reply_markup=types.ReplyKeyboardRemove(),
         )
         await state.clear()
