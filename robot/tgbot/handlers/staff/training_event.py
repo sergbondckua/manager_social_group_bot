@@ -16,6 +16,11 @@ from profiles.models import ClubUser
 from robot.tasks import visualize_gpx
 from robot.tgbot.filters.staff import ClubStaffFilter
 from robot.tgbot.keyboards import staff as kb
+from robot.tgbot.misc import validators
+from robot.tgbot.services.staff_training_service import (
+    create_poster_path,
+    process_gpx_files_after_creation,
+)
 from robot.tgbot.states.staff import CreateTraining
 from robot.tgbot.text import staff_create_training as mt
 from training_events.models import TrainingEvent, TrainingDistance
@@ -26,25 +31,8 @@ logger = logging.getLogger("robot")
 staff_router = Router()
 staff_router.message.filter(ClubStaffFilter())
 
-# Константи
-MIN_TITLE_LENGTH = 3
-MAX_TITLE_LENGTH = 100
-MIN_LOCATION_LENGTH = 3
-MAX_LOCATION_LENGTH = 150
-MIN_DISTANCE = 1
-MAX_DISTANCE = 100
-MAX_PARTICIPANTS = 100
-MIN_PACE_SECONDS = 180  # 3:00
-MAX_PACE_SECONDS = 900  # 15:00
-
 SKIP_AND_CANCEL_BUTTONS = kb.skip_and_cancel_keyboard()
 CANCEL_BUTTON = kb.cancel_keyboard()
-
-
-class TrainingCreationError(Exception):
-    """Кастомна помилка для створення тренування."""
-
-    pass
 
 
 async def get_club_user(telegram_id: int) -> Optional[ClubUser]:
@@ -53,36 +41,6 @@ async def get_club_user(telegram_id: int) -> Optional[ClubUser]:
         return await ClubUser.objects.aget(telegram_id=telegram_id)
     except ClubUser.DoesNotExist:
         return None
-
-
-def validate_title(title: str) -> bool:
-    """Валідує назву тренування."""
-    return MIN_TITLE_LENGTH <= len(title.strip()) <= MAX_TITLE_LENGTH
-
-
-def validate_location(location: str) -> bool:
-    """Валідує місце проведення тренування."""
-    return MIN_LOCATION_LENGTH <= len(location.strip()) <= MAX_LOCATION_LENGTH
-
-
-def validate_distance(distance: float) -> bool:
-    """Валідує дистанцію."""
-    return MIN_DISTANCE < distance <= MAX_DISTANCE
-
-
-def validate_participants(participants: int) -> bool:
-    """Валідує кількість учасників."""
-    return 0 <= participants <= MAX_PARTICIPANTS
-
-
-def validate_pace(pace_str: str) -> bool:
-    """Валідує темп."""
-    try:
-        parsed_pace = datetime.strptime(pace_str, "%M:%S").time()
-        total_seconds = parsed_pace.minute * 60 + parsed_pace.second
-        return MIN_PACE_SECONDS <= total_seconds <= MAX_PACE_SECONDS
-    except ValueError:
-        return False
 
 
 def parse_date(date_str: str) -> Optional[datetime]:
@@ -122,10 +80,16 @@ def parse_pace(pace_str: str) -> str:
 
 
 async def clear_state_and_notify(
-    message: types.Message, state: FSMContext, text: str
+    message: types.Message,
+    state: FSMContext,
+    text: str,
+    prev_delete_message: bool = False,
 ):
     """Очищує стан та надсилає повідомлення."""
     await state.clear()
+    # Видалення попереднього повідомлення
+    if prev_delete_message:
+        await message.delete()
     await message.answer(text, reply_markup=types.ReplyKeyboardRemove())
 
 
@@ -158,12 +122,18 @@ async def cmd_my_trainings(message: types.Message):
     # Отримуємо тренування користувача
     @sync_to_async
     def get_trainings(user):
-        return list(TrainingEvent.objects.filter(created_by=user).order_by("-date")[:10])
+        return list(
+            TrainingEvent.objects.filter(created_by=user).order_by("-date")[
+                :10
+            ]
+        )
 
     trainings = await get_trainings(club_user)
 
     if not trainings:
-        await message.bot.send_message(user_id,"📝 Ви ще не створювали тренувань.")
+        await message.bot.send_message(
+            user_id, "📝 Ви ще не створювали тренувань."
+        )
         return
 
     message_parts = ["📋 Ваші останні тренування:", ""]
@@ -206,10 +176,10 @@ async def process_title(message: types.Message, state: FSMContext):
     """Обробник введення назви тренування."""
     title = message.text.strip()
 
-    if not validate_title(title):
+    if not validators.validate_title(title):
         await message.answer(
             "Назва тренування не відповідає вимогам "
-            f"({MIN_TITLE_LENGTH}-{MAX_TITLE_LENGTH} символів). "
+            f"({validators.MIN_TITLE_LENGTH}-{validators.MAX_TITLE_LENGTH} символів). "
             "Спробуйте ще раз:"
         )
         return
@@ -314,10 +284,10 @@ async def process_training_location(message: types.Message, state: FSMContext):
     """Обробник введення місця тренування."""
     location = message.text.strip()
 
-    if not validate_location(location):
+    if not validators.validate_location(location):
         await message.answer(
             "Місце зустрічі не відповідає вимогам "
-            f"({MIN_LOCATION_LENGTH}-{MAX_LOCATION_LENGTH} символів). "
+            f"({validators.MIN_LOCATION_LENGTH}-{validators.MAX_LOCATION_LENGTH} символів). "
             "Спробуйте ще раз:"
         )
         return
@@ -378,10 +348,10 @@ async def process_training_distance(message: types.Message, state: FSMContext):
         distance_str = message.text.strip().replace(",", ".")
         distance = float(distance_str)
 
-        if not validate_distance(distance):
+        if not validators.validate_distance(distance):
             await message.answer(
                 "Дистанція повинна бути більше "
-                f"{MIN_DISTANCE} км та не більше {MAX_DISTANCE} км. "
+                f"{validators.MIN_DISTANCE} км та не більше {validators.MAX_DISTANCE} км. "
                 "Спробуйте ще раз:"
             )
             return
@@ -414,9 +384,9 @@ async def process_max_participants(message: types.Message, state: FSMContext):
     try:
         max_participants = int(message.text.strip())
 
-        if not validate_participants(max_participants):
+        if not validators.validate_participants(max_participants):
             await message.answer(
-                f"Кількість учасників повинна бути від 0 до {MAX_PARTICIPANTS}. "
+                f"Кількість учасників повинна бути від 0 до {validators.MAX_PARTICIPANTS}. "
                 "Спробуйте ще раз:"
             )
             return
@@ -454,11 +424,11 @@ async def process_pace_min(message: types.Message, state: FSMContext):
     """Обробник введення мінімального темпу."""
     pace_str = parse_pace(message.text)
 
-    if not validate_pace(pace_str):
+    if not validators.validate_pace(pace_str):
         await message.answer(
             "Темп повинен бути між "
-            f"{MIN_PACE_SECONDS//60:02d}:{MIN_PACE_SECONDS%60:02d} "
-            f"та {MAX_PACE_SECONDS//60:02d}:{MAX_PACE_SECONDS%60:02d} хв/км. "
+            f"{validators.MIN_PACE_SECONDS//60:02d}:{validators.MIN_PACE_SECONDS%60:02d} "
+            f"та {validators.MAX_PACE_SECONDS//60:02d}:{validators.MAX_PACE_SECONDS%60:02d} хв/км. "
             "Спробуйте ще раз:"
         )
         return
@@ -491,11 +461,11 @@ async def process_pace_max(message: types.Message, state: FSMContext):
     """Обробник введення максимального темпу."""
     pace_str = parse_pace(message.text)
 
-    if not validate_pace(pace_str):
+    if not validators.validate_pace(pace_str):
         await message.answer(
             "Темп повинен бути між "
-            f"{MIN_PACE_SECONDS//60:02d}:{MIN_PACE_SECONDS%60:02d} "
-            f"та {MAX_PACE_SECONDS//60:02d}:{MAX_PACE_SECONDS%60:02d} хв/км. "
+            f"{validators.MIN_PACE_SECONDS//60:02d}:{validators.MIN_PACE_SECONDS%60:02d} "
+            f"та {validators.MAX_PACE_SECONDS//60:02d}:{validators.MAX_PACE_SECONDS%60:02d} хв/км. "
             "Спробуйте ще раз:"
         )
         return
@@ -671,70 +641,70 @@ async def finish_training_creation(
     await callback.answer()
 
 
-async def download_file_safe(bot, file_id: str, destination: str) -> bool:
-    """Безпечно завантажує файл."""
-    try:
-        file = await bot.get_file(file_id)
-        await bot.download_file(
-            file_path=file.file_path, destination=destination
-        )
-        return True
-    except Exception as e:
-        logger.error(f"Помилка завантаження файлу {file_id}: {e}")
-        return False
-
-
-async def create_poster_path(
-    club_user_id: int, file_id: str, bot
-) -> Optional[str]:
-    """Створює шлях для постера та завантажує його."""
-    try:
-        file = await bot.get_file(file_id)
-        file_name = file.file_path.split("/")[-1]
-        save_path = (
-            Path(settings.MEDIA_ROOT) / f"trainings/{club_user_id}/images"
-        )
-        save_path.mkdir(parents=True, exist_ok=True)
-
-        poster_path = save_path / file_name
-
-        if await download_file_safe(bot, file_id, str(poster_path)):
-            return str(poster_path)
-        return None
-    except Exception as e:
-        logger.error(f"Помилка створення шляху постера: {e}")
-        return None
-
-
-async def create_route_path(
-    club_user_id: int,
-    distance: float,
-    training_date: datetime,
-    file_id: str,
-    bot: Bot,
-) -> tuple[Optional[str], Optional[str]]:
-    """Створює шлях для маршруту та завантажує його."""
-    try:
-        file = await bot.get_file(file_id)
-        file_extension = file.file_path.split("/")[-1].split(".")[-1]
-        file_name = f"{distance}km_{training_date.strftime('%d%B%Y_%H%M')}.{file_extension}"
-
-        save_path = Path(settings.MEDIA_ROOT) / f"trainings/{club_user_id}/gpx"
-        save_path.mkdir(parents=True, exist_ok=True)
-
-        route_path = save_path / file_name
-
-        if await download_file_safe(bot, file_id, str(route_path)):
-            map_image_path = str(route_path).replace(".gpx", ".png")
-            # Запускаємо Celery-задачу асинхронно
-            visualize_gpx.delay(
-                gpx_file=str(route_path), output_file=map_image_path
-            )
-            return str(route_path), map_image_path
-        return None, None
-    except Exception as e:
-        logger.error(f"Помилка створення шляху маршруту: {e}")
-        return None, None
+# async def download_file_safe(bot, file_id: str, destination: str) -> bool:
+#     """Безпечно завантажує файл."""
+#     try:
+#         file = await bot.get_file(file_id)
+#         await bot.download_file(
+#             file_path=file.file_path, destination=destination
+#         )
+#         return True
+#     except Exception as e:
+#         logger.error(f"Помилка завантаження файлу {file_id}: {e}")
+#         return False
+#
+#
+# async def create_poster_path(
+#     club_user_id: int, file_id: str, bot
+# ) -> Optional[str]:
+#     """Створює шлях для постера та завантажує його."""
+#     try:
+#         file = await bot.get_file(file_id)
+#         file_name = file.file_path.split("/")[-1]
+#         save_path = (
+#             Path(settings.MEDIA_ROOT) / f"trainings/{club_user_id}/images"
+#         )
+#         save_path.mkdir(parents=True, exist_ok=True)
+#
+#         poster_path = save_path / file_name
+#
+#         if await download_file_safe(bot, file_id, str(poster_path)):
+#             return str(poster_path)
+#         return None
+#     except Exception as e:
+#         logger.error(f"Помилка створення шляху постера: {e}")
+#         return None
+#
+#
+# async def create_route_path(
+#     club_user_id: int,
+#     distance: float,
+#     training_date: datetime,
+#     file_id: str,
+#     bot: Bot,
+# ) -> tuple[Optional[str], Optional[str]]:
+#     """Створює шлях для маршруту та завантажує його."""
+#     try:
+#         file = await bot.get_file(file_id)
+#         file_extension = file.file_path.split("/")[-1].split(".")[-1]
+#         file_name = f"{distance}km_{training_date.strftime('%d%B%Y_%H%M')}.{file_extension}"
+#
+#         save_path = Path(settings.MEDIA_ROOT) / f"trainings/{club_user_id}/gpx"
+#         save_path.mkdir(parents=True, exist_ok=True)
+#
+#         route_path = save_path / file_name
+#
+#         if await download_file_safe(bot, file_id, str(route_path)):
+#             map_image_path = str(route_path).replace(".gpx", ".png")
+#             # Запускаємо Celery-задачу асинхронно
+#             visualize_gpx.delay(
+#                 gpx_file=str(route_path), output_file=map_image_path
+#             )
+#             return str(route_path), map_image_path
+#         return None, None
+#     except Exception as e:
+#         logger.error(f"Помилка створення шляху маршруту: {e}")
+#         return None, None
 
 
 async def create_training_final(message: types.Message, state: FSMContext):
@@ -813,131 +783,88 @@ async def create_training_final(message: types.Message, state: FSMContext):
             await create_training_with_distances()
         )
 
+        # # Обробляємо GPX файли після створення записів в БД
+        # created_distances = []
+        # for info in created_distances_info:
+        #     distance_obj = info["distance_obj"]
+        #     distance_data = info["distance_data"]
+        #
+        #     # Обробка маршруту GPX
+        #     if distance_data.get("route_gpx"):
+        #         route_path, map_image_path = await create_route_path(
+        #             club_user.id,
+        #             distance_data["distance"],
+        #             training_datetime,
+        #             distance_data["route_gpx"],
+        #             message.bot,
+        #         )
+        #
+        #         # Оновлюємо шляхи в базі даних
+        #         if route_path or map_image_path:
+        #             await sync_to_async(
+        #                 lambda: setattr(
+        #                     distance_obj,
+        #                     "route_gpx",
+        #                     (
+        #                         route_path.replace(
+        #                             str(settings.MEDIA_ROOT), ""
+        #                         )
+        #                         if route_path
+        #                         else None
+        #                     ),
+        #                 )
+        #             )()
+        #             await sync_to_async(
+        #                 lambda: setattr(
+        #                     distance_obj,
+        #                     "route_gpx_map",
+        #                     (
+        #                         map_image_path.replace(
+        #                             str(settings.MEDIA_ROOT), ""
+        #                         )
+        #                         if map_image_path
+        #                         else None
+        #                     ),
+        #                 )
+        #             )()
+        #             await sync_to_async(distance_obj.save)()
+        #
+        #     created_distances.append(distance_obj)
+
         # Обробляємо GPX файли після створення записів в БД
-        created_distances = []
-        for info in created_distances_info:
-            distance_obj = info["distance_obj"]
-            distance_data = info["distance_data"]
-
-            # Обробка маршруту GPX
-            if distance_data.get("route_gpx"):
-                route_path, map_image_path = await create_route_path(
-                    club_user.id,
-                    distance_data["distance"],
-                    training_datetime,
-                    distance_data["route_gpx"],
-                    message.bot,
-                )
-
-                # Оновлюємо шляхи в базі даних
-                if route_path or map_image_path:
-                    await sync_to_async(
-                        lambda: setattr(
-                            distance_obj,
-                            "route_gpx",
-                            (
-                                route_path.replace(
-                                    str(settings.MEDIA_ROOT), ""
-                                )
-                                if route_path
-                                else None
-                            ),
-                        )
-                    )()
-                    await sync_to_async(
-                        lambda: setattr(
-                            distance_obj,
-                            "route_gpx_map",
-                            (
-                                map_image_path.replace(
-                                    str(settings.MEDIA_ROOT), ""
-                                )
-                                if map_image_path
-                                else None
-                            ),
-                        )
-                    )()
-                    await sync_to_async(distance_obj.save)()
-
-            created_distances.append(distance_obj)
+        created_distances = await process_gpx_files_after_creation(
+            created_distances_info,
+            club_user.id,
+            training_datetime,
+            message.bot,
+        )
 
         # Формуємо повідомлення про успішне створення
-        success_message = format_success_message(training, created_distances)
+        success_message = mt.format_success_message(
+            training, created_distances
+        )
 
-        await clear_state_and_notify(message, state, success_message)
+        # Очищаємо FSM та надсилаємо повідомлення видаляємо попереднє повідомлення
+        await clear_state_and_notify(message, state, success_message, True)
 
         logger.info(
-            f"Тренування '{training.title}' успішно створено користувачем {club_user.telegram_id}"
+            "Тренування %s успішно створено користувачем %s",
+            training.id,
+            club_user.id,
         )
 
     except ValidationError as e:
-        logger.error(f"Помилка валідації при створенні тренування: {e}")
+        logger.error("Помилка валідації при створенні тренування: %s", e)
         await clear_state_and_notify(
             message,
             state,
             "❌ Помилка валідації даних. Спробуйте створити тренування знову.",
         )
     except Exception as e:
-        logger.error(f"Помилка створення тренування: {e}")
+        logger.error("Помилка створення тренування: %s", e)
         await clear_state_and_notify(
             message,
             state,
             "❌ Виникла помилка при створенні тренування. "
             "Спробуйте пізніше або зверніться до адміністратора.",
         )
-
-
-def format_success_message(training: TrainingEvent, distances: list) -> str:
-    """Форматує повідомлення про успішне створення тренування."""
-    message_parts = [
-        "✅ Тренування успішно створено!",
-        "",
-        f"📝 {training.title}",
-    ]
-
-    if training.description:
-        message_parts.append(f"📄 Опис: {training.description}")
-
-    message_parts.extend(
-        [
-            f"📅 Дата: {training.date.date().strftime('%d.%m.%Y')}",
-            f"🕐 Час: {training.date.time().strftime('%H:%M')}",
-            f"📍 Місце: {training.location}",
-            "",
-            "📏 Дистанції:",
-        ]
-    )
-
-    for distance in distances:
-        distance_info = f"• {distance.distance} км"
-
-        if distance.max_participants:
-            distance_info += f" (макс. {distance.max_participants} учасників)"
-        else:
-            distance_info += " (необмежено учасників)"
-
-        if distance.pace_min or distance.pace_max:
-            pace_parts = []
-            if distance.pace_min:
-                pace_parts.append(f"від {distance.pace_min}")
-            if distance.pace_max:
-                pace_parts.append(f"до {distance.pace_max}")
-            distance_info += f" - темп: {' '.join(pace_parts)}"
-
-        if distance.route_gpx:
-            distance_info += " 🗺"
-
-        message_parts.append(distance_info)
-
-    if training.poster:
-        message_parts.append("🖼 Постер додано")
-
-    message_parts.extend(
-        [
-            "",
-            f"👤 Створено: {training.created_by.get_full_name() or 'Невідомий користувач'}",
-            f"🆔 ID тренування: {training.id}",
-        ]
-    )
-
-    return "\n".join(message_parts)
