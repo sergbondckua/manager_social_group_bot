@@ -103,11 +103,12 @@ async def process_gpx_files_after_creation(
         distance_obj = info["distance_obj"]
         distance_data = info["distance_data"]
 
+        # Пропускаємо дистанції без GPX файлу
         if not distance_data.get("route_gpx"):
             created_distances.append(distance_obj)
             continue
 
-        # Обробка маршруту GPX
+        # Створюємо шляхи для GPX файлу та мапи
         route_path, map_image_path = await create_route_path(
             club_user_id,
             distance_data["distance"],

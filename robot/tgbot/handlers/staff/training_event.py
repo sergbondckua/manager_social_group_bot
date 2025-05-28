@@ -1,9 +1,8 @@
 import logging
 from datetime import datetime
-from pathlib import Path
-from typing import Optional, Dict, Any
+from typing import Optional
 
-from aiogram import types, Router, F, Bot
+from aiogram import types, Router, F
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from asgiref.sync import sync_to_async
@@ -13,7 +12,6 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 
 from profiles.models import ClubUser
-from robot.tasks import visualize_gpx
 from robot.tgbot.filters.staff import ClubStaffFilter
 from robot.tgbot.keyboards import staff as kb
 from robot.tgbot.misc import validators
@@ -537,9 +535,7 @@ async def process_route_gpx(message: types.Message, state: FSMContext):
 async def invalid_route_gpx(message: types.Message):
     """Обробник некоректного файлу маршруту."""
     await message.answer(
-        "Некоректний формат файлу маршруту. "
-        "Файл повинен бути у форматі .GPX. Спробуйте ще раз "
-        "або /skip для пропуску:",
+        mt.format_invalid_file_message,
         reply_markup=SKIP_AND_CANCEL_BUTTONS,
     )
 
@@ -563,47 +559,17 @@ async def save_current_distance_and_ask_next(
     distances.append(current_distance)
 
     # Показуємо всі додані дистанції
-    distances_text = format_distances_list(distances)
+    distances_text = mt.format_distances_list(distances)
     keyboard = kb.add_distance_or_finish_keyboard()
 
     await state.update_data(distances=distances)
     await message.answer(
-        f"✅ Дистанція {current_distance['distance']} км додана!\n\n"
-        f"📏 Додані дистанції:\n{distances_text}\n\n"
-        f"Що робимо далі?",
+        mt.format_confirmation_message.format(
+            current_distance=current_distance["distance"],
+            distances_text=distances_text,
+        ),
         reply_markup=keyboard,
     )
-
-
-def format_distances_list(distances: list) -> str:
-    """Форматує список дистанцій для відображення."""
-    return "\n".join(
-        [
-            f"• {d['distance']} км - макс. {('необмежено' if d['max_participants'] == 0 else str(d['max_participants']))} учасників"
-            + format_pace_info(d)
-            + format_route_info(d)
-            for d in distances
-        ]
-    )
-
-
-def format_pace_info(distance_data: dict) -> str:
-    """Форматує інформацію про темп."""
-    if not distance_data.get("pace_min") and not distance_data.get("pace_max"):
-        return ""
-
-    pace_parts = []
-    if distance_data.get("pace_min"):
-        pace_parts.append(f"від {distance_data['pace_min']}")
-    if distance_data.get("pace_max"):
-        pace_parts.append(f"до {distance_data['pace_max']}")
-
-    return f" (темп: {' '.join(pace_parts)})"
-
-
-def format_route_info(distance_data: dict) -> str:
-    """Форматує інформацію про маршрут."""
-    return " (маршрут: 🗺)" if distance_data.get("route_gpx") else ""
 
 
 @staff_router.callback_query(F.data == "add_distance")
@@ -639,72 +605,6 @@ async def finish_training_creation(
     )
     await create_training_final(callback.message, state)
     await callback.answer()
-
-
-# async def download_file_safe(bot, file_id: str, destination: str) -> bool:
-#     """Безпечно завантажує файл."""
-#     try:
-#         file = await bot.get_file(file_id)
-#         await bot.download_file(
-#             file_path=file.file_path, destination=destination
-#         )
-#         return True
-#     except Exception as e:
-#         logger.error(f"Помилка завантаження файлу {file_id}: {e}")
-#         return False
-#
-#
-# async def create_poster_path(
-#     club_user_id: int, file_id: str, bot
-# ) -> Optional[str]:
-#     """Створює шлях для постера та завантажує його."""
-#     try:
-#         file = await bot.get_file(file_id)
-#         file_name = file.file_path.split("/")[-1]
-#         save_path = (
-#             Path(settings.MEDIA_ROOT) / f"trainings/{club_user_id}/images"
-#         )
-#         save_path.mkdir(parents=True, exist_ok=True)
-#
-#         poster_path = save_path / file_name
-#
-#         if await download_file_safe(bot, file_id, str(poster_path)):
-#             return str(poster_path)
-#         return None
-#     except Exception as e:
-#         logger.error(f"Помилка створення шляху постера: {e}")
-#         return None
-#
-#
-# async def create_route_path(
-#     club_user_id: int,
-#     distance: float,
-#     training_date: datetime,
-#     file_id: str,
-#     bot: Bot,
-# ) -> tuple[Optional[str], Optional[str]]:
-#     """Створює шлях для маршруту та завантажує його."""
-#     try:
-#         file = await bot.get_file(file_id)
-#         file_extension = file.file_path.split("/")[-1].split(".")[-1]
-#         file_name = f"{distance}km_{training_date.strftime('%d%B%Y_%H%M')}.{file_extension}"
-#
-#         save_path = Path(settings.MEDIA_ROOT) / f"trainings/{club_user_id}/gpx"
-#         save_path.mkdir(parents=True, exist_ok=True)
-#
-#         route_path = save_path / file_name
-#
-#         if await download_file_safe(bot, file_id, str(route_path)):
-#             map_image_path = str(route_path).replace(".gpx", ".png")
-#             # Запускаємо Celery-задачу асинхронно
-#             visualize_gpx.delay(
-#                 gpx_file=str(route_path), output_file=map_image_path
-#             )
-#             return str(route_path), map_image_path
-#         return None, None
-#     except Exception as e:
-#         logger.error(f"Помилка створення шляху маршруту: {e}")
-#         return None, None
 
 
 async def create_training_final(message: types.Message, state: FSMContext):
@@ -743,7 +643,7 @@ async def create_training_final(message: types.Message, state: FSMContext):
         def create_training_with_distances():
             with transaction.atomic():
                 # Створюємо тренування
-                training = TrainingEvent.objects.create(
+                training_event = TrainingEvent.objects.create(
                     title=data["title"],
                     description=data.get("description", ""),
                     date=training_datetime,
@@ -757,11 +657,11 @@ async def create_training_final(message: types.Message, state: FSMContext):
                 )
 
                 # Створюємо дистанції
-                created_distances = []
+                created_distance_records = []
                 for distance_data in data["distances"]:
-                    # Обробка маршруту GPX (цю частину залишаємо async)
+                    # Обробка маршруту GPX
                     training_distance = TrainingDistance.objects.create(
-                        training=training,
+                        training=training_event,
                         distance=distance_data["distance"],
                         max_participants=distance_data["max_participants"],
                         pace_min=distance_data.get("pace_min"),
@@ -769,67 +669,19 @@ async def create_training_final(message: types.Message, state: FSMContext):
                         route_gpx=None,  # Встановимо пізніше
                         route_gpx_map=None,  # Встановимо пізніше
                     )
-                    created_distances.append(
+                    created_distance_records.append(
                         {
                             "distance_obj": training_distance,
                             "distance_data": distance_data,
                         }
                     )
 
-                return training, created_distances
+                return training_event, created_distance_records
 
         # Виконуємо транзакцію
         training, created_distances_info = (
             await create_training_with_distances()
         )
-
-        # # Обробляємо GPX файли після створення записів в БД
-        # created_distances = []
-        # for info in created_distances_info:
-        #     distance_obj = info["distance_obj"]
-        #     distance_data = info["distance_data"]
-        #
-        #     # Обробка маршруту GPX
-        #     if distance_data.get("route_gpx"):
-        #         route_path, map_image_path = await create_route_path(
-        #             club_user.id,
-        #             distance_data["distance"],
-        #             training_datetime,
-        #             distance_data["route_gpx"],
-        #             message.bot,
-        #         )
-        #
-        #         # Оновлюємо шляхи в базі даних
-        #         if route_path or map_image_path:
-        #             await sync_to_async(
-        #                 lambda: setattr(
-        #                     distance_obj,
-        #                     "route_gpx",
-        #                     (
-        #                         route_path.replace(
-        #                             str(settings.MEDIA_ROOT), ""
-        #                         )
-        #                         if route_path
-        #                         else None
-        #                     ),
-        #                 )
-        #             )()
-        #             await sync_to_async(
-        #                 lambda: setattr(
-        #                     distance_obj,
-        #                     "route_gpx_map",
-        #                     (
-        #                         map_image_path.replace(
-        #                             str(settings.MEDIA_ROOT), ""
-        #                         )
-        #                         if map_image_path
-        #                         else None
-        #                     ),
-        #                 )
-        #             )()
-        #             await sync_to_async(distance_obj.save)()
-        #
-        #     created_distances.append(distance_obj)
 
         # Обробляємо GPX файли після створення записів в БД
         created_distances = await process_gpx_files_after_creation(

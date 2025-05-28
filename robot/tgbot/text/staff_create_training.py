@@ -7,6 +7,30 @@ btn_skip = text("⏩ Пропустити")
 btn_finish_training = text("🏁 Завершити створення")
 btn_add_distance = text("➕ Додати ще дистанцію")
 
+format_confirmation_message = text(
+    "🎯 ",
+    hbold("Дистанція {current_distance} км успішно додана!"),
+    "\n\n",
+    "📊 ",
+    hitalic("Список доданих дистанцій:"),
+    "\n",
+    "{distances_text}",
+    "\n\n",
+    "🛠️ ",
+    hbold("Наступні дії:"),
+    "\n",
+    "Оберіть дію з меню нижче 👇",
+)
+
+format_invalid_file_message = text(
+    "❌ " + hbold("Невірний формат файлу!") + "\n\n",
+    "📁 Будь ласка, завантажте файл у " + hbold("GPX") + " форматі\n",
+    "ℹ️ "
+    + "Це стандартний формат для треків з більшості спортивних додатків\n\n",
+    "🔄 "
+    + "Спробуйте завантажити ще раз або натисніть команду /skip для пропуску",
+)
+
 
 def format_success_message(training: TrainingEvent, distances: list) -> str:
     """Форматує повідомлення про успішне створення тренування з HTML-форматуванням"""
@@ -78,3 +102,67 @@ def format_success_message(training: TrainingEvent, distances: list) -> str:
     )
 
     return "\n".join(message)
+
+
+def format_distances_list(distances: list) -> str:
+    """Форматує список дистанцій з Markdown, емодзі та професійним оформленням."""
+    distance_lines = []
+
+    for d in distances:
+        # Основний блок: дистанція та учасники
+        distance_emoji = "📏"
+        distance_text = f"{distance_emoji} {hbold(d['distance'])} км"
+
+        participants_emoji = "👥"
+        participants_text = (
+            f"{participants_emoji} {hbold('необмежено')} учасників"
+            if d["max_participants"] == 0
+            else f"{participants_emoji} до {hbold(d['max_participants'])} учасників"
+        )
+
+        # Додаткові блоки: темп та маршрут
+        pace_info = format_pace_info(d)
+        route_info = format_route_info(d)  # Припускаємо наявність цієї функції
+
+        # Збираємо всі компоненти
+        components = [
+            text(distance_text, "•", participants_text),
+            pace_info,
+            route_info,
+        ]
+
+        # Фільтруємо порожні значення та об'єднуємо
+        filtered_components = [c for c in components if c]
+        distance_lines.append("\n".join(filtered_components))
+
+    return "\n\n".join(distance_lines)
+
+
+def format_pace_info(distance_data: dict) -> str:
+    """Генерує Markdown-форматовану інформацію про темп з емодзі"""
+    pace_min = distance_data.get("pace_min")
+    pace_max = distance_data.get("pace_max")
+
+    if not pace_min and not pace_max:
+        return ""
+
+    # Емодзі для різних варіантів темпу
+    emoji = "🏃💨" if pace_min and pace_max else "⏱️"
+
+    parts = []
+    if pace_min:
+        parts.append(f"від {hbold(pace_min)}")
+    if pace_max:
+        parts.append(f"до {hbold(pace_max)}")
+
+    pace_range = " ".join(parts)
+    return text(hitalic(f"{emoji} Темп: "), pace_range, hitalic(" хв/км"))
+
+
+def format_route_info(distance_data: dict) -> str:
+    """Форматує інформацію про маршрут з емодзі."""
+    if not distance_data.get("route_name"):
+        return ""
+
+    emoji = "🗺️"
+    return text(hitalic(f"{emoji} Маршрут: "), distance_data["route_name"])
