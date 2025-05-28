@@ -28,8 +28,25 @@ def skip_and_cancel_keyboard():
     )
     return builder.as_markup(resize_keyboard=True, one_time_keyboard=False)
 
+
 def cancel_keyboard():
     """Клавіатура "Відмінити"."""
     builder = ReplyKeyboardBuilder()
     builder.add(types.KeyboardButton(text=mt.btn_cancel))
+    return builder.as_markup(resize_keyboard=True, one_time_keyboard=False)
+
+
+def create_training_publish_and_delete_keyboard(training_id: int):
+    """Інлайн-клавіатура для публікації тренування."""
+    builder = InlineKeyboardBuilder()
+    builder.add(
+        types.InlineKeyboardButton(
+            text=mt.btn_training_publish,
+            callback_data=f"publish_training_{training_id}",
+        ),
+        types.InlineKeyboardButton(
+            text=mt.btn_training_delete,
+            callback_data=f"delete_training_{training_id}",
+        ),
+    )
     return builder.as_markup(resize_keyboard=True, one_time_keyboard=False)

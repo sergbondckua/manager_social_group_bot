@@ -3,6 +3,7 @@ from datetime import datetime
 from typing import Optional
 
 from aiogram import types, Router, F
+from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from asgiref.sync import sync_to_async
@@ -82,13 +83,14 @@ async def clear_state_and_notify(
     state: FSMContext,
     text: str,
     prev_delete_message: bool = False,
+    keyboard: types = None,
 ):
     """Очищує стан та надсилає повідомлення."""
     await state.clear()
     # Видалення попереднього повідомлення
     if prev_delete_message:
         await message.delete()
-    await message.answer(text, reply_markup=types.ReplyKeyboardRemove())
+    await message.answer(text, reply_markup=keyboard)
 
 
 @staff_router.message(F.text == mt.btn_cancel)
@@ -695,9 +697,18 @@ async def create_training_final(message: types.Message, state: FSMContext):
         success_message = mt.format_success_message(
             training, created_distances
         )
+        # Клавіатура для публікації тренування
+        keyboard = kb.create_training_publish_and_delete_keyboard(training.id)
 
         # Очищаємо FSM та надсилаємо повідомлення видаляємо попереднє повідомлення
-        await clear_state_and_notify(message, state, success_message, True)
+        await clear_state_and_notify(
+            message=message,
+            state=state,
+            text=f"✨ Тренування {training.title} успішно створено! ✨",
+            prev_delete_message=True,
+            keyboard=types.ReplyKeyboardRemove(),
+        )
+        await message.answer(success_message, reply_markup=keyboard)
 
         logger.info(
             "Тренування %s успішно створено користувачем %s",
@@ -720,3 +731,38 @@ async def create_training_final(message: types.Message, state: FSMContext):
             "❌ Виникла помилка при створенні тренування. "
             "Спробуйте пізніше або зверніться до адміністратора.",
         )
+
+
+@staff_router.callback_query(F.data.startswith("delete_training_"))
+async def delete_training_event(callback: types.CallbackQuery):
+    """Обробка кнопки Видалення тренування."""
+
+    try:
+        # Отримання ID тренування з callback даних
+        training_id = int(callback.data.split("_")[-1])
+
+        # Отримання тренування
+        training = await TrainingEvent.objects.aget(id=training_id)
+
+        # Видалення тренування
+        await training.adelete()
+        new_text = f"🗑 Тренування '{training.title}' (ID: {training_id}) успішно видалено!"
+
+        try:
+            # Редагування повідомлення
+            await callback.message.edit_text(
+                text=new_text, reply_markup=None  # Remove inline keyboard
+            )
+        except TelegramBadRequest:
+            # Якщо повідомлення вже було видалено
+            await callback.answer(new_text, show_alert=True)
+    except TrainingEvent.DoesNotExist:
+        await callback.answer("❌ Тренування не знайдено!", show_alert=True)
+    except (ValueError, IndexError):
+        await callback.answer("❌ Невірний формат команди!", show_alert=True)
+    except Exception as e:
+        logger.error(f"Delete training error: {e}")
+        await callback.answer("🚫 Сталася невідома помилка!", show_alert=True)
+    finally:
+        # Відповідь на callback
+        await callback.answer()
