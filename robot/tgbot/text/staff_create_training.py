@@ -1,4 +1,4 @@
-from aiogram.utils.markdown import hbold, hcode, hitalic, text, hpre
+from aiogram.utils.markdown import hbold, hcode, hitalic, text
 from html import escape
 from training_events.models import TrainingEvent
 
@@ -12,9 +12,9 @@ btn_cancel_training = text("🙉 Скасувати анонсоване тре�
 
 format_delete_confirmation = text(
     "⚠️ " + hbold("Підтвердження видалення тренування\n\n"),
-    "📌 " + hbold('Назва:') + "{training_title}\n",
-    "🆔 " + hbold('ID:') + hpre("{training_id}\n"),
-    "👥 " + hbold('Учасників:' + "{participants_count}\n\n"),
+    "📌 " + hbold('Назва: ') + "{training_title}\n",
+    "🆔 " + hbold('ID: ') + "{training_id}\n",
+    "👥 " + hbold('Учасників: ') + "{participants_count}\n\n",
     "🔥 " + hbold("Увага: ця дія незворотна!"),
 )
 
@@ -52,7 +52,7 @@ def format_success_message(training: TrainingEvent, distances: list) -> str:
 
     # Опис (якщо є)
     if training.description:
-        message.append(f"📋 {hbold('Опис:')}\n{escape(training.description)}")
+        message.append(f"📋 {hbold('Опис:')} {escape(training.description)}")
 
     # Постер (якщо є)
     if training.poster:
@@ -65,7 +65,7 @@ def format_success_message(training: TrainingEvent, distances: list) -> str:
         [
             f"\n📅 {hbold('Дата:')} {date_str}",
             f"🕒 {hbold('Час:')} {time_str}",
-            f"📍 {hbold('Місце:')}\n{escape(training.location)}",
+            f"📍 {hbold('Місце:')} {escape(training.location)}",
         ]
     )
 

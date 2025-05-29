@@ -3,7 +3,6 @@ from datetime import datetime
 from typing import Optional
 
 from aiogram import types, Router, F, Bot
-from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from asgiref.sync import sync_to_async
@@ -742,13 +741,15 @@ async def confirm_delete_training(callback: types.CallbackQuery):
         training_id = int(callback.data.split("_")[-1])
 
         # Отримання тренування
-        training = await TrainingEvent.objects.aget(id=training_id)
+        training = await TrainingEvent.objects.select_related().aget(
+            id=training_id
+        )
 
         await callback.message.edit_text(
-            text=mt.format_confirmation_message.format(
+            text=mt.format_delete_confirmation.format(
                 training_id=training.id,
                 training_title=training.title,
-                participants_count=training.registrations.count(),
+                participants_count=await training.registrations.acount(),
             ),
             reply_markup=kb.confirmation_keyboard(
                 f"delete_confirm_{training_id}"
@@ -771,7 +772,7 @@ async def execute_delete_training(callback: types.CallbackQuery):
     """Виконання видалення тренування."""
     try:
         # Розбиваємо callback_data: delete_confirm_123_yes/no
-        _, action, training_id = callback.data.split("_")[-3:]
+        _, training_id, action = callback.data.split("_")[-3:]
         training_id = int(training_id)
 
         if action != "yes":
@@ -786,7 +787,7 @@ async def execute_delete_training(callback: types.CallbackQuery):
         # Перевірка, чи можна видалити
         if (
             training.date > timezone.now()
-            and training.registrations.count() > 0
+            and await training.registrations.acount() > 0
             and not training.is_cancelled
         ):
             await callback.message.edit_text(
