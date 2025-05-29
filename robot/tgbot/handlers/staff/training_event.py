@@ -5,8 +5,10 @@ from typing import Optional
 from aiogram import types, Router, F, Bot
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
+from aiogram.types import FSInputFile
 from asgiref.sync import sync_to_async
 from django.conf import settings
+from django.db.models import QuerySet
 from django.utils import timezone
 from django.core.exceptions import ValidationError
 from django.db import transaction
@@ -21,7 +23,7 @@ from robot.tgbot.services.staff_training_service import (
 )
 from robot.tgbot.states.staff import CreateTraining
 from robot.tgbot.text import staff_create_training as mt
-from training_events.models import TrainingEvent, TrainingDistance
+from training_events.models import TrainingEvent, TrainingDistance, TrainingRegistration
 
 # Налаштування логування
 logger = logging.getLogger("robot")
@@ -772,7 +774,7 @@ async def execute_delete_training(callback: types.CallbackQuery):
     """Виконання видалення тренування."""
     try:
         # Розбиваємо callback_data: delete_confirm_123_yes/no
-        _, training_id, action = callback.data.split("_")[-3:]
+        training_id, action = callback.data.split("_")[-2:]
         training_id = int(training_id)
 
         if action != "yes":
@@ -794,7 +796,7 @@ async def execute_delete_training(callback: types.CallbackQuery):
                 "❌ Неможливо видалити тренування, "
                 "що вже анонсоване та має зареєстрованих учасників.\n"
                 "Спочатку потрібно скасувати анонсоване тренування.",
-                reply_markup=kb.cancel_training(training_id),
+                reply_markup=kb.revoke_training_keyboard(training_id),
             )
             return
 
@@ -818,18 +820,116 @@ async def execute_delete_training(callback: types.CallbackQuery):
 
 
 async def notify_participants(
-    bot: Bot, participants: list, training: TrainingEvent
+    bot: Bot, participants: list [TrainingRegistration], training: TrainingEvent
 ):
     """Надсилання сповіщень усім учасникам"""
     for user in participants:
         try:
-            await bot.send_message(
-                chat_id=user.telegram_id,
-                text=f"🔔 Важливе сповіщення!\n\n"
-                f"Тренування «{training.title}», на яке ви записані, скасоване 😔\n\n"
-                f"Дата: {training.date.strftime('%d.%m.%Y')}\n"
-                f"Причина: адміністративний рішення\n\n"
-                f"Вибачте за незручності!",
-            )
+            chat_id = user.participant.telegram_id
+            if training.poster:
+                photo_file = FSInputFile(training.poster.path)
+                await bot.send_chat_action(
+                    chat_id=chat_id, action="upload_photo"
+                )
+                await bot.send_photo(
+                    chat_id=chat_id,
+                    photo=photo_file,
+                    caption=mt.format_training_cancellation_notice.format(
+                        training_title=training.title,
+                        training_date=training.date.strftime("%d %B %Y, %H:%M"),
+                    ),
+                )
+            else:
+                await bot.send_message(
+                    chat_id=chat_id,
+                    text=mt.format_training_cancellation_notice.format(
+                        training_title=training.title,
+                        training_date=training.date.strftime("%d %B %Y, %H:%M"),
+                    ),
+                )
         except Exception as e:
             logger.error("Помилка сповіщення %s: %s", user, e)
+
+@staff_router.callback_query(F.data.startswith("revoke_training_"))
+async def confirm_revoke_training(callback: types.CallbackQuery):
+    """Підтвердження скасування тренування."""
+    try:
+        # Отримання ID тренування та діі
+        action, training_id = callback.data.split("_")[-2:]
+        training_id = int(training_id)
+
+        if action == "close":
+            await callback.message.delete()
+            return
+        # Отримання тренування
+        training = await TrainingEvent.objects.select_related().aget(
+            id=training_id
+        )
+
+        await callback.message.edit_text(
+            text=mt.format_revoke_confirmation.format(
+                training_id=training.id,
+                training_title=training.title,
+            ),
+            reply_markup=kb.confirmation_keyboard(f"revoke_confirm_{training_id}"),
+        )
+    except TrainingEvent.DoesNotExist:
+        logger.error("Тренування не знайдено")
+        await callback.answer("❌ Тренування не знайдено!", show_alert=True)
+    except Exception as e:
+        logger.error("Помилка підтвердження скасування: %s", e)
+        await callback.answer(
+            "🚫 Сталася помилка при підготовці скасування", show_alert=True
+        )
+    finally:
+        await callback.answer()
+
+
+@staff_router.callback_query(F.data.startswith("revoke_confirm_"))
+async def execute_revoke_training(callback: types.CallbackQuery):
+    try:
+        # Отримання ID тренування та діі
+        training_id, action = callback.data.split("_")[-2:]
+        training_id = int(training_id)
+
+        if action != "yes":
+            await callback.message.edit_text(
+                text="🙌 Скасовання тренування відмовлено",
+                reply_markup=None,
+            )
+            return
+
+        @sync_to_async()
+        def revoke_training(training_event_id: int) -> tuple:
+            """ Виконання скасування тренування."""
+            training_event = TrainingEvent.objects.select_related().get(
+                id=training_event_id
+            )
+
+            participant_registrations = training_event.registrations.all()
+            training_event.is_cancelled = True
+            training_event.save()
+            return training_event, list(participant_registrations)
+
+        # Виконання скасування тренування
+        training, participants = await revoke_training(training_id)
+
+        # Надсилання сповіщень усім учасникам
+        await notify_participants(callback.bot, participants, training)
+
+        # Оновлення повідомлення
+        await callback.message.edit_text(
+            text=f"🙉 Тренування «{training.title}» успішно скасовано!\n"
+                 f"📨 Учасникам ({len(participants)}) надіслано сповіщення",
+            reply_markup=None,
+        )
+    except TrainingEvent.DoesNotExist:
+        logger.error("Тренування не знайдено")
+        await callback.answer("❌ Тренування не знайдено!", show_alert=True)
+    except Exception as e:
+        logger.error("Помилка скасування тренування: %s", e)
+        await callback.answer(
+            "🚫 Сталася помилка при скасуванні тренування", show_alert=True
+        )
+    finally:
+        await callback.answer()
