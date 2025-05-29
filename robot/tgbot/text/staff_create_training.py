@@ -1,4 +1,4 @@
-from aiogram.utils.markdown import hbold, hcode, hitalic, text
+from aiogram.utils.markdown import hbold, hcode, hitalic, text, hpre
 from html import escape
 from training_events.models import TrainingEvent
 
@@ -8,6 +8,15 @@ btn_finish_training = text("🏁 Завершити створення")
 btn_add_distance = text("➕ Додати ще дистанцію")
 btn_training_publish = text("🗞 Анонсувати")
 btn_training_delete = text("🗑 Видалити")
+btn_cancel_training = text("🙉 Скасувати анонсоване тренування")
+
+format_delete_confirmation = text(
+    "⚠️ " + hbold("Підтвердження видалення тренування\n\n"),
+    "📌 " + hbold('Назва:') + "{training_title}\n",
+    "🆔 " + hbold('ID:') + hpre("{training_id}\n"),
+    "👥 " + hbold('Учасників:' + "{participants_count}\n\n"),
+    "🔥 " + hbold("Увага: ця дія незворотна!"),
+)
 
 format_confirmation_message = text(
     "🎯 ",

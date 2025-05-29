@@ -50,3 +50,22 @@ def create_training_publish_and_delete_keyboard(training_id: int):
         ),
     )
     return builder.as_markup(resize_keyboard=True, one_time_keyboard=False)
+
+
+def confirmation_keyboard(prefix: str):
+    """Інлайн-клавіатура для підтвердження."""
+    builder = InlineKeyboardBuilder()
+    builder.button(text="✅ Так, видалити", callback_data=f"{prefix}_yes")
+    builder.button(text="❌ Ні, скасувати", callback_data=f"{prefix}_no")
+    return builder.as_markup()
+
+def cancel_training(training_id: int):
+    """Інлайн-клавіатура для скасування тренування."""
+    builder = InlineKeyboardBuilder()
+    builder.add(
+        types.InlineKeyboardButton(
+            text=mt.btn_cancel_training,
+            callback_data=f"cancel_training_{training_id}",
+        ),
+    )
+    return builder.as_markup(resize_keyboard=True, one_time_keyboard=False)

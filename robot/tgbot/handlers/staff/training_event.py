@@ -2,7 +2,7 @@ import logging
 from datetime import datetime
 from typing import Optional
 
-from aiogram import types, Router, F
+from aiogram import types, Router, F, Bot
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
@@ -734,8 +734,8 @@ async def create_training_final(message: types.Message, state: FSMContext):
 
 
 @staff_router.callback_query(F.data.startswith("delete_training_"))
-async def delete_training_event(callback: types.CallbackQuery):
-    """Обробка кнопки Видалення тренування."""
+async def confirm_delete_training(callback: types.CallbackQuery):
+    """Підтвердження видалення тренування."""
 
     try:
         # Отримання ID тренування з callback даних
@@ -744,25 +744,91 @@ async def delete_training_event(callback: types.CallbackQuery):
         # Отримання тренування
         training = await TrainingEvent.objects.aget(id=training_id)
 
+        await callback.message.edit_text(
+            text=mt.format_confirmation_message.format(
+                training_id=training.id,
+                training_title=training.title,
+                participants_count=training.registrations.count(),
+            ),
+            reply_markup=kb.confirmation_keyboard(
+                f"delete_confirm_{training_id}"
+            ),
+        )
+    except TrainingEvent.DoesNotExist:
+        logger.error("Тренування не знайдено")
+        await callback.answer("❌ Тренування не знайдено!", show_alert=True)
+    except Exception as e:
+        logger.error("Помилка підтвердження видалення: %s", e)
+        await callback.answer(
+            "🚫 Сталася помилка при підготовці видалення", show_alert=True
+        )
+    finally:
+        await callback.answer()
+
+
+@staff_router.callback_query(F.data.startswith("delete_confirm_"))
+async def execute_delete_training(callback: types.CallbackQuery):
+    """Виконання видалення тренування."""
+    try:
+        # Розбиваємо callback_data: delete_confirm_123_yes/no
+        _, action, training_id = callback.data.split("_")[-3:]
+        training_id = int(training_id)
+
+        if action != "yes":
+            await callback.message.edit_text("🙅 Видалення скасовано")
+            return
+
+        # Знаходимо тренування в БД
+        training = await TrainingEvent.objects.select_related().aget(
+            id=training_id
+        )
+
+        # Перевірка, чи можна видалити
+        if (
+            training.date > timezone.now()
+            and training.registrations.count() > 0
+            and not training.is_cancelled
+        ):
+            await callback.message.edit_text(
+                "❌ Неможливо видалити тренування, "
+                "що вже анонсоване та має зареєстрованих учасників.\n"
+                "Спочатку потрібно скасувати анонсоване тренування.",
+                reply_markup=kb.cancel_training(training_id),
+            )
+            return
+
         # Видалення тренування
         await training.adelete()
-        new_text = f"🗑 Тренування '{training.title}' (ID: {training_id}) успішно видалено!"
 
-        try:
-            # Редагування повідомлення
-            await callback.message.edit_text(
-                text=new_text, reply_markup=None  # Remove inline keyboard
-            )
-        except TelegramBadRequest:
-            # Якщо повідомлення вже було видалено
-            await callback.answer(new_text, show_alert=True)
+        # Оновлення повідомлення
+        await callback.message.edit_text(
+            text=f"🗑 Тренування «{training.title}» успішно видалено!\n",
+            reply_markup=None,
+        )
     except TrainingEvent.DoesNotExist:
-        await callback.answer("❌ Тренування не знайдено!", show_alert=True)
-    except (ValueError, IndexError):
-        await callback.answer("❌ Невірний формат команди!", show_alert=True)
+        await callback.answer("❌ Тренування вже видалено!", show_alert=True)
     except Exception as e:
-        logger.error(f"Delete training error: {e}")
-        await callback.answer("🚫 Сталася невідома помилка!", show_alert=True)
+        logger.error(f"Помилка видалення тренування: {e}")
+        await callback.answer(
+            f"🚫 Критична помилка при видаленні: {e}", show_alert=True
+        )
     finally:
-        # Відповідь на callback
         await callback.answer()
+
+
+async def notify_participants(
+    bot: Bot, participants: list, training: TrainingEvent
+):
+    """Надсилання сповіщень усім учасникам"""
+    for user in participants:
+        try:
+            await bot.send_message(
+                chat_id=user.telegram_id,
+                text=f"🔔 Важливе сповіщення!\n\n"
+                f"Тренування «{training.title}», на яке ви записані, скасоване 😔\n\n"
+                f"Дата: {training.date.strftime('%d.%m.%Y')}\n"
+                f"Причина: адміністративний рішення\n\n"
+                f"Вибачте за незручності!",
+            )
+        except Exception as e:
+            logger.error("Помилка сповіщення %s: %s", user, e)
