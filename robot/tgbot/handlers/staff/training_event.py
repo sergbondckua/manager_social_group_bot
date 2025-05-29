@@ -23,7 +23,11 @@ from robot.tgbot.services.staff_training_service import (
 )
 from robot.tgbot.states.staff import CreateTraining
 from robot.tgbot.text import staff_create_training as mt
-from training_events.models import TrainingEvent, TrainingDistance, TrainingRegistration
+from training_events.models import (
+    TrainingEvent,
+    TrainingDistance,
+    TrainingRegistration,
+)
 
 # Налаштування логування
 logger = logging.getLogger("robot")
@@ -820,12 +824,12 @@ async def execute_delete_training(callback: types.CallbackQuery):
 
 
 async def notify_participants(
-    bot: Bot, participants: list [TrainingRegistration], training: TrainingEvent
+    bot: Bot, participants: list, training: TrainingEvent
 ):
     """Надсилання сповіщень усім учасникам"""
     for user in participants:
         try:
-            chat_id = user.participant.telegram_id
+            chat_id = user
             if training.poster:
                 photo_file = FSInputFile(training.poster.path)
                 await bot.send_chat_action(
@@ -836,7 +840,9 @@ async def notify_participants(
                     photo=photo_file,
                     caption=mt.format_training_cancellation_notice.format(
                         training_title=training.title,
-                        training_date=training.date.strftime("%d %B %Y, %H:%M"),
+                        training_date=training.date.strftime(
+                            "%d %B %Y, %H:%M"
+                        ),
                     ),
                 )
             else:
@@ -844,11 +850,14 @@ async def notify_participants(
                     chat_id=chat_id,
                     text=mt.format_training_cancellation_notice.format(
                         training_title=training.title,
-                        training_date=training.date.strftime("%d %B %Y, %H:%M"),
+                        training_date=training.date.strftime(
+                            "%d %B %Y, %H:%M"
+                        ),
                     ),
                 )
         except Exception as e:
-            logger.error("Помилка сповіщення %s: %s", user, e)
+            logger.error("Помилка сповіщення: %s", e)
+
 
 @staff_router.callback_query(F.data.startswith("revoke_training_"))
 async def confirm_revoke_training(callback: types.CallbackQuery):
@@ -871,7 +880,9 @@ async def confirm_revoke_training(callback: types.CallbackQuery):
                 training_id=training.id,
                 training_title=training.title,
             ),
-            reply_markup=kb.confirmation_keyboard(f"revoke_confirm_{training_id}"),
+            reply_markup=kb.confirmation_keyboard(
+                f"revoke_confirm_{training_id}"
+            ),
         )
     except TrainingEvent.DoesNotExist:
         logger.error("Тренування не знайдено")
@@ -901,15 +912,19 @@ async def execute_revoke_training(callback: types.CallbackQuery):
 
         @sync_to_async()
         def revoke_training(training_event_id: int) -> tuple:
-            """ Виконання скасування тренування."""
+            """Виконання скасування тренування."""
             training_event = TrainingEvent.objects.select_related().get(
                 id=training_event_id
             )
 
-            participant_registrations = training_event.registrations.all()
+            participant_registrations = [
+                reg.participant.telegram_id
+                for reg in training_event.registrations.all()
+            ]
+
             training_event.is_cancelled = True
             training_event.save()
-            return training_event, list(participant_registrations)
+            return training_event, participant_registrations
 
         # Виконання скасування тренування
         training, participants = await revoke_training(training_id)
@@ -918,9 +933,9 @@ async def execute_revoke_training(callback: types.CallbackQuery):
         await notify_participants(callback.bot, participants, training)
 
         # Оновлення повідомлення
-        await callback.message.edit_text(
+        await callback.answer(
             text=f"🙉 Тренування «{training.title}» успішно скасовано!\n"
-                 f"📨 Учасникам ({len(participants)}) надіслано сповіщення",
+            f"📨 Учасникам ({len(participants)}) надіслано сповіщення",
             reply_markup=None,
         )
     except TrainingEvent.DoesNotExist:
