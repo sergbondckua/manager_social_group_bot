@@ -1,5 +1,6 @@
 import logging
 from datetime import datetime
+from pathlib import Path
 from typing import Optional
 
 from aiogram import types, Router, F, Bot
@@ -834,7 +835,9 @@ async def notify_participants(
         try:
             chat_id = user
             if training.poster:
-                photo_file = FSInputFile(settings.BASE_DIR / training.poster.path)
+                photo_file = FSInputFile(
+                    Path(settings.MEDIA_ROOT) / training.poster.path
+                )
                 await bot.send_chat_action(
                     chat_id=chat_id, action="upload_photo"
                 )
