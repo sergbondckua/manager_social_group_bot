@@ -107,7 +107,10 @@ async def cancel_training_creation(message: types.Message, state: FSMContext):
         return
 
     await clear_state_and_notify(
-        message, state, "❌ Створення тренування скасовано."
+        message,
+        state,
+        text="❌ Створення тренування скасовано.",
+        keyboard=types.ReplyKeyboardRemove(),
     )
 
 
@@ -831,7 +834,7 @@ async def notify_participants(
         try:
             chat_id = user
             if training.poster:
-                photo_file = FSInputFile(training.poster.path)
+                photo_file = FSInputFile(settings.BASE_DIR / training.poster.path)
                 await bot.send_chat_action(
                     chat_id=chat_id, action="upload_photo"
                 )
