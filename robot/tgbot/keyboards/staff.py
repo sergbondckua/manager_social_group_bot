@@ -36,10 +36,12 @@ def cancel_keyboard():
     return builder.as_markup(resize_keyboard=True, one_time_keyboard=False)
 
 
-def create_training_publish_and_delete_keyboard(training_id: int):
+def create_training_publish_and_delete_keyboard(
+    training_id: int,
+) -> types.InlineKeyboardMarkup:
     """Інлайн-клавіатура для публікації тренування."""
     builder = InlineKeyboardBuilder()
-    builder.add(
+    builder.row(
         types.InlineKeyboardButton(
             text=mt.btn_training_publish,
             callback_data=f"publish_training_{training_id}",
@@ -49,6 +51,13 @@ def create_training_publish_and_delete_keyboard(training_id: int):
             callback_data=f"delete_training_{training_id}",
         ),
     )
+    builder.row(
+        types.InlineKeyboardButton(
+            text=mt.btn_close,
+            callback_data="btn_close",
+        )
+    )
+
     return builder.as_markup(resize_keyboard=True, one_time_keyboard=False)
 
 
@@ -68,8 +77,8 @@ def revoke_training_keyboard(training_id: int):
             callback_data=f"revoke_training_{training_id}",
         ),
         types.InlineKeyboardButton(
-            text="🚫 Закрити",
-            callback_data=f"revoke_training_close_{training_id}",
+            text=mt.btn_close,
+            callback_data="btn_close",
         )
     )
     builder.adjust(1)

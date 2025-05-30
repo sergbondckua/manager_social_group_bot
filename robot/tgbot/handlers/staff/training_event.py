@@ -9,7 +9,6 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import FSInputFile
 from asgiref.sync import sync_to_async
 from django.conf import settings
-from django.db.models import QuerySet
 from django.utils import timezone
 from django.core.exceptions import ValidationError
 from django.db import transaction
@@ -24,11 +23,7 @@ from robot.tgbot.services.staff_training_service import (
 )
 from robot.tgbot.states.staff import CreateTraining
 from robot.tgbot.text import staff_create_training as mt
-from training_events.models import (
-    TrainingEvent,
-    TrainingDistance,
-    TrainingRegistration,
-)
+from training_events.models import TrainingEvent, TrainingDistance
 
 # Налаштування логування
 logger = logging.getLogger("robot")
@@ -115,6 +110,13 @@ async def cancel_training_creation(message: types.Message, state: FSMContext):
     )
 
 
+@staff_router.callback_query(F.data == "btn_close")
+async def btn_close(callback: types.CallbackQuery):
+    """ Закриває повідомлення і видаляє клавіатуру."""
+    await callback.message.delete()
+    return
+
+
 # Обробник команди для перегляду створених тренувань
 @staff_router.message(Command("my_trainings"))
 async def cmd_my_trainings(message: types.Message):
@@ -132,20 +134,20 @@ async def cmd_my_trainings(message: types.Message):
     @sync_to_async
     def get_trainings(user):
         return list(
-            TrainingEvent.objects.filter(created_by=user).order_by("-date")[
-                :10
-            ]
+            TrainingEvent.objects.filter(
+                created_by=user, date__gte=timezone.now(), is_cancelled=False
+            ).order_by("-date")[:10]
         )
 
     trainings = await get_trainings(club_user)
 
     if not trainings:
         await message.bot.send_message(
-            user_id, "📝 Ви ще не створювали тренувань."
+            user_id, "📝 Запланованих тренувань немає або ще не створені."
         )
         return
 
-    message_parts = ["📋 Ваші останні тренування:", ""]
+    message_parts = ["📋 Ваші заплановані тренування:", ""]
 
     for training in trainings:
         status = "🔜" if training.date > timezone.now() else "✅"
@@ -154,9 +156,37 @@ async def cmd_my_trainings(message: types.Message):
             f"📅 {training.date.strftime('%d.%m.%Y %H:%M')}\n"
             f"📍 {training.location}\n"
             f"🆔 ID: {training.id}\n"
+            f"⚙️ Деталі: /get_training_{training.id}"
             "\n ================\n\n"
         )
     await message.bot.send_message(user_id, "\n".join(message_parts))
+
+
+@staff_router.message(F.text.startswith("/get_training_"))
+async def cmd_get_training(message: types.Message, state: FSMContext):
+    """Обробник команди "/get_training_" для отримання деталей тренування."""
+
+    training_id = message.text.split("_")[-1]
+    training = await TrainingEvent.objects.select_related().aget(
+        id=training_id
+    )
+    distances = [d async for d in training.distances.all()]
+
+    if not training:
+        await message.answer(
+            "❌ Тренування не знайдено в базі даних. "
+            "Повідомте адміністратора."
+        )
+        return
+
+    msg = await mt.format_success_message(training, distances)
+
+    await message.answer(
+        msg,
+        reply_markup=kb.create_training_publish_and_delete_keyboard(
+            training.id
+        ),
+    )
 
 
 @staff_router.message(Command("create_training"))
@@ -703,7 +733,7 @@ async def create_training_final(message: types.Message, state: FSMContext):
         )
 
         # Формуємо повідомлення про успішне створення
-        success_message = mt.format_success_message(
+        success_message = await mt.format_success_message(
             training, created_distances
         )
         # Клавіатура для публікації тренування
@@ -870,12 +900,9 @@ async def confirm_revoke_training(callback: types.CallbackQuery):
     """Підтвердження скасування тренування."""
     try:
         # Отримання ID тренування та діі
-        action, training_id = callback.data.split("_")[-2:]
+        training_id = callback.data.split("_")[-1]
         training_id = int(training_id)
 
-        if action == "close":
-            await callback.message.delete()
-            return
         # Отримання тренування
         training = await TrainingEvent.objects.select_related().aget(
             id=training_id

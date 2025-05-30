@@ -1,8 +1,13 @@
 from aiogram.utils.markdown import hbold, hcode, hitalic, text
 from html import escape
+
+from asgiref.sync import sync_to_async
+
+from common.utils import clean_tag_message
 from training_events.models import TrainingEvent
 
 btn_cancel = text("🚫 Скасувати створення")
+btn_close = text("❌ Прибрати")
 btn_skip = text("⏩ Пропустити")
 btn_finish_training = text("🏁 Завершити створення")
 btn_add_distance = text("➕ Додати ще дистанцію")
@@ -62,7 +67,7 @@ format_training_cancellation_notice = text(
     "🙏 Вибачте за незручності! Ми повідомимо про нові тренування.",
 )
 
-
+@sync_to_async
 def format_success_message(training: TrainingEvent, distances: list) -> str:
     """Форматує повідомлення про успішне створення тренування з HTML-форматуванням"""
     # Основні компоненти повідомлення
@@ -72,7 +77,9 @@ def format_success_message(training: TrainingEvent, distances: list) -> str:
 
     # Опис (якщо є)
     if training.description:
-        message.append(f"📋 {hbold('Опис:')} {escape(training.description)}")
+        message.append(
+            f"📋 {hbold('Опис:')} {clean_tag_message(training.description)}"
+        )
 
     # Постер (якщо є)
     if training.poster:
@@ -123,8 +130,15 @@ def format_success_message(training: TrainingEvent, distances: list) -> str:
         training.created_by.get_full_name()
         or f"користувач (ID: {training.created_by.telegram_id})"
     )
+    if training.registrations.count() > 0:
+        registrations = (f"\n👥 {hbold('Зареєстровано: ')} "
+                         f"{training.registrations.count()} учасник(а / ів)")
+    else:
+        registrations = ""
+
     message.extend(
         [
+            registrations,
             f"\n👤 {hbold('Організатор:')} {escape(creator_name)}",
             f"🆔 {hbold('ID тренування:')} {hcode(training.id)}",
         ]
