@@ -917,7 +917,9 @@ async def execute_revoke_training(callback: types.CallbackQuery):
             return
 
         @sync_to_async()
-        def revoke_training(training_event_id: int) -> tuple:
+        def revoke_training(
+            training_event_id: int,
+        ) -> tuple[TrainingEvent, list[int]]:
             """Виконання скасування тренування."""
             training_event = TrainingEvent.objects.select_related().get(
                 id=training_event_id
@@ -939,9 +941,12 @@ async def execute_revoke_training(callback: types.CallbackQuery):
         await notify_participants(callback.bot, participants, training)
 
         # Оновлення повідомлення
-        await callback.answer(
-            text=f"🙉 Тренування «{training.title}» успішно скасовано!\n"
-            f"📨 Учасникам ({len(participants)}) надіслано сповіщення",
+        await callback.message.edit_text(
+            text=mt.format_training_cancellation_confirmation.format(
+                training_title=training.title,
+                participants_count=len(participants),
+                training_date=training.date.strftime("%d.%m.%Y, %H:%M"),
+            ),
             reply_markup=None,
         )
     except TrainingEvent.DoesNotExist:
