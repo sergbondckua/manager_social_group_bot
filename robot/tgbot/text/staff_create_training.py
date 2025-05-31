@@ -14,6 +14,7 @@ btn_add_distance = text("➕ Додати ще дистанцію")
 btn_training_publish = text("🗞 Анонсувати")
 btn_training_delete = text("🗑 Видалити")
 btn_cancel_training = text("🛑 Скасувати анонсоване тренування")
+btn_register_training = text("®️ Я, буду!")
 
 format_delete_confirmation = text(
     "⚠️ " + hbold("Підтвердження видалення тренування\n\n"),

@@ -118,7 +118,7 @@ async def btn_close(callback: types.CallbackQuery):
 
 
 # Обробник команди для перегляду створених тренувань
-@staff_router.message(Command("my_trainings"))
+@staff_router.message(Command("trainings"))
 async def cmd_my_trainings(message: types.Message):
     """Показує список тренувань, створених користувачем."""
     user_id = message.from_user.id
@@ -983,6 +983,42 @@ async def execute_revoke_training(callback: types.CallbackQuery):
         logger.error("Помилка скасування тренування: %s", e)
         await callback.answer(
             "🚫 Сталася помилка при скасуванні тренування", show_alert=True
+        )
+    finally:
+        await callback.answer()
+
+
+@staff_router.callback_query(F.data.startswith("publish_training_"))
+async def publish_training(callback: types.CallbackQuery):
+    try:
+        # Отримання ID
+        training_id = callback.data.split("_")[-1]
+        training_id = int(training_id)
+
+        # Отримання тренування
+        training = await TrainingEvent.objects.select_related().aget(
+            id=training_id
+        )
+
+        # Публікація тренування
+        await callback.message.bot.send_message(
+            chat_id=settings.DEFAULT_CHAT_ID,
+            text=f"✅ Тренування '{training.title}' опубліковано!",
+            reply_markup=kb.register_training_keyboard(training_id),
+        )
+
+        # Оновлення повідомлення
+        await callback.message.edit_text(
+            text=f"✅ Тренування {training.title}' опубліковано!",
+            reply_markup=None,
+        )
+    except TrainingEvent.DoesNotExist:
+        logger.error("Тренування не знайдено")
+        await callback.answer("❌ Тренування не знайдено!", show_alert=True)
+    except Exception as e:
+        logger.error("Помилка публікації тренування: %s", e)
+        await callback.answer(
+            "🚫 Сталася помилка при публікації тренування", show_alert=True
         )
     finally:
         await callback.answer()
