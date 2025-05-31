@@ -72,8 +72,11 @@ format_training_cancellation_notice = text(
 def format_success_message(training: TrainingEvent, distances: list) -> str:
     """Форматує повідомлення про успішне створення тренування з HTML-форматуванням"""
     # Основні компоненти повідомлення
+    # Постер (якщо є)
+    poster_emoji = " | 🖼" if training.poster else ""
+
     message = [
-        f"🏷 {hbold('Назва:')} {escape(training.title)}",
+        f"🏷 {hbold('Назва:')} {training.title}{poster_emoji}",
     ]
 
     # Опис (якщо є)
@@ -81,10 +84,6 @@ def format_success_message(training: TrainingEvent, distances: list) -> str:
         message.append(
             f"📋 {hbold('Опис:')} {clean_tag_message(training.description)}"
         )
-
-    # Постер (якщо є)
-    if training.poster:
-        message.append(f"\n🖼 {hbold('Постер додано')}")
 
     # Дата та час
     date_str = training.date.date().strftime("%d.%m.%Y")
@@ -149,7 +148,7 @@ def format_success_message(training: TrainingEvent, distances: list) -> str:
 
 
 def format_distances_list(distances: list) -> str:
-    """Форматує список дистанцій з Markdown, емодзі та професійним оформленням."""
+    """Форматує список дистанцій."""
     distance_lines = []
 
     for d in distances:

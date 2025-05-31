@@ -12,6 +12,7 @@ from django.conf import settings
 from django.utils import timezone
 from django.core.exceptions import ValidationError
 from django.db import transaction
+from django.utils._os import safe_join
 
 from profiles.models import ClubUser
 from robot.tgbot.filters.staff import ClubStaffFilter
@@ -112,7 +113,7 @@ async def cancel_training_creation(message: types.Message, state: FSMContext):
 
 @staff_router.callback_query(F.data == "btn_close")
 async def btn_close(callback: types.CallbackQuery):
-    """ Закриває повідомлення і видаляє клавіатуру."""
+    """Закриває повідомлення і видаляє клавіатуру."""
     await callback.message.delete()
     return
 
@@ -865,9 +866,9 @@ async def notify_participants(
         try:
             chat_id = user
             if training.poster:
-                photo_file = FSInputFile(
-                    Path(settings.MEDIA_ROOT) / training.poster.path
-                )
+                relative_path = training.poster.name.lstrip("/")
+                poster_path = Path(settings.MEDIA_ROOT) / relative_path
+                photo_file = FSInputFile(poster_path)
                 await bot.send_chat_action(
                     chat_id=chat_id, action="upload_photo"
                 )
@@ -891,8 +892,8 @@ async def notify_participants(
                         ),
                     ),
                 )
-        except Exception as e:
-            logger.error("Помилка сповіщення: %s", e)
+        except ValueError as e:
+            logger.error("!Помилка сповіщення: %s", e, exc_info=True)
 
 
 @staff_router.callback_query(F.data.startswith("revoke_training_"))
@@ -980,7 +981,7 @@ async def execute_revoke_training(callback: types.CallbackQuery):
         logger.error("Тренування не знайдено")
         await callback.answer("❌ Тренування не знайдено!", show_alert=True)
     except Exception as e:
-        logger.error("Помилка скасування тренування: %s", e)
+        logger.error("Помилка скасування тренування: %s", e, exc_info=True)
         await callback.answer(
             "🚫 Сталася помилка при скасуванні тренування", show_alert=True
         )
@@ -999,17 +1000,52 @@ async def publish_training(callback: types.CallbackQuery):
         training = await TrainingEvent.objects.select_related().aget(
             id=training_id
         )
+        distances = [distance async for distance in training.distances.all()]
+
+        # Отримання тексту замість Markdown
 
         # Публікація тренування
-        await callback.message.bot.send_message(
-            chat_id=settings.DEFAULT_CHAT_ID,
-            text=f"✅ Тренування '{training.title}' опубліковано!",
-            reply_markup=kb.register_training_keyboard(training_id),
-        )
+        if training.poster:
+            relative_path = training.poster.name.lstrip("/")
+            poster_path = Path(settings.MEDIA_ROOT) / relative_path
+            photo_file = FSInputFile(poster_path)
+            await callback.message.bot.send_photo(
+                chat_id=settings.DEFAULT_CHAT_ID,
+                photo=photo_file,
+                caption=f"{await mt.format_success_message(training, distances)}",
+                reply_markup=kb.register_training_keyboard(training_id),
+            )
+        else:
+            await callback.message.bot.send_message(
+                chat_id=settings.DEFAULT_CHAT_ID,
+                text=f"{await mt.format_success_message(training, distances)}",
+                reply_markup=kb.register_training_keyboard(training_id),
+            )
+
+        for distance in distances:
+            if distance.route_gpx:
+                relative_path = distance.route_gpx.name.lstrip("/")
+                gpx_path = Path(settings.MEDIA_ROOT) / relative_path
+                gpx_file = FSInputFile(gpx_path)
+                await callback.message.bot.send_document(
+                    chat_id=settings.DEFAULT_CHAT_ID,
+                    document=gpx_file,
+                    caption=f"Маршрут до {distance.distance} км",
+                )
+                png_path = Path(settings.MEDIA_ROOT) / relative_path.replace(
+                    ".gpx", ".png"
+                )
+                if png_path.exists():
+                    png_file = FSInputFile(png_path)
+                    await callback.message.bot.send_photo(
+                        chat_id=settings.DEFAULT_CHAT_ID,
+                        photo=png_file,
+                        caption=f"Візуалізація до {distance.distance} км",
+                    )
 
         # Оновлення повідомлення
         await callback.message.edit_text(
-            text=f"✅ Тренування {training.title}' опубліковано!",
+            text=f"♻️ Тренування {training.title} опубліковано!",
             reply_markup=None,
         )
     except TrainingEvent.DoesNotExist:

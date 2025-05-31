@@ -84,6 +84,14 @@ async def register_training(callback: types.CallbackQuery):
         )
         return
 
+    # Перевіряємо чи тренування було скасовано
+    if training.is_cancelled:
+        await callback.answer(
+            text="⚠️ Тренування було скасовано!",
+            show_alert=True,
+        )
+        return
+
     # Перевіряємо чи тренування пройшло
     if training.date < timezone.now():
         await callback.answer(
@@ -197,6 +205,14 @@ async def register_for_distance(callback: types.CallbackQuery):
     if training.date < timezone.now():
         await callback.answer(
             text="⚠️ Це тренування вже відбулося!",
+            show_alert=True,
+        )
+        return
+
+    # Перевіряємо чи тренування було скасовано
+    if training.is_cancelled:
+        await callback.answer(
+            text="⚠️ Тренування було скасовано!",
             show_alert=True,
         )
         return

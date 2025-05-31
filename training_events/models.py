@@ -162,11 +162,10 @@ class TrainingDistance(BaseModel):
     )
 
     def __str__(self):
-
         name = "".join(
             s[0].upper() for s in self.training.title.split(" ") if s.isalpha()
         )
-        return f"{self.distance} км - {name}"
+        return f"{self.distance} км - {name}_{self.training.id}"
 
     class Meta:
         ordering = ["distance"]

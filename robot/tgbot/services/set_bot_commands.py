@@ -21,6 +21,16 @@ async def set_default_commands(bot: Bot):
                 types.BotCommand(
                     command="weather_now", description="Поточна погода"
                 ),
+                types.BotCommand(
+                    command="my_trainings", description="Мої тренування"
+                ),
+                types.BotCommand(
+                    command="create_training",
+                    description="Створити тренування (тільки для адмінів)",
+                ),
+                types.BotCommand(
+                    command="trainings", description="Створені тренування (тільки для адмінів)"
+                ),
             ],
             scope=types.BotCommandScopeDefault(),
             language_code="uk",
