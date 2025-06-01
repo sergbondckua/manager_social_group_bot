@@ -13,6 +13,7 @@ from training_events.models import TrainingDistance
 
 logger = logging.getLogger("robot")
 
+
 async def download_file_safe(bot, file_id: str, destination: str) -> bool:
     """Безпечно завантажує файл."""
     try:
@@ -144,12 +145,14 @@ async def update_distance_paths(
     updates = {}
 
     if route_path:
-        updates["route_gpx"] = route_path.replace(str(settings.MEDIA_ROOT), "")
+        updates["route_gpx"] = route_path.replace(
+            str(settings.MEDIA_ROOT), ""
+        ).lstrip("/")
 
     if map_image_path:
         updates["route_gpx_map"] = map_image_path.replace(
             str(settings.MEDIA_ROOT), ""
-        )
+        ).lstrip("/")
 
     if updates:
         await sync_to_async(

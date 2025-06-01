@@ -4,6 +4,7 @@ from datetime import datetime
 from aiogram import Router, F, types
 from aiogram.filters import Command
 from asgiref.sync import sync_to_async
+from django.utils import timezone
 from django.utils.timezone import make_aware
 
 from profiles.models import ClubUser
@@ -95,7 +96,7 @@ async def register_training(callback: types.CallbackQuery):
         return
 
     # Перевіряємо чи тренування пройшло
-    if training.date < make_aware(datetime.now().replace(tzinfo=None)):
+    if training.date < timezone.now():
         await callback.answer(
             text="⚠️ Це тренування вже відбулося!",
             show_alert=True,
@@ -130,7 +131,7 @@ async def register_training(callback: types.CallbackQuery):
             chat_id=user_id,
             text=mt.format_distance_selection_template.format(
                 title=training.title,
-                date=training.date.strftime("%d.%m.%Y 🕑 %H:%M"),
+                date=timezone.localtime(training.date).strftime("%d.%m.%Y 🕑 %H:%M"),
                 location=training.location,
             ),
             reply_markup=kb.distance_keyboard(distances),
@@ -168,7 +169,7 @@ async def register_training(callback: types.CallbackQuery):
             participant=await get_full_name(callback, participant),
             title=training.title,
             distance=distance.distance,
-            date=training.date.strftime("%d.%m.%Y 🕑 %H:%M"),
+            date=timezone.localtime(training.date).strftime("%d.%m.%Y 🕑 %H:%M"),
             location=training.location,
         ),
     )
@@ -178,7 +179,7 @@ async def register_training(callback: types.CallbackQuery):
         participant=await get_full_name(callback, participant),
         username=await get_username(callback),
         title=training.title,
-        date=training.date.strftime("%d.%m.%Y 🕑 %H:%M"),
+        date=timezone.localtime(training.date).strftime("%d.%m.%Y 🕑 %H:%M"),
         location=training.location,
         distance=distance.distance,
     )
@@ -206,7 +207,7 @@ async def register_for_distance(callback: types.CallbackQuery):
         return
 
     # Перевіряємо чи тренування пройшло
-    if training.date < make_aware(datetime.now().replace(tzinfo=None)):
+    if training.date < timezone.now():
         await callback.answer(
             text="⚠️ Це тренування вже відбулося!",
             show_alert=True,
@@ -264,7 +265,7 @@ async def register_for_distance(callback: types.CallbackQuery):
             participant=await get_full_name(callback, participant),
             title=training.title,
             distance=distance.distance,
-            date=training.date.strftime("%d.%m.%Y 🕑 %H:%M"),
+            date=timezone.localtime(training.date).strftime("%d.%m.%Y 🕑 %H:%M"),
             location=training.location,
         ),
     )
@@ -274,7 +275,7 @@ async def register_for_distance(callback: types.CallbackQuery):
         participant=await get_full_name(callback, participant),
         username=await get_username(callback),
         title=training.title,
-        date=training.date.strftime("%d.%m.%Y 🕑 %H:%M"),
+        date=timezone.localtime(training.date).strftime("%d.%m.%Y 🕑 %H:%M"),
         location=training.location,
         distance=distance.distance,
     )
@@ -317,14 +318,14 @@ async def unregister_training(message: types.Message):
             chat_id=user_id,
             text=mt.format_unregister_confirmation.format(
                 title=training.title,
-                date=training.date.strftime('%d.%m.%Y 🕑 %H:%M')
+                date=timezone.localtime(training.date).strftime('%d.%m.%Y 🕑 %H:%M')
             )
         )
 
         # Відправляємо повідомлення адміністраторам про скасовану реєстрацію
         msg = mt.format_unregister_template.format(
             title=training.title,
-            date=training.date.strftime("%d.%m.%Y 🕑 %H:%M"),
+            date=timezone.localtime(training.date).strftime("%d.%m.%Y 🕑 %H:%M"),
             participant_name=await get_full_name(message, participant),
             username=await get_username(message),
         )
@@ -376,7 +377,7 @@ async def show_my_registrations(message: types.Message):
     for reg in registrations:
         text += mt.format_my_reg_training.format(
             title=reg.training.title,
-            date=reg.training.date.strftime("%d.%m.%Y 🕑 %H:%M"),
+            date=timezone.localtime(reg.training.date).strftime("%d.%m.%Y 🕑 %H:%M"),
             location=reg.training.location,
             distance=reg.distance.distance,
             created_at=reg.created_at.strftime("%d.%m.%Y 🕑 %H:%M"),

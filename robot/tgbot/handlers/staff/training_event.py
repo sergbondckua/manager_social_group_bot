@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from datetime import datetime
 from pathlib import Path
@@ -11,6 +12,7 @@ from asgiref.sync import sync_to_async
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import transaction
+from django.utils import timezone
 from django.utils.timezone import make_aware
 
 from profiles.models import ClubUser
@@ -101,7 +103,7 @@ async def cmd_my_trainings(message: types.Message):
         return list(
             TrainingEvent.objects.filter(
                 created_by=user,
-                date__gte=make_aware(datetime.now().replace(tzinfo=None)),
+                date__gte=timezone.now(),
                 is_cancelled=False,
             ).order_by("date")[:10]
         )
@@ -117,16 +119,14 @@ async def cmd_my_trainings(message: types.Message):
     message_parts = ["📋 Ваші заплановані тренування:", ""]
 
     for training in trainings:
-        status = (
-            "🔜"
-            if training.date > make_aware(datetime.now().replace(tzinfo=None))
-            else "✅"
-        )
+        status = "🔜" if training.date > timezone.now() else "✅"
         message_parts.append(
             mt.format_training_info_template.format(
                 status=status,
                 title=training.title,
-                date=training.date.strftime("%d.%m.%Y %H:%M"),
+                date=timezone.localtime(training.date).strftime(
+                    "%d.%m.%Y %H:%M"
+                ),
                 location=training.location,
                 training_id=training.id,
             )
@@ -670,7 +670,9 @@ async def create_training_final(message: types.Message, state: FSMContext):
                     date=training_datetime,
                     location=data["location"],
                     poster=(
-                        poster_path.replace(str(settings.MEDIA_ROOT), "")
+                        poster_path.replace(
+                            str(settings.MEDIA_ROOT), ""
+                        ).lstrip("/")
                         if poster_path
                         else None
                     ),
@@ -806,13 +808,15 @@ async def execute_delete_training(callback: types.CallbackQuery):
 
         # Перевірка, чи можна видалити
         if (
-            training.date > make_aware(datetime.now().replace(tzinfo=None))
+            training.date > timezone.now()
             and await training.registrations.acount() > 0
             and not training.is_cancelled
         ):
             await callback.message.edit_text(
                 text=mt.format_revoke_training_error_detailed.format(
-                    training_date=training.date.strftime("%d.%m.%Y %H:%M"),
+                    training_date=timezone.localtime(training.date).strftime(
+                        "%d.%m.%Y %H:%M"
+                    ),
                     training_title=training.title,
                     participants_count=await training.registrations.acount(),
                 ),
@@ -858,9 +862,9 @@ async def notify_participants(
                     photo=photo_file,
                     caption=mt.format_training_cancellation_notice.format(
                         training_title=training.title,
-                        training_date=training.date.strftime(
-                            "%d %B %Y, %H:%M"
-                        ),
+                        training_date=timezone.localtime(
+                            training.date
+                        ).strftime("%d %B %Y, %H:%M"),
                     ),
                 )
             else:
@@ -868,9 +872,9 @@ async def notify_participants(
                     chat_id=chat_id,
                     text=mt.format_training_cancellation_notice.format(
                         training_title=training.title,
-                        training_date=training.date.strftime(
-                            "%d %B %Y, %H:%M"
-                        ),
+                        training_date=timezone.localtime(
+                            training.date
+                        ).strftime("%d %B %Y, %H:%M"),
                     ),
                 )
         except ValueError as e:
@@ -954,7 +958,9 @@ async def execute_revoke_training(callback: types.CallbackQuery):
             text=mt.format_training_cancellation_confirmation.format(
                 training_title=training.title,
                 participants_count=len(participants),
-                training_date=training.date.strftime("%d.%m.%Y, %H:%M"),
+                training_date=timezone.localtime(training.date).strftime(
+                    "%d.%m.%Y, %H:%M"
+                ),
             ),
             reply_markup=None,
         )
@@ -972,6 +978,8 @@ async def execute_revoke_training(callback: types.CallbackQuery):
 
 @staff_router.callback_query(F.data.startswith("publish_training_"))
 async def publish_training(callback: types.CallbackQuery):
+    """Публікація тренування."""
+
     try:
         # Отримання ID
         training_id = callback.data.split("_")[-1]
@@ -983,13 +991,15 @@ async def publish_training(callback: types.CallbackQuery):
         )
         distances = [distance async for distance in training.distances.all()]
 
-        # Отримання тексту замість Markdown
+        if training.is_cancelled:
+            await callback.answer(
+                "❌ Тренування раніше було скасовано!", show_alert=True
+            )
+            return
 
         # Публікація тренування
         if training.poster:
-            relative_path = training.poster.name.lstrip("/")
-            poster_path = Path(settings.MEDIA_ROOT) / relative_path
-            photo_file = FSInputFile(poster_path)
+            photo_file = FSInputFile(training.poster.path)
             await callback.message.bot.send_photo(
                 chat_id=settings.DEFAULT_CHAT_ID,
                 photo=photo_file,
@@ -1004,13 +1014,12 @@ async def publish_training(callback: types.CallbackQuery):
             )
 
         # Публікація маршрутів та візуалізацій
+        await asyncio.sleep(3)  # Пауза перед публікацією
         gpx_group = []
         img_group = []
         for num, distance in enumerate(distances):
             if distance.route_gpx:
-                relative_path = distance.route_gpx.name.lstrip("/")
-                gpx_path = Path(settings.MEDIA_ROOT) / relative_path
-                gpx_file = FSInputFile(gpx_path)
+                gpx_file = FSInputFile(distance.route_gpx.path)
                 gpx_group.append(
                     InputMediaDocument(
                         media=gpx_file,
@@ -1020,9 +1029,7 @@ async def publish_training(callback: types.CallbackQuery):
                 )
 
                 # Публікація візуалізацій
-                png_path = Path(settings.MEDIA_ROOT) / relative_path.replace(
-                    ".gpx", ".png"
-                )
+                png_path = Path(distance.route_gpx.path).with_suffix(".png")
                 if png_path.exists():
                     png_file = FSInputFile(png_path)
                     img_group.append(

@@ -2,6 +2,7 @@ from aiogram.utils.markdown import hbold, hcode, hitalic, text
 from html import escape
 
 from asgiref.sync import sync_to_async
+from django.utils import timezone
 
 from common.utils import clean_tag_message
 from training_events.models import TrainingEvent
@@ -138,8 +139,8 @@ def format_success_message(training: TrainingEvent, distances: list) -> str:
         )
 
     # Дата та час
-    date_str = training.date.date().strftime("%d.%m.%Y")
-    time_str = training.date.time().strftime("%H:%M")
+    date_str = timezone.localtime(training.date).date().strftime("%d.%m.%Y")
+    time_str = timezone.localtime(training.date).time().strftime("%H:%M")
     message.extend(
         [
             f"\n📅 {hbold('Дата:')} {date_str}",
