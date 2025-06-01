@@ -1,8 +1,10 @@
 import logging
+from datetime import datetime
+
 from aiogram import Router, F, types
 from aiogram.filters import Command
 from asgiref.sync import sync_to_async
-from django.utils import timezone
+from django.utils.timezone import make_aware
 
 from profiles.models import ClubUser
 from robot.tgbot.keyboards import user as kb
@@ -93,7 +95,7 @@ async def register_training(callback: types.CallbackQuery):
         return
 
     # Перевіряємо чи тренування пройшло
-    if training.date < timezone.now():
+    if training.date < make_aware(datetime.now().replace(tzinfo=None)):
         await callback.answer(
             text="⚠️ Це тренування вже відбулося!",
             show_alert=True,
@@ -204,7 +206,7 @@ async def register_for_distance(callback: types.CallbackQuery):
         return
 
     # Перевіряємо чи тренування пройшло
-    if training.date < timezone.now():
+    if training.date < make_aware(datetime.now().replace(tzinfo=None)):
         await callback.answer(
             text="⚠️ Це тренування вже відбулося!",
             show_alert=True,
@@ -356,7 +358,7 @@ async def show_my_registrations(message: types.Message):
         TrainingRegistration.objects.select_related("training", "distance")
         .filter(
             participant=participant,
-            training__date__gte=timezone.now(),
+            training__date__gte=make_aware(datetime.now().replace(tzinfo=None)),
             training__is_cancelled=False,
         )
         .order_by("training__date")

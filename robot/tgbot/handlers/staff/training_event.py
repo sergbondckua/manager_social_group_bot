@@ -9,14 +9,15 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import FSInputFile, InputMediaDocument, InputMediaPhoto
 from asgiref.sync import sync_to_async
 from django.conf import settings
-from django.utils import timezone
 from django.core.exceptions import ValidationError
 from django.db import transaction
+from django.utils.timezone import make_aware
 
 from profiles.models import ClubUser
 from robot.tgbot.filters.staff import ClubStaffFilter
 from robot.tgbot.keyboards import staff as kb
 from robot.tgbot.misc import validators
+from robot.tgbot.services import reg_training_service as rs
 from robot.tgbot.services.staff_training_service import (
     create_poster_path,
     process_gpx_files_after_creation,
@@ -41,42 +42,6 @@ async def get_club_user(telegram_id: int) -> Optional[ClubUser]:
         return await ClubUser.objects.aget(telegram_id=telegram_id)
     except ClubUser.DoesNotExist:
         return None
-
-
-def parse_date(date_str: str) -> Optional[datetime]:
-    """Парсить дату з рядка."""
-    try:
-        normalized_date = (
-            date_str.strip()
-            .replace("/", ".")
-            .replace(",", ".")
-            .replace(" ", ".")
-        )
-        return datetime.strptime(normalized_date, "%d.%m.%Y")
-    except ValueError:
-        return None
-
-
-def parse_time(time_str: str) -> Optional[datetime]:
-    """Парсить час з рядка."""
-    try:
-        normalized_time = (
-            time_str.strip()
-            .replace("/", ":")
-            .replace(",", ":")
-            .replace(" ", ":")
-            .replace(".", ":")
-        )
-        return datetime.strptime(normalized_time, "%H:%M")
-    except ValueError:
-        return None
-
-
-def parse_pace(pace_str: str) -> str:
-    """Парсить та нормалізує темп."""
-    return (
-        pace_str.strip().replace(".", ":").replace(",", ":").replace(" ", ":")
-    )
 
 
 async def clear_state_and_notify(
@@ -130,13 +95,15 @@ async def cmd_my_trainings(message: types.Message):
         )
         return
 
-    # Отримуємо тренування користувача
+    # Отримуємо тренування організатора
     @sync_to_async
     def get_trainings(user):
         return list(
             TrainingEvent.objects.filter(
-                created_by=user, date__gte=timezone.now(), is_cancelled=False
-            ).order_by("-date")[:10]
+                created_by=user,
+                date__gte=make_aware(datetime.now().replace(tzinfo=None)),
+                is_cancelled=False,
+            ).order_by("date")[:10]
         )
 
     trainings = await get_trainings(club_user)
@@ -150,7 +117,11 @@ async def cmd_my_trainings(message: types.Message):
     message_parts = ["📋 Ваші заплановані тренування:", ""]
 
     for training in trainings:
-        status = "🔜" if training.date > timezone.now() else "✅"
+        status = (
+            "🔜"
+            if training.date > make_aware(datetime.now().replace(tzinfo=None))
+            else "✅"
+        )
         message_parts.append(
             mt.format_training_info_template.format(
                 status=status,
@@ -160,7 +131,9 @@ async def cmd_my_trainings(message: types.Message):
                 training_id=training.id,
             )
         )
-    await message.bot.send_message(user_id, "\n".join(message_parts))
+    await message.bot.send_message(
+        user_id, "\n".join(message_parts), reply_markup=kb.btn_close()
+    )
 
 
 @staff_router.message(F.text.startswith("/get_training_"))
@@ -272,7 +245,7 @@ async def process_training_description(
 @staff_router.message(CreateTraining.waiting_for_date)
 async def process_training_date(message: types.Message, state: FSMContext):
     """Обробник введення дати тренування."""
-    parsed_date = parse_date(message.text.lstrip().rstrip())
+    parsed_date = rs.parse_date(message.text.lstrip().rstrip())
 
     if not parsed_date:
         await message.answer(
@@ -282,7 +255,10 @@ async def process_training_date(message: types.Message, state: FSMContext):
         return
 
     # Перевіряємо, що дата не в минулому
-    if parsed_date.date() < timezone.now().date():
+    if (
+        parsed_date.date()
+        < make_aware(datetime.now().replace(tzinfo=None)).date()
+    ):
         await message.answer(
             "Дата тренування не може бути в минулому. Введіть коректну дату:"
         )
@@ -296,7 +272,7 @@ async def process_training_date(message: types.Message, state: FSMContext):
 @staff_router.message(CreateTraining.waiting_for_time)
 async def process_training_time(message: types.Message, state: FSMContext):
     """Обробник введення часу тренування."""
-    parsed_time = parse_time(message.text.lstrip().rstrip())
+    parsed_time = rs.parse_time(message.text.lstrip().rstrip())
 
     if not parsed_time:
         await message.answer(
@@ -465,7 +441,7 @@ async def skip_pace_min(message: types.Message, state: FSMContext):
 @staff_router.message(CreateTraining.waiting_for_pace_min)
 async def process_pace_min(message: types.Message, state: FSMContext):
     """Обробник введення мінімального темпу."""
-    pace_str = parse_pace(message.text)
+    pace_str = rs.parse_pace(message.text)
 
     if not validators.validate_pace(pace_str):
         await message.answer(
@@ -502,7 +478,7 @@ async def skip_pace_max(message: types.Message, state: FSMContext):
 @staff_router.message(CreateTraining.waiting_for_pace_max)
 async def process_pace_max(message: types.Message, state: FSMContext):
     """Обробник введення максимального темпу."""
-    pace_str = parse_pace(message.text)
+    pace_str = rs.parse_pace(message.text)
 
     if not validators.validate_pace(pace_str):
         await message.answer(
@@ -669,7 +645,7 @@ async def create_training_final(message: types.Message, state: FSMContext):
             return
 
         # Створюємо datetime
-        training_datetime = timezone.make_aware(
+        training_datetime = make_aware(
             datetime.combine(
                 datetime.strptime(data["date"], "%d.%m.%Y").date(),
                 datetime.strptime(data["time"], "%H:%M").time(),
@@ -830,7 +806,7 @@ async def execute_delete_training(callback: types.CallbackQuery):
 
         # Перевірка, чи можна видалити
         if (
-            training.date > timezone.now()
+            training.date > make_aware(datetime.now().replace(tzinfo=None))
             and await training.registrations.acount() > 0
             and not training.is_cancelled
         ):

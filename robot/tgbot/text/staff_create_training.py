@@ -83,8 +83,8 @@ format_training_info_template = text(
     "📅 " + hbold("{date}"),
     "📍 " + hbold("{location}"),
     "🆔 " + hbold("ID:") + " {training_id}",
-    "⚙️ " + hbold("Деталі:") + " " + hcode("/get_training_{training_id}"),
-    hitalic("===================="),
+    "⚙️ " + hbold("Деталі:") + "/get_training_{training_id}",
+    "====================",
     sep="\n",
 )
 format_title_validation_error = text(

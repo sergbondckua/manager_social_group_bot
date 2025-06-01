@@ -96,3 +96,14 @@ def register_training_keyboard(training_id):
     )
     builder.adjust(1)
     return builder.as_markup(resize_keyboard=True, one_time_keyboard=False)
+
+
+def btn_close():
+    builder = InlineKeyboardBuilder()
+    builder.add(
+        types.InlineKeyboardButton(
+            text=mt.btn_close,
+            callback_data="btn_close",
+        )
+    )
+    return builder.as_markup(resize_keyboard=True, one_time_keyboard=False)
