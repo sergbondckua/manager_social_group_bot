@@ -6,6 +6,7 @@ from django.utils import timezone
 
 from profiles.models import ClubUser
 from robot.tgbot.keyboards import user as kb
+from robot.tgbot.text import user_template as mt
 from training_events.models import (
     TrainingEvent,
     TrainingRegistration,
@@ -78,9 +79,8 @@ async def register_training(callback: types.CallbackQuery):
         )
         participant = await ClubUser.objects.aget(telegram_id=user_id)
     except (TrainingEvent.DoesNotExist, ClubUser.DoesNotExist):
-        await callback.message.bot.send_message(
-            chat_id=user_id,
-            text="❌ Тренування або профіль користувача не знайдено!",
+        await callback.answer(
+            text="🔍 Тренування або профіль користувача не знайдено!",
         )
         return
 
@@ -123,12 +123,14 @@ async def register_training(callback: types.CallbackQuery):
                 }
             )
 
+        # Надсилаємо користувачу список дистанцій
         await callback.message.bot.send_message(
             chat_id=user_id,
-            text=f"🏃‍♀️ Тренування: {training.title}\n"
-            f"📅 Дата: {training.date.strftime('%d.%m.%Y %H:%M')}\n"
-            f"📍 Місце: {training.location}\n\n"
-            "Оберіть дистанцію на яку бажаєте зареєструватися:",
+            text=mt.format_distance_selection_template.format(
+                title=training.title,
+                date=training.date.strftime("%d.%m.%Y 🕑 %H:%M"),
+                location=training.location,
+            ),
             reply_markup=kb.distance_keyboard(distances),
         )
         return
@@ -146,7 +148,7 @@ async def register_training(callback: types.CallbackQuery):
             return
 
     # Створюємо реєстрацію
-    registration = await TrainingRegistration.objects.acreate(
+    await TrainingRegistration.objects.acreate(
         training=training, participant=participant, distance=distance
     )
 
@@ -157,26 +159,26 @@ async def register_training(callback: types.CallbackQuery):
         training.title,
     )
 
+    # Надсилаємо повідомлення про успішну реєстрацію
     await callback.message.bot.send_message(
         chat_id=user_id,
-        text=f"✅ Реєстрація успішна!\n\n"
-        f"👤 Учасник: {await get_full_name(callback, participant)}\n"
-        f"🏃‍♀️ Тренування: {training.title}\n"
-        f"📅 Дата: {training.date.strftime('%d.%m.%Y %H:%M')}\n"
-        f"📍 Місце: {training.location}\n"
-        f"🎯 Дистанція: {distance.distance} км\n"
-        f"🔗 Всі реєстрації: /my_trainings\n\n"
-        "Бажаємо успішного тренування! 💪",
+        text=mt.format_success_registration_template.format(
+            participant=await get_full_name(callback, participant),
+            title=training.title,
+            distance=distance.distance,
+            date=training.date.strftime("%d.%m.%Y 🕑 %H:%M"),
+            location=training.location,
+        ),
     )
 
-    # Надсилаємо повідомлення організатору про реєстрацію учасника
-    msg = (
-        f"🆕 Нова реєстрація на тренування!\n\n"
-        f"👤 Учасник: {await get_full_name(callback, participant)} {await get_username(callback)}\n"
-        f"🏃‍♀️ Тренування: {training.title}\n"
-        f"📅 Дата: {training.date.strftime('%d.%m.%Y %H:%M')}\n"
-        f"📍 Місце: {training.location}\n"
-        f"🎯 Дистанція: {distance.distance} км"
+    # Відправляємо повідомлення організатору про реєстрацію
+    msg = mt.format_registration_template.format(
+        participant=await get_full_name(callback, participant),
+        username=await get_username(callback),
+        title=training.title,
+        date=training.date.strftime("%d.%m.%Y 🕑 %H:%M"),
+        location=training.location,
+        distance=distance.distance,
     )
     await send_creator_training_notification(training, callback.message, msg)
 
@@ -195,9 +197,9 @@ async def register_for_distance(callback: types.CallbackQuery):
         distance = await training.distances.aget(id=distance_id)
         participant = await ClubUser.objects.aget(telegram_id=user_id)
     except (TrainingEvent.DoesNotExist, ClubUser.DoesNotExist):
-        await callback.message.bot.send_message(
-            chat_id=user_id,
-            text="❌ Тренування, дистанція або профіль не знайдено!",
+        await callback.answer(
+            text="🔍 Тренування, дистанцію або профіль не знайдено!",
+            show_alert=True,
         )
         return
 
@@ -253,33 +255,33 @@ async def register_for_distance(callback: types.CallbackQuery):
     # Видаляємо попереднє повідомлення з вибором дистанції
     await callback.message.delete()
 
+    # Надсилаємо повідомлення про успішну реєстрацію
     await callback.message.bot.send_message(
         chat_id=user_id,
-        text=f"✅ Реєстрація успішна!\n\n"
-        f"👤 Учасник: {await get_full_name(callback, participant)}\n"
-        f"🏃‍♀️ Тренування: {training.title}\n"
-        f"📅 Дата: {training.date.strftime('%d.%m.%Y %H:%M')}\n"
-        f"📍 Місце: {training.location}\n"
-        f"🎯 Дистанція: {distance.distance} км\n"
-        f"🔗 Всі реєстрації: /my_trainings\n\n"
-        "Бажаємо успішного тренування! 💪",
+        text=mt.format_success_registration_template.format(
+            participant=await get_full_name(callback, participant),
+            title=training.title,
+            distance=distance.distance,
+            date=training.date.strftime("%d.%m.%Y 🕑 %H:%M"),
+            location=training.location,
+        ),
     )
 
-    # Відправляємо повідомлення адміністраторам про реєстрацію
-    msg = (
-        f"🆕 Нова реєстрація на тренування!\n\n"
-        f"👤 Учасник: {await get_full_name(callback, participant)} {await get_username(callback)}\n"
-        f"🏃‍♀️ Тренування: {training.title}\n"
-        f"📅 Дата: {training.date.strftime('%d.%m.%Y %H:%M')}\n"
-        f"📍 Місце: {training.location}\n"
-        f"🎯 Дистанція: {distance.distance} км"
+    # Відправляємо повідомлення організатору про реєстрацію
+    msg = mt.format_registration_template.format(
+        participant=await get_full_name(callback, participant),
+        username=await get_username(callback),
+        title=training.title,
+        date=training.date.strftime("%d.%m.%Y 🕑 %H:%M"),
+        location=training.location,
+        distance=distance.distance,
     )
     await send_creator_training_notification(training, callback.message, msg)
 
 
-@reg_training_router.message(F.text.startswith("/unregister_training_"))
+@reg_training_router.message(F.text.startswith("/unreg_training_"))
 async def unregister_training(message: types.Message):
-    """Відміна реєстрації на тренування"""
+    """Анулює реєстрацію на тренування"""
     user_id = message.from_user.id
     user_full_name = message.from_user.full_name
     training_id = int(message.text.split("_")[-1])
@@ -308,20 +310,21 @@ async def unregister_training(message: types.Message):
             training.title,
         )
 
+        # Відправляємо повідомлення про скасовану реєстрацію
         await message.bot.send_message(
             chat_id=user_id,
-            text=f"❌ Реєстрацію скасовано\n\n"
-            f"🏃‍♀️ Тренування: {training.title}\n"
-            f"📅 Дата: {training.date.strftime('%d.%m.%Y %H:%M')}\n\n"
-            "Ви більше не зареєстровані на це тренування.",
+            text=mt.format_unregister_confirmation.format(
+                title=training.title,
+                date=training.date.strftime('%d.%m.%Y 🕑 %H:%M')
+            )
         )
 
         # Відправляємо повідомлення адміністраторам про скасовану реєстрацію
-        msg = (
-            f"❌ Учасник скасував реєстрацію!\n\n"
-            f"🏃‍♀️ Тренування: {training.title}\n"
-            f"📅 Дата: {training.date.strftime('%d.%m.%Y %H:%M')}\n\n"
-            f"👤 Учасник: {await get_full_name(message, participant)} {await get_username(message)}\n"
+        msg = mt.format_unregister_template.format(
+            title=training.title,
+            date=training.date.strftime("%d.%m.%Y 🕑 %H:%M"),
+            participant_name=await get_full_name(message, participant),
+            username=await get_username(message),
         )
         await send_creator_training_notification(training, message, msg)
 
@@ -349,9 +352,15 @@ async def show_my_registrations(message: types.Message):
 
     # Отримуємо активні реєстрації
     registrations = []
-    async for reg in TrainingRegistration.objects.select_related(
-        "training", "distance"
-    ).filter(participant=participant, training__date__gte=timezone.now()):
+    async for reg in (
+        TrainingRegistration.objects.select_related("training", "distance")
+        .filter(
+            participant=participant,
+            training__date__gte=timezone.now(),
+            training__is_cancelled=False,
+        )
+        .order_by("training__date")
+    ):
         registrations.append(reg)
 
     if not registrations:
@@ -363,17 +372,17 @@ async def show_my_registrations(message: types.Message):
 
     text = "📋 Ваші реєстрації:\n\n"
     for reg in registrations:
-        text += (
-            f"🏃‍♀️ {reg.training.title}\n"
-            f"📅 {reg.training.date.strftime('%d.%m.%Y %H:%M')}\n"
-            f"📍 {reg.training.location}\n"
-            f"🎯 {reg.distance.distance} км\n"
-            f"📝 Зареєстровано: {reg.created_at.strftime('%d.%m.%Y %H:%M')}\n"
-            f"🚫 Відмінити реєстрацію: /unregister_training_{reg.training.id}\n"
-            "--------------------------------\n\n"
+        text += mt.format_my_reg_training.format(
+            title=reg.training.title,
+            date=reg.training.date.strftime("%d.%m.%Y 🕑 %H:%M"),
+            location=reg.training.location,
+            distance=reg.distance.distance,
+            created_at=reg.created_at.strftime("%d.%m.%Y 🕑 %H:%M"),
+            training_id=reg.training.id,
         )
 
     await message.bot.send_message(
         chat_id=user_id,
         text=text,
+        reply_markup=kb.btn_close_keyboard(),
     )

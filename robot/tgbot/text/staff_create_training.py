@@ -67,6 +67,58 @@ format_training_cancellation_notice = text(
     "🚧 " + hbold("Причина:") + " адміністративне рішення\n\n",
     "🙏 Вибачте за незручності! Ми повідомимо про нові тренування.",
 )
+format_revoke_training_error_detailed = text(
+    hbold("❌ Помилка видалення\n"),
+    hitalic("Неможливо видалити:"),
+    "🏃‍♀️ " + hbold("{training_title}"),
+    "📅 " + hbold("{training_date}\n"),
+    "ℹ️ " + hitalic("Причина:"),
+    "• Тренування вже анонсоване",
+    "• Зареєстровано учасників: {participants_count}\n",
+    hbold("Щоб продовжити, спочатку скасуйте тренування."),
+    sep="\n",
+)
+format_training_info_template = text(
+    hbold("{status} {title}"),
+    "📅 " + hbold("{date}"),
+    "📍 " + hbold("{location}"),
+    "🆔 " + hbold("ID:") + " {training_id}",
+    "⚙️ " + hbold("Деталі:") + " " + hcode("/get_training_{training_id}"),
+    hitalic("===================="),
+    sep="\n",
+)
+format_title_validation_error = text(
+    hbold("❌ Помилка валідації назви\n"),
+    hitalic("Назва тренування не відповідає вимогам:\n"),
+    "• Мінімальна довжина: " + hbold("{min_title_length}"),
+    "• Максимальна довжина: " + hbold("{max_title_length}\n"),
+    hitalic("Будь ласка, введіть назву ще раз:"),
+    sep="\n",
+)
+format_description_prompt = text(
+    hbold("📝 Введіть опис тренування:\n"),
+    hitalic("Приклад:"),
+    "«Групова пробіжка в Данівському лісі.",
+    "Маршрут з мальовничими краєвидами.»\n",
+    hitalic("Або введіть (натисніть) /skip для пропуску"),
+    sep="\n",
+)
+format_location_error_template = text(
+    hbold("❌ Помилка введення місця\n"),
+    hitalic("Місце зустрічі не відповідає вимогам:\n"),
+    "• Мінімальна довжина: " + hbold("{min_location_length}") + " символів",
+    "• Максимальна довжина: " + hbold("{max_location_length}") + " символів\n",
+    hitalic("Приклади коректного введення:"),
+    hcode("Зупинка санаторій «Данівський»\n"),
+    hitalic("Спробуйте ввести місце ще раз:"),
+    sep="\n",
+)
+format_poster_prompt = text(
+    hbold("🖼 Додайте постер тренування\n"),
+    hitalic("Або введіть /skip для пропуску"),
+    sep="\n",
+)
+
 
 @sync_to_async
 def format_success_message(training: TrainingEvent, distances: list) -> str:
@@ -131,16 +183,18 @@ def format_success_message(training: TrainingEvent, distances: list) -> str:
         or f"користувач (ID: {training.created_by.telegram_id})"
     )
     if training.registrations.count() > 0:
-        registrations = (f"\n👥 {hbold('Зареєстровано: ')} "
-                         f"{training.registrations.count()} учасник(а / ів)")
+        registrations = (
+            f"\n👥 {hbold('Зареєстровано: ')} "
+            f"{training.registrations.count()} учасник(а / ів)"
+        )
     else:
         registrations = ""
 
     message.extend(
         [
             registrations,
-            f"\n👤 {hbold('Організатор:')} {escape(creator_name)}",
-            f"🆔 {hbold('ID тренування:')} {hcode(training.id)}",
+            f"\n👤 {hbold('Організатор:')} {creator_name}",
+            f"#️⃣ {hbold('Хештег:')} #{training.id}тренування",
         ]
     )
 

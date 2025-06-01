@@ -1,5 +1,4 @@
 from aiogram.utils.keyboard import InlineKeyboardBuilder
-from aiogram import types
 
 def distance_keyboard(distances):
     builder = InlineKeyboardBuilder()
@@ -16,4 +15,12 @@ def distance_keyboard(distances):
             callback_data="btn_close",
         ),
     builder.adjust(2, 1)
+    return builder.as_markup()
+
+def btn_close_keyboard():
+    builder = InlineKeyboardBuilder()
+    builder.button(
+            text="❌ Прибрати",
+            callback_data="btn_close",
+        ),
     return builder.as_markup()

@@ -6,13 +6,12 @@ from typing import Optional
 from aiogram import types, Router, F, Bot
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
-from aiogram.types import FSInputFile
+from aiogram.types import FSInputFile, InputMediaDocument, InputMediaPhoto
 from asgiref.sync import sync_to_async
 from django.conf import settings
 from django.utils import timezone
 from django.core.exceptions import ValidationError
 from django.db import transaction
-from django.utils._os import safe_join
 
 from profiles.models import ClubUser
 from robot.tgbot.filters.staff import ClubStaffFilter
@@ -153,18 +152,19 @@ async def cmd_my_trainings(message: types.Message):
     for training in trainings:
         status = "🔜" if training.date > timezone.now() else "✅"
         message_parts.append(
-            f"{status} {training.title}\n"
-            f"📅 {training.date.strftime('%d.%m.%Y %H:%M')}\n"
-            f"📍 {training.location}\n"
-            f"🆔 ID: {training.id}\n"
-            f"⚙️ Деталі: /get_training_{training.id}"
-            "\n ================\n\n"
+            mt.format_training_info_template.format(
+                status=status,
+                title=training.title,
+                date=training.date.strftime("%d.%m.%Y %H:%M"),
+                location=training.location,
+                training_id=training.id,
+            )
         )
     await message.bot.send_message(user_id, "\n".join(message_parts))
 
 
 @staff_router.message(F.text.startswith("/get_training_"))
-async def cmd_get_training(message: types.Message, state: FSMContext):
+async def cmd_get_training(message: types.Message):
     """Обробник команди "/get_training_" для отримання деталей тренування."""
 
     training_id = message.text.split("_")[-1]
@@ -206,7 +206,7 @@ async def cmd_create_training(message: types.Message, state: FSMContext):
     await state.set_state(CreateTraining.waiting_for_title)
     await message.bot.send_message(
         chat_id=message.from_user.id,
-        text="Введіть назву тренування:",
+        text="🏷 Введіть назву тренування:",
         reply_markup=CANCEL_BUTTON,
     )
 
@@ -216,18 +216,20 @@ async def process_title(message: types.Message, state: FSMContext):
     """Обробник введення назви тренування."""
     title = message.text.strip()
 
+    # Перевіряємо валідність назви
     if not validators.validate_title(title):
         await message.answer(
-            "Назва тренування не відповідає вимогам "
-            f"({validators.MIN_TITLE_LENGTH}-{validators.MAX_TITLE_LENGTH} символів). "
-            "Спробуйте ще раз:"
+            mt.format_title_validation_error.format(
+                min_title_length=validators.MIN_TITLE_LENGTH,
+                max_title_length=validators.MAX_TITLE_LENGTH,
+            )
         )
         return
 
     # Перевіряємо унікальність назви
     if await TrainingEvent.objects.filter(title=title).aexists():
         await message.answer(
-            f"❌ Тренування з назвою '{title}' вже існує. "
+            f"👭 Тренування з назвою '{title}' вже існує. "
             "Оберіть іншу назву:"
         )
         return
@@ -235,7 +237,7 @@ async def process_title(message: types.Message, state: FSMContext):
     await state.update_data(title=title)
     await state.set_state(CreateTraining.waiting_for_description)
     await message.answer(
-        "Введіть опис тренування (або /skip для пропуску):",
+        text=mt.format_description_prompt,
         reply_markup=SKIP_AND_CANCEL_BUTTONS,
     )
 
@@ -262,7 +264,7 @@ async def process_training_description(
     await state.update_data(description=message.text.strip())
     await state.set_state(CreateTraining.waiting_for_date)
     await message.answer(
-        "Введіть дату тренування у форматі ДД.ММ.РРРР:",
+        "📅 Введіть дату тренування у форматі ДД.ММ.РРРР:",
         reply_markup=CANCEL_BUTTON,
     )
 
@@ -326,16 +328,17 @@ async def process_training_location(message: types.Message, state: FSMContext):
 
     if not validators.validate_location(location):
         await message.answer(
-            "Місце зустрічі не відповідає вимогам "
-            f"({validators.MIN_LOCATION_LENGTH}-{validators.MAX_LOCATION_LENGTH} символів). "
-            "Спробуйте ще раз:"
+            text=mt.format_location_error_template.format(
+                min_location_length=validators.MIN_LOCATION_LENGTH,
+                max_location_length=validators.MAX_LOCATION_LENGTH,
+            )
         )
         return
 
     await state.update_data(location=location)
     await state.set_state(CreateTraining.waiting_for_poster)
     await message.answer(
-        "Завантажте постер тренування (фото) або /skip:",
+        text=mt.format_poster_prompt,
         reply_markup=SKIP_AND_CANCEL_BUTTONS,
     )
 
@@ -832,9 +835,11 @@ async def execute_delete_training(callback: types.CallbackQuery):
             and not training.is_cancelled
         ):
             await callback.message.edit_text(
-                "❌ Неможливо видалити тренування, "
-                "що вже анонсоване та має зареєстрованих учасників.\n"
-                "Спочатку потрібно скасувати анонсоване тренування.",
+                text=mt.format_revoke_training_error_detailed.format(
+                    training_date=training.date.strftime("%d.%m.%Y %H:%M"),
+                    training_title=training.title,
+                    participants_count=await training.registrations.acount(),
+                ),
                 reply_markup=kb.revoke_training_keyboard(training_id),
             )
             return
@@ -1022,26 +1027,52 @@ async def publish_training(callback: types.CallbackQuery):
                 reply_markup=kb.register_training_keyboard(training_id),
             )
 
-        for distance in distances:
+        # Публікація маршрутів та візуалізацій
+        gpx_group = []
+        img_group = []
+        for num, distance in enumerate(distances):
             if distance.route_gpx:
                 relative_path = distance.route_gpx.name.lstrip("/")
                 gpx_path = Path(settings.MEDIA_ROOT) / relative_path
                 gpx_file = FSInputFile(gpx_path)
-                await callback.message.bot.send_document(
-                    chat_id=settings.DEFAULT_CHAT_ID,
-                    document=gpx_file,
-                    caption=f"Маршрут до {distance.distance} км",
+                gpx_group.append(
+                    InputMediaDocument(
+                        media=gpx_file,
+                        caption=f"Маршрут {distance.distance} км\n"
+                        f"#{training.id}тренування #{int(distance.distance)}км",
+                    )
                 )
+
+                # Публікація візуалізацій
                 png_path = Path(settings.MEDIA_ROOT) / relative_path.replace(
                     ".gpx", ".png"
                 )
                 if png_path.exists():
                     png_file = FSInputFile(png_path)
-                    await callback.message.bot.send_photo(
-                        chat_id=settings.DEFAULT_CHAT_ID,
-                        photo=png_file,
-                        caption=f"Візуалізація до {distance.distance} км",
+                    img_group.append(
+                        InputMediaPhoto(
+                            media=png_file,
+                            caption=(
+                                f"Візуалізація маршрутів: {training.title}\n"
+                                f"#{training.id}тренування"
+                                if num == 0
+                                else None
+                            ),
+                        )
                     )
+
+        # Відправка згрупованих файлів GPX
+        if gpx_group:
+            await callback.message.bot.send_media_group(
+                chat_id=settings.DEFAULT_CHAT_ID,
+                media=gpx_group,
+            )
+        # Відправка згрупованих файлів PNG
+        if img_group:
+            await callback.message.bot.send_media_group(
+                chat_id=settings.DEFAULT_CHAT_ID,
+                media=img_group,
+            )
 
         # Оновлення повідомлення
         await callback.message.edit_text(
