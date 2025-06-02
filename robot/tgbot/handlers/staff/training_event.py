@@ -1044,6 +1044,25 @@ async def publish_training(callback: types.CallbackQuery):
                         )
                     )
 
+        async def wait_for_file_exist(
+            file_path: Path, max_wait_time: int = 300
+        ):
+            """TODO"""
+            wait_interval = 2  # перевіряємо кожні 2 секунди
+            total_waited = 0
+
+            while total_waited < max_wait_time:
+                if file_path.exists():
+                    return file_path
+
+                # Почекаємо перед наступною перевіркою
+                await asyncio.sleep(wait_interval)
+                total_waited += wait_interval
+
+            raise TimeoutError(
+                f"Файли не з'явилися за {max_wait_time} секунд"
+            )
+
         # Відправка згрупованих файлів GPX
         if gpx_group:
             await callback.message.bot.send_media_group(
