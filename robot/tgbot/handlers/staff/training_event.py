@@ -1069,7 +1069,8 @@ async def publish_training(callback: types.CallbackQuery):
                         InputMediaPhoto(
                             media=png_file,
                             caption=(
-                                f"Візуалізація маршруту {distance.distance} км"
+                                f"Візуалізація маршруту(ів) {training.title}\n"
+                                f"#{training.id}тренування"
                                 if num == 0
                                 else None
                             ),
