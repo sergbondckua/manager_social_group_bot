@@ -1064,20 +1064,22 @@ async def publish_training(callback: types.CallbackQuery):
                 png_path = Path(distance.route_gpx.path).with_suffix(".png")
                 try:
                     await wait_for_file_exist(png_path)
-                    if png_path.exists():
-                        png_file = FSInputFile(png_path)
-                        img_group.append(
-                            InputMediaPhoto(
-                                media=png_file,
-                                caption=(
-                                    f"Візуалізація маршруту {distance.distance} км"
-                                    if num == 0
-                                    else None
-                                ),
-                            )
+                    png_file = FSInputFile(png_path)
+                    img_group.append(
+                        InputMediaPhoto(
+                            media=png_file,
+                            caption=(
+                                f"Візуалізація маршруту {distance.distance} км"
+                                if num == 0
+                                else None
+                            ),
                         )
+                    )
                 except TimeoutError:
                     logger.warning("PNG не знайдено: %s", png_path)
+                    await find_png_msg.edit_text(
+                        text="😮 Візуалізацій маршрутів не знайдено!"
+                    )
 
             # Видалення проміжного повідомлення
             if find_png_msg:
