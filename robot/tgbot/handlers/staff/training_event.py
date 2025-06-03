@@ -991,6 +991,7 @@ async def publish_training(callback: types.CallbackQuery):
         )
         distances = [distance async for distance in training.distances.all()]
 
+        # Перевірка чи тренування не скасовано
         if training.is_cancelled:
             await callback.answer(
                 "❌ Тренування раніше було скасовано!", show_alert=True
@@ -1014,11 +1015,42 @@ async def publish_training(callback: types.CallbackQuery):
             )
 
         # Публікація маршрутів та візуалізацій
-        await asyncio.sleep(3)  # Пауза перед публікацією
         gpx_group = []
         img_group = []
-        for num, distance in enumerate(distances):
-            if distance.route_gpx:
+
+        # Очікуємо появу файлу
+        async def wait_for_file_exist(
+            file_path: Path, max_wait_time: int = 60
+        ):
+            """TODO"""
+            wait_interval = 2  # перевіряємо кожні 2 секунди
+            total_waited = 0
+
+            while total_waited < max_wait_time:
+                if file_path.exists():
+                    return
+
+                # Почекаємо перед наступною перевіркою
+                await asyncio.sleep(wait_interval)
+                total_waited += wait_interval
+
+            raise TimeoutError(f"Файли не з'явилися за {max_wait_time} секунд")
+
+        # Відправка повідомлення про пошук візуалізації (якщо є GPX)
+        has_gpx = any(distance.route_gpx for distance in distances)
+        find_png_msg = None
+        if has_gpx:
+            find_png_msg = await callback.message.bot.send_message(
+                chat_id=settings.DEFAULT_CHAT_ID,
+                text="🔍 Пошук візуалізації маршрутів...",
+            )
+
+            # Обробка дистанцій
+            for num, distance in enumerate(distances):
+                if not distance.route_gpx:
+                    continue
+
+                # Додавання GPX
                 gpx_file = FSInputFile(distance.route_gpx.path)
                 gpx_group.append(
                     InputMediaDocument(
@@ -1028,59 +1060,49 @@ async def publish_training(callback: types.CallbackQuery):
                     )
                 )
 
-                # Публікація візуалізацій
+                # Обробка PNG
                 png_path = Path(distance.route_gpx.path).with_suffix(".png")
-                if png_path.exists():
-                    png_file = FSInputFile(png_path)
-                    img_group.append(
-                        InputMediaPhoto(
-                            media=png_file,
-                            caption=(
-                                f"Візуалізація маршрутів: {training.title}\n"
-                                f"#{training.id}тренування"
-                                if num == 0
-                                else None
-                            ),
+                try:
+                    await wait_for_file_exist(png_path)
+                    if png_path.exists():
+                        png_file = FSInputFile(png_path)
+                        img_group.append(
+                            InputMediaPhoto(
+                                media=png_file,
+                                caption=(
+                                    f"Візуалізація маршруту {distance.distance} км"
+                                    if num == 0
+                                    else None
+                                ),
+                            )
                         )
-                    )
+                except TimeoutError:
+                    logger.warning("PNG не знайдено: %s", png_path)
 
-        async def wait_for_file_exist(
-            file_path: Path, max_wait_time: int = 300
-        ):
-            """TODO"""
-            wait_interval = 2  # перевіряємо кожні 2 секунди
-            total_waited = 0
+            # Видалення проміжного повідомлення
+            if find_png_msg:
+                try:
+                    await find_png_msg.delete()
+                except Exception as e:
+                    logger.error("Помилка видалення повідомлення: %s", e)
 
-            while total_waited < max_wait_time:
-                if file_path.exists():
-                    return file_path
+            # Відправка груп
+            if gpx_group:
+                await callback.message.bot.send_media_group(
+                    chat_id=settings.DEFAULT_CHAT_ID,
+                    media=gpx_group,
+                )
+            if img_group:
+                await callback.message.bot.send_media_group(
+                    chat_id=settings.DEFAULT_CHAT_ID,
+                    media=img_group,
+                )
 
-                # Почекаємо перед наступною перевіркою
-                await asyncio.sleep(wait_interval)
-                total_waited += wait_interval
-
-            raise TimeoutError(
-                f"Файли не з'явилися за {max_wait_time} секунд"
+            # Оновлення повідомлення
+            await callback.message.edit_text(
+                text=f"♻️ Тренування {training.title} опубліковано!",
+                reply_markup=None,
             )
-
-        # Відправка згрупованих файлів GPX
-        if gpx_group:
-            await callback.message.bot.send_media_group(
-                chat_id=settings.DEFAULT_CHAT_ID,
-                media=gpx_group,
-            )
-        # Відправка згрупованих файлів PNG
-        if img_group:
-            await callback.message.bot.send_media_group(
-                chat_id=settings.DEFAULT_CHAT_ID,
-                media=img_group,
-            )
-
-        # Оновлення повідомлення
-        await callback.message.edit_text(
-            text=f"♻️ Тренування {training.title} опубліковано!",
-            reply_markup=None,
-        )
     except TrainingEvent.DoesNotExist:
         logger.error("Тренування не знайдено")
         await callback.answer("❌ Тренування не знайдено!", show_alert=True)
