@@ -216,7 +216,7 @@ async def wait_for_task_completion(
 
 async def wait_for_file_exist(file_path: Path, max_wait_time: int = 60):
     """Очікуємо появу файлу"""
-    wait_interval = 2  # перевіряємо кожні 2 секунди
+    wait_interval = 0.5  # перевіряємо кожні 500 мс
     total_waited = 0
 
     while total_waited < max_wait_time:

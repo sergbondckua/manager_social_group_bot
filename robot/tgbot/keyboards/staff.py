@@ -16,7 +16,7 @@ def add_distance_or_finish_keyboard():
             callback_data="finish_training",
         ),
     )
-    return builder.as_markup(resize_keyboard=True, one_time_keyboard=False)
+    return builder.as_markup()
 
 
 def skip_and_cancel_keyboard():
@@ -58,7 +58,7 @@ def create_training_publish_and_delete_keyboard(
         )
     )
 
-    return builder.as_markup(resize_keyboard=True, one_time_keyboard=False)
+    return builder.as_markup()
 
 
 def confirmation_keyboard(prefix: str):
@@ -82,7 +82,7 @@ def revoke_training_keyboard(training_id: int):
         )
     )
     builder.adjust(1)
-    return builder.as_markup(resize_keyboard=True, one_time_keyboard=False)
+    return builder.as_markup()
 
 
 def register_training_keyboard(training_id):
@@ -95,7 +95,7 @@ def register_training_keyboard(training_id):
         ),
     )
     builder.adjust(1)
-    return builder.as_markup(resize_keyboard=True, one_time_keyboard=False)
+    return builder.as_markup()
 
 
 def btn_close():
@@ -106,4 +106,4 @@ def btn_close():
             callback_data="btn_close",
         )
     )
-    return builder.as_markup(resize_keyboard=True, one_time_keyboard=False)
+    return builder.as_markup()

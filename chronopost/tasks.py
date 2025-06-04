@@ -1,7 +1,7 @@
 import asyncio
 import logging
 
-from asgiref.sync import sync_to_async, async_to_sync
+from asgiref.sync import sync_to_async
 from django.conf import settings
 from django.utils import timezone
 

@@ -1,4 +1,4 @@
-from aiogram.utils.markdown import text, hbold, hlink, hcode
+from aiogram.utils.markdown import text, hbold, hlink, hcode, hitalic
 
 # Константи для повторюваних елементів
 DOUBLE_TAB: str = "\t\t"
@@ -62,4 +62,12 @@ msg_press_deeplink_button: str = text(
     text("🆔 ", hcode("{user_id}")),
     text("🔘👈 Натиснув(ла) кнопку ", hbold("{deep_link_text}")),
     sep="\n",
+)
+
+rating_request_template = text(
+    hbold("📊 Оцініть, будь ласка, тренування\n"),
+    hbold("🏃‍♀️ Тренування: ") + hitalic("{title}"),
+    hbold("⏰ Дата: ") + "{date}\n",
+    hitalic("Як вам сподобалося тренування?"),
+    sep="\n"
 )
