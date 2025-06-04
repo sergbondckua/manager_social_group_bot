@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from datetime import datetime
 from pathlib import Path
@@ -5,6 +6,7 @@ from typing import Optional
 
 from aiogram import Bot
 from asgiref.sync import sync_to_async
+from celery.result import AsyncResult
 from django.conf import settings
 
 from robot.tasks import visualize_gpx
@@ -70,9 +72,11 @@ async def create_route_path(
         if await download_file_safe(bot, file_id, str(route_path)):
             map_image_path = str(route_path).replace(".gpx", ".png")
             # Запускаємо Celery-задачу асинхронно
-            visualize_gpx.delay(
+            task = visualize_gpx.delay(
                 gpx_file=str(route_path), output_file=map_image_path
             )
+            # Очікуємо завершення задачи
+            await wait_for_task_completion(task.task_id)
             return str(route_path), map_image_path
         return None, None
     except Exception as e:
@@ -162,3 +166,53 @@ async def update_distance_paths(
             ]
         )()
         await sync_to_async(distance_obj.save)()
+
+
+async def wait_for_task_completion(task_id: str, max_wait_time: int = 60):
+    """Очікування завершення задачі Celery.
+
+    Args:
+        task_id (str): Ідентифікатор задачі.
+        max_wait_time (int, optional): Максимальний час очікування (в секундах).
+        """
+
+    wait_interval = 2  # перевіряємо кожні 2 секунди
+    total_waited = 0
+
+    while total_waited < max_wait_time:
+        # Отримуємо результат задачі
+        task_result = AsyncResult(task_id)
+
+        # Перевіряємо статус
+        if task_result.ready():
+            if task_result.successful():
+                return
+            else:
+                # Отримуємо деталі помилки
+                error = task_result.result
+                raise Exception("Помилка задачі: %s", str(error))
+
+        # Почекаємо перед наступною перевіркою
+        await asyncio.sleep(wait_interval)
+        total_waited += wait_interval
+
+    # Якщо час вийшов
+    raise TimeoutError(
+        f"Фонова задача не завершилася за {max_wait_time} секунд"
+    )
+
+
+async def wait_for_file_exist(file_path: Path, max_wait_time: int = 60):
+    """Очікуємо появу файлу"""
+    wait_interval = 2  # перевіряємо кожні 2 секунди
+    total_waited = 0
+
+    while total_waited < max_wait_time:
+        if file_path.exists():
+            return
+
+        # Почекаємо перед наступною перевіркою
+        await asyncio.sleep(wait_interval)
+        total_waited += wait_interval
+
+    raise TimeoutError(f"Файли не з'явилися за {max_wait_time} секунд")

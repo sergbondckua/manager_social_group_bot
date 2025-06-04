@@ -23,6 +23,7 @@ from robot.tgbot.services import reg_training_service as rs
 from robot.tgbot.services.staff_training_service import (
     create_poster_path,
     process_gpx_files_after_creation,
+    wait_for_file_exist,
 )
 from robot.tgbot.states.staff import CreateTraining
 from robot.tgbot.text import staff_create_training as mt
@@ -1018,24 +1019,6 @@ async def publish_training(callback: types.CallbackQuery):
         gpx_group = []
         img_group = []
 
-        # Очікуємо появу файлу
-        async def wait_for_file_exist(
-            file_path: Path, max_wait_time: int = 60
-        ):
-            """TODO"""
-            wait_interval = 2  # перевіряємо кожні 2 секунди
-            total_waited = 0
-
-            while total_waited < max_wait_time:
-                if file_path.exists():
-                    return
-
-                # Почекаємо перед наступною перевіркою
-                await asyncio.sleep(wait_interval)
-                total_waited += wait_interval
-
-            raise TimeoutError(f"Файли не з'явилися за {max_wait_time} секунд")
-
         # Відправка повідомлення про пошук візуалізації (якщо є GPX)
         has_gpx = any(distance.route_gpx for distance in distances)
         find_png_msg = None
@@ -1061,7 +1044,7 @@ async def publish_training(callback: types.CallbackQuery):
                 )
 
                 # Обробка PNG
-                png_path = Path(distance.route_gpx.path).with_suffix(".png")
+                png_path = Path(distance.route_gpx_map.path)
                 try:
                     await wait_for_file_exist(png_path)
                     png_file = FSInputFile(png_path)

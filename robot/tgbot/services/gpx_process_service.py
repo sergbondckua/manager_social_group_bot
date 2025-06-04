@@ -30,7 +30,7 @@ async def wait_for_task_completion(
             else:
                 # Отримуємо деталі помилки
                 error = task_result.result
-                raise Exception(f"Помилка візуалізації: {str(error)}")
+                raise Exception("Помилка візуалізації: %s", str(error))
 
         # Почекаємо перед наступною перевіркою
         await asyncio.sleep(wait_interval)

@@ -106,6 +106,7 @@ class TelegramService:
                 user_id,
                 e,
             )
+            return "", ""
         except Exception as e:
             logger.error(
                 "Помилка при отриманні інформацією про користувача: %s", e
