@@ -144,27 +144,34 @@ async def cmd_my_trainings(message: types.Message):
 async def cmd_get_training(message: types.Message):
     """Обробник команди "/get_training_" для отримання деталей тренування."""
 
-    training_id = message.text.split("_")[-1]
-    training = await TrainingEvent.objects.select_related().aget(
-        id=training_id
-    )
+    try:
+        training_id = message.text.split("_")[-1]
+        training = await TrainingEvent.objects.select_related().aget(
+            id=training_id
+        )
 
-    if not training:
+        if not training:
+            await message.answer(
+                "❌ Тренування не знайдено в базі даних. "
+                "Повідомте адміністратора."
+            )
+            return
+
+        distances = [d async for d in training.distances.all()]
+        msg = await mt.format_success_message(training, distances)
+
+        await message.answer(
+            msg,
+            reply_markup=kb.create_training_publish_and_delete_keyboard(
+                training.id
+            ),
+        )
+
+    except TrainingEvent.DoesNotExist:
         await message.answer(
             "❌ Тренування не знайдено в базі даних. "
-            "Повідомте адміністратора."
+            "Напевно було раніше видалено."
         )
-        return
-
-    distances = [d async for d in training.distances.all()]
-    msg = await mt.format_success_message(training, distances)
-
-    await message.answer(
-        msg,
-        reply_markup=kb.create_training_publish_and_delete_keyboard(
-            training.id
-        ),
-    )
 
 
 @staff_router.message(Command("create_training"))
