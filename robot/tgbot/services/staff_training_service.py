@@ -74,11 +74,9 @@ async def create_route_path(
         if await download_file_safe(bot, file_id, str(route_path)):
             map_image_path = str(route_path).replace(".gpx", ".png")
             # Запускаємо Celery-задачу асинхронно
-            task = visualize_gpx.delay(
+            visualize_gpx.delay(
                 gpx_file=str(route_path), output_file=map_image_path
             )
-            # Очікуємо завершення задачи
-            await wait_for_task_completion(task.task_id)
             return str(route_path), map_image_path
         return None, None
     except Exception as e:

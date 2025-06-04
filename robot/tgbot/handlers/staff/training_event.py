@@ -22,7 +22,6 @@ from robot.tgbot.services import reg_training_service as rs
 from robot.tgbot.services.staff_training_service import (
     create_poster_path,
     process_gpx_files_after_creation,
-    wait_for_file_exist,
     publish_training_message,
     any_has_gpx,
     handle_gpx_files,
