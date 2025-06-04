@@ -631,9 +631,7 @@ async def finish_training_creation(
     callback: types.CallbackQuery, state: FSMContext
 ):
     """Завершення створення тренування."""
-    await callback.message.edit_text(
-        "⏳ Створюю тренування... 🙇‍♀️ Це може зайняти деякий час."
-    )
+
     await callback.bot.send_chat_action(
         callback.message.chat.id, action="typing"
     )

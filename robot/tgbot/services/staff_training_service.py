@@ -62,6 +62,10 @@ async def create_route_path(
 ) -> tuple[Optional[str], Optional[str]]:
     """Створює шлях для маршруту та завантажує його."""
     try:
+        status_message = await bot.send_message(
+            club_user_id,
+            "⏳ Створюю тренування... 🙇‍♀️ Це може зайняти деякий час."
+        )
         file = await bot.get_file(file_id)
         file_extension = file.file_path.split("/")[-1].split(".")[-1]
         file_name = f"{distance}km_{training_date.strftime('%d%B%Y_%H%M')}.{file_extension}"
@@ -78,7 +82,7 @@ async def create_route_path(
                 gpx_file=str(route_path), output_file=map_image_path
             )
             # Очікуємо завершення задачи
-            await wait_for_task_completion(task.task_id)
+            await wait_for_task_completion(task.task_id, 60, status_message)
             return str(route_path), map_image_path
         return None, None
     except Exception as e:
@@ -170,12 +174,15 @@ async def update_distance_paths(
         await sync_to_async(distance_obj.save)()
 
 
-async def wait_for_task_completion(task_id: str, max_wait_time: int = 60):
+async def wait_for_task_completion(
+    task_id: str, max_wait_time: int = 60, status_message: types.Message = None
+):
     """Очікування завершення задачі Celery.
 
     Args:
         task_id (str): Ідентифікатор задачі.
         max_wait_time (int, optional): Максимальний час очікування (в секундах).
+        status_message (types.Message, optional): Повідомлення для оновлення статусу.
     """
 
     wait_interval = 2  # перевіряємо кожні 2 секунди
@@ -197,6 +204,15 @@ async def wait_for_task_completion(task_id: str, max_wait_time: int = 60):
         # Почекаємо перед наступною перевіркою
         await asyncio.sleep(wait_interval)
         total_waited += wait_interval
+
+        # Оновлюємо повідомлення кожні 10 секунд
+        if total_waited % 10 == 0:
+            try:
+                await status_message.edit_text(
+                    f"Ще обробляється... ({total_waited} сек.)"
+                )
+            except Exception:
+                pass  # Ігноруємо помилки при редагуванні
 
     # Якщо час вийшов
     raise TimeoutError(
@@ -277,8 +293,9 @@ def create_gpx_media(distance, training_id):
     return InputMediaDocument(
         media=FSInputFile(distance.route_gpx.path),
         caption=f"Маршрут {distance.distance} км\n"
-               f"#{training_id}тренування #{int(distance.distance)}км",
+        f"#{training_id}тренування #{int(distance.distance)}км",
     )
+
 
 def create_png_media(png_path, training, num):
     """Створює об'єкт медіа для PNG файлу."""
@@ -286,7 +303,9 @@ def create_png_media(png_path, training, num):
         media=FSInputFile(png_path),
         caption=(
             f"Візуалізація маршруту(ів) {training.title}\n"
-            f"#{training.id}тренування" if num == 0 else None
+            f"#{training.id}тренування"
+            if num == 0
+            else None
         ),
     )
 
@@ -335,6 +354,7 @@ async def send_media_groups(gpx_group, img_group, callback):
             media=img_group,
         )
 
+
 async def cleanup_search_message(message: types.Message):
     """Видаляє проміжне повідомлення про пошук."""
     if message:
@@ -343,7 +363,10 @@ async def cleanup_search_message(message: types.Message):
         except Exception as e:
             logger.error("Помилка видалення повідомлення: %s", e)
 
-async def confirm_publication(training: TrainingEvent, callback: types.CallbackQuery):
+
+async def confirm_publication(
+    training: TrainingEvent, callback: types.CallbackQuery
+):
     """Підтверджує успішну публікацію."""
     await callback.message.bot.send_chat_action(
         callback.message.chat.id, action="typing"
