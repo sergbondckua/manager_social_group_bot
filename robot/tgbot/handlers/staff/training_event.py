@@ -148,7 +148,6 @@ async def cmd_get_training(message: types.Message):
     training = await TrainingEvent.objects.select_related().aget(
         id=training_id
     )
-    distances = [d async for d in training.distances.all()]
 
     if not training:
         await message.answer(
@@ -157,6 +156,7 @@ async def cmd_get_training(message: types.Message):
         )
         return
 
+    distances = [d async for d in training.distances.all()]
     msg = await mt.format_success_message(training, distances)
 
     await message.answer(

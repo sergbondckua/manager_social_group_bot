@@ -320,7 +320,7 @@ async def send_media_groups(gpx_group, img_group, callback):
     """Відправляє медіагрупи в чат."""
     if gpx_group:
         await callback.message.bot.send_chat_action(
-            callback.message.chat.id, action="upload_document"
+            settings.DEFAULT_CHAT_ID, action="upload_document"
         )
         await callback.message.bot.send_media_group(
             chat_id=settings.DEFAULT_CHAT_ID,
@@ -328,7 +328,7 @@ async def send_media_groups(gpx_group, img_group, callback):
         )
     if img_group:
         await callback.message.bot.send_chat_action(
-            callback.message.chat.id, action="upload_photo"
+            settings.DEFAULT_CHAT_ID, action="upload_photo"
         )
         await callback.message.bot.send_media_group(
             chat_id=settings.DEFAULT_CHAT_ID,
