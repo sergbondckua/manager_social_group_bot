@@ -62,10 +62,6 @@ async def create_route_path(
 ) -> tuple[Optional[str], Optional[str]]:
     """Створює шлях для маршруту та завантажує його."""
     try:
-        status_message = await bot.send_message(
-            club_user_id,
-            "⏳ Створюю тренування... 🙇‍♀️ Це може зайняти деякий час."
-        )
         file = await bot.get_file(file_id)
         file_extension = file.file_path.split("/")[-1].split(".")[-1]
         file_name = f"{distance}km_{training_date.strftime('%d%B%Y_%H%M')}.{file_extension}"
@@ -82,7 +78,7 @@ async def create_route_path(
                 gpx_file=str(route_path), output_file=map_image_path
             )
             # Очікуємо завершення задачи
-            await wait_for_task_completion(task.task_id, 60, status_message)
+            await wait_for_task_completion(task.task_id)
             return str(route_path), map_image_path
         return None, None
     except Exception as e:
