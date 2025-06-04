@@ -228,6 +228,9 @@ async def publish_training_message(
     keyboard = kb.register_training_keyboard(training.id)
 
     if training.poster:
+        await callback.message.bot.send_chat_action(
+            callback.message.chat.id, action="upload_photo"
+        )
         photo_file = FSInputFile(training.poster.path)
         await callback.message.bot.send_photo(
             chat_id=settings.DEFAULT_CHAT_ID,
@@ -236,6 +239,9 @@ async def publish_training_message(
             reply_markup=keyboard,
         )
     else:
+        await callback.message.bot.send_chat_action(
+            callback.message.chat.id, action="typing"
+        )
         await callback.message.bot.send_message(
             chat_id=settings.DEFAULT_CHAT_ID,
             text=message_text,
@@ -295,9 +301,7 @@ async def handle_gpx_files(
 ):
     """Обробляє та відправляє GPX файли та візуалізації."""
     find_png_msg = await notify_about_visualization_search(callback)
-
     gpx_group, img_group = await prepare_media_groups(training, distances)
-
     await send_media_groups(gpx_group, img_group, callback)
     await cleanup_search_message(find_png_msg)
 
@@ -315,11 +319,17 @@ async def notify_about_visualization_search(
 async def send_media_groups(gpx_group, img_group, callback):
     """Відправляє медіагрупи в чат."""
     if gpx_group:
+        await callback.message.bot.send_chat_action(
+            callback.message.chat.id, action="upload_document"
+        )
         await callback.message.bot.send_media_group(
             chat_id=settings.DEFAULT_CHAT_ID,
             media=gpx_group,
         )
     if img_group:
+        await callback.message.bot.send_chat_action(
+            callback.message.chat.id, action="upload_photo"
+        )
         await callback.message.bot.send_media_group(
             chat_id=settings.DEFAULT_CHAT_ID,
             media=img_group,
@@ -335,6 +345,9 @@ async def cleanup_search_message(message: types.Message):
 
 async def confirm_publication(training: TrainingEvent, callback: types.CallbackQuery):
     """Підтверджує успішну публікацію."""
+    await callback.message.bot.send_chat_action(
+        callback.message.chat.id, action="typing"
+    )
     await callback.message.edit_text(
         text=f"♻️ Тренування {training.title} опубліковано!",
         reply_markup=None,
