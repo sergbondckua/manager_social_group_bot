@@ -1,4 +1,3 @@
-import asyncio
 import logging
 from datetime import datetime
 from pathlib import Path
@@ -24,6 +23,10 @@ from robot.tgbot.services.staff_training_service import (
     create_poster_path,
     process_gpx_files_after_creation,
     wait_for_file_exist,
+    publish_training_message,
+    any_has_gpx,
+    handle_gpx_files,
+    confirm_publication,
 )
 from robot.tgbot.states.staff import CreateTraining
 from robot.tgbot.text import staff_create_training as mt
@@ -621,7 +624,9 @@ async def finish_training_creation(
     callback: types.CallbackQuery, state: FSMContext
 ):
     """Завершення створення тренування."""
-    await callback.message.edit_text("⏳ Створюю тренування...")
+    await callback.message.edit_text(
+        "⏳ Створюю тренування... 🙇‍♀️ Це може зайняти деякий час."
+    )
     await callback.bot.send_chat_action(
         callback.message.chat.id, action="typing"
     )
@@ -1000,95 +1005,15 @@ async def publish_training(callback: types.CallbackQuery):
             return
 
         # Публікація тренування
-        if training.poster:
-            photo_file = FSInputFile(training.poster.path)
-            await callback.message.bot.send_photo(
-                chat_id=settings.DEFAULT_CHAT_ID,
-                photo=photo_file,
-                caption=f"{await mt.format_success_message(training, distances)}",
-                reply_markup=kb.register_training_keyboard(training_id),
-            )
-        else:
-            await callback.message.bot.send_message(
-                chat_id=settings.DEFAULT_CHAT_ID,
-                text=f"{await mt.format_success_message(training, distances)}",
-                reply_markup=kb.register_training_keyboard(training_id),
-            )
+        await publish_training_message(training, distances, callback)
 
-        # Публікація маршрутів та візуалізацій
-        gpx_group = []
-        img_group = []
+        # Публікація GPX-файлів
+        if any_has_gpx(distances):
+            await handle_gpx_files(training, distances, callback)
 
-        # Відправка повідомлення про пошук візуалізації (якщо є GPX)
-        has_gpx = any(distance.route_gpx for distance in distances)
-        find_png_msg = None
-        if has_gpx:
-            find_png_msg = await callback.message.bot.send_message(
-                chat_id=settings.DEFAULT_CHAT_ID,
-                text="🔍 Пошук візуалізації маршрутів...",
-            )
+        # Підтвердження публікації
+        await confirm_publication(training, callback)
 
-            # Обробка дистанцій
-            for num, distance in enumerate(distances):
-                if not distance.route_gpx:
-                    continue
-
-                # Додавання GPX
-                gpx_file = FSInputFile(distance.route_gpx.path)
-                gpx_group.append(
-                    InputMediaDocument(
-                        media=gpx_file,
-                        caption=f"Маршрут {distance.distance} км\n"
-                        f"#{training.id}тренування #{int(distance.distance)}км",
-                    )
-                )
-
-                # Обробка PNG
-                png_path = Path(distance.route_gpx_map.path)
-                try:
-                    await wait_for_file_exist(png_path)
-                    png_file = FSInputFile(png_path)
-                    img_group.append(
-                        InputMediaPhoto(
-                            media=png_file,
-                            caption=(
-                                f"Візуалізація маршруту(ів) {training.title}\n"
-                                f"#{training.id}тренування"
-                                if num == 0
-                                else None
-                            ),
-                        )
-                    )
-                except TimeoutError:
-                    logger.warning("PNG не знайдено: %s", png_path)
-                    await find_png_msg.edit_text(
-                        text="😮 Візуалізацій маршрутів не знайдено!"
-                    )
-
-            # Видалення проміжного повідомлення
-            if find_png_msg:
-                try:
-                    await find_png_msg.delete()
-                except Exception as e:
-                    logger.error("Помилка видалення повідомлення: %s", e)
-
-            # Відправка груп
-            if gpx_group:
-                await callback.message.bot.send_media_group(
-                    chat_id=settings.DEFAULT_CHAT_ID,
-                    media=gpx_group,
-                )
-            if img_group:
-                await callback.message.bot.send_media_group(
-                    chat_id=settings.DEFAULT_CHAT_ID,
-                    media=img_group,
-                )
-
-            # Оновлення повідомлення
-            await callback.message.edit_text(
-                text=f"♻️ Тренування {training.title} опубліковано!",
-                reply_markup=None,
-            )
     except TrainingEvent.DoesNotExist:
         logger.error("Тренування не знайдено")
         await callback.answer("❌ Тренування не знайдено!", show_alert=True)

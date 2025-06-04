@@ -4,14 +4,16 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
-from aiogram import Bot
+from aiogram import Bot, types
+from aiogram.types import FSInputFile, InputMediaPhoto, InputMediaDocument
 from asgiref.sync import sync_to_async
 from celery.result import AsyncResult
 from django.conf import settings
 
 from robot.tasks import visualize_gpx
-from training_events.models import TrainingDistance
-
+from training_events.models import TrainingDistance, TrainingEvent
+from robot.tgbot.text import staff_create_training as mt
+from robot.tgbot.keyboards import staff as kb
 
 logger = logging.getLogger("robot")
 
@@ -174,7 +176,7 @@ async def wait_for_task_completion(task_id: str, max_wait_time: int = 60):
     Args:
         task_id (str): Ідентифікатор задачі.
         max_wait_time (int, optional): Максимальний час очікування (в секундах).
-        """
+    """
 
     wait_interval = 2  # перевіряємо кожні 2 секунди
     total_waited = 0
@@ -216,3 +218,124 @@ async def wait_for_file_exist(file_path: Path, max_wait_time: int = 60):
         total_waited += wait_interval
 
     raise TimeoutError(f"Файли не з'явилися за {max_wait_time} секунд")
+
+
+async def publish_training_message(
+    training: TrainingEvent, distances: list, callback: types.CallbackQuery
+):
+    """Відправляє основне повідомлення про тренування."""
+    message_text = await mt.format_success_message(training, distances)
+    keyboard = kb.register_training_keyboard(training.id)
+
+    if training.poster:
+        photo_file = FSInputFile(training.poster.path)
+        await callback.message.bot.send_photo(
+            chat_id=settings.DEFAULT_CHAT_ID,
+            photo=photo_file,
+            caption=message_text,
+            reply_markup=keyboard,
+        )
+    else:
+        await callback.message.bot.send_message(
+            chat_id=settings.DEFAULT_CHAT_ID,
+            text=message_text,
+            reply_markup=keyboard,
+        )
+
+
+async def prepare_media_groups(
+    training: TrainingEvent, distances: list
+) -> tuple[list, list]:
+    """Готує медіагрупи для GPX та PNG файлів."""
+    gpx_group = []
+    img_group = []
+
+    for num, distance in enumerate(distances):
+        if not distance.route_gpx:
+            continue
+
+        gpx_group.append(create_gpx_media(distance, training.id))
+
+        try:
+            png_path = Path(distance.route_gpx_map.path)
+            await wait_for_file_exist(png_path)
+            img_group.append(create_png_media(png_path, training, num))
+        except TimeoutError:
+            logger.warning("PNG не знайдено: %s", png_path)
+
+    return gpx_group, img_group
+
+
+def create_gpx_media(distance, training_id):
+    """Створює об'єкт медіа для GPX файлу."""
+    return InputMediaDocument(
+        media=FSInputFile(distance.route_gpx.path),
+        caption=f"Маршрут {distance.distance} км\n"
+               f"#{training_id}тренування #{int(distance.distance)}км",
+    )
+
+def create_png_media(png_path, training, num):
+    """Створює об'єкт медіа для PNG файлу."""
+    return InputMediaPhoto(
+        media=FSInputFile(png_path),
+        caption=(
+            f"Візуалізація маршруту(ів) {training.title}\n"
+            f"#{training.id}тренування" if num == 0 else None
+        ),
+    )
+
+
+def any_has_gpx(distances: list) -> bool:
+    """Перевіряє, чи є серед дистанцій GPX файли."""
+    return any(distance.route_gpx for distance in distances)
+
+
+async def handle_gpx_files(
+    training: TrainingEvent, distances: list, callback: types.CallbackQuery
+):
+    """Обробляє та відправляє GPX файли та візуалізації."""
+    find_png_msg = await notify_about_visualization_search(callback)
+
+    gpx_group, img_group = await prepare_media_groups(training, distances)
+
+    await send_media_groups(gpx_group, img_group, callback)
+    await cleanup_search_message(find_png_msg)
+
+
+async def notify_about_visualization_search(
+    callback: types.CallbackQuery,
+) -> types.Message:
+    """Відправляє повідомлення про пошук візуалізацій."""
+    return await callback.message.bot.send_message(
+        chat_id=settings.DEFAULT_CHAT_ID,
+        text="🔍 Пошук візуалізації маршрутів...",
+    )
+
+
+async def send_media_groups(gpx_group, img_group, callback):
+    """Відправляє медіагрупи в чат."""
+    if gpx_group:
+        await callback.message.bot.send_media_group(
+            chat_id=settings.DEFAULT_CHAT_ID,
+            media=gpx_group,
+        )
+    if img_group:
+        await callback.message.bot.send_media_group(
+            chat_id=settings.DEFAULT_CHAT_ID,
+            media=img_group,
+        )
+
+async def cleanup_search_message(message: types.Message):
+    """Видаляє проміжне повідомлення про пошук."""
+    if message:
+        try:
+            await message.delete()
+        except Exception as e:
+            logger.error("Помилка видалення повідомлення: %s", e)
+
+async def confirm_publication(training: TrainingEvent, callback: types.CallbackQuery):
+    """Підтверджує успішну публікацію."""
+    await callback.message.edit_text(
+        text=f"♻️ Тренування {training.title} опубліковано!",
+        reply_markup=None,
+    )
