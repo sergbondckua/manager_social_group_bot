@@ -33,6 +33,8 @@ def send_post_training_survey(*args, **kwargs):
                 date__gt=two_hours_ago, date__lt=now, is_cancelled=False
             ).values_list("id", flat=True)
         )
+        # todo
+        print(f"training_ids: {training_ids}, now: {now}, two_hours_ago: {two_hours_ago}", flush=True)
 
         if not training_ids:
             logger.info("Немає тренувань для опитування")
