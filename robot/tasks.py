@@ -26,7 +26,7 @@ def send_post_training_survey(*args, **kwargs):
     """Функція для відправки опитування після тренування"""
     try:
         # Отримуємо всі тренування, які закінчилися протягом останніх 2 годин
-        now = timezone.now()
+        now = timezone.localtime(timezone.now())
         two_hours_ago = now - timedelta(hours=2)
         training_ids = list(
             TrainingEvent.objects.filter(
