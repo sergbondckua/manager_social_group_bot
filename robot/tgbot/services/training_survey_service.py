@@ -22,6 +22,7 @@ async def process_trainings(training_ids: List[int]):
     trainings = sync_to_async(get_trainings_with_registered_participants)(
         training_ids
     )
+    print(trainings, flush=True)
 
     messages_to_send: List[Tuple[int, str]] = []
     seen_users = set()
