@@ -33,7 +33,7 @@ def cancel_keyboard():
     return builder.as_markup(resize_keyboard=True, one_time_keyboard=False)
 
 
-def rating_and_comment_keyboard(training_id):
+def rating_keyboard(training_id):
     """Інлайн-клавіатура для оцінки тренування."""
     builder = InlineKeyboardBuilder()
     buttons = [
@@ -45,6 +45,16 @@ def rating_and_comment_keyboard(training_id):
     ]
     builder.add(*buttons)
     builder.add(
+        InlineKeyboardButton(text=mt.btn_cancel, callback_data="btn_cancel")
+    )
+    builder.adjust(3, 2, 1)
+    return builder.as_markup()
+
+
+def add_comment_keyboard(training_id):
+    """Інлайн-клавіатура для додавання коментаря."""
+    builder = InlineKeyboardBuilder()
+    builder.add(
         InlineKeyboardButton(
             text="📝 Залишити коментар",
             callback_data=f"comment_training_{training_id}",
@@ -53,5 +63,4 @@ def rating_and_comment_keyboard(training_id):
     builder.add(
         InlineKeyboardButton(text=mt.btn_cancel, callback_data="btn_cancel")
     )
-    builder.adjust(3, 2, 1, 1)
     return builder.as_markup()

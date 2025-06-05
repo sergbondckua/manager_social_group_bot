@@ -23,7 +23,7 @@ async def process_trainings(training_ids: List[int]):
         training_ids
     )
 
-    messages_to_send: List[Tuple[int, str]] = []
+    messages_to_send: List[Tuple[int, str, int]] = []
     seen_users = set()
 
     for training in await trainings:
