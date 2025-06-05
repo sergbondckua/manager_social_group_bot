@@ -22,7 +22,7 @@ def visualize_gpx(self, gpx_file: str, output_file: str = None):
 
 
 @shared_task(bind=True)
-def send_post_training_survey():
+def send_post_training_survey(*args, **kwargs):
     """Функція для відправки опитування після тренування"""
     try:
         # Отримуємо всі тренування, які закінчилися протягом останніх 2 годин
