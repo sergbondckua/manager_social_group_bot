@@ -22,7 +22,6 @@ async def process_trainings(training_ids: List[int]):
     trainings = sync_to_async(get_trainings_with_registered_participants)(
         training_ids
     )
-    print(trainings, flush=True)
 
     messages_to_send: List[Tuple[int, str]] = []
     seen_users = set()
@@ -39,7 +38,9 @@ async def process_trainings(training_ids: List[int]):
             message_text = mt.rating_request_template.format(
                 title=training.title, date=localized_time.strftime("%d.%m.%Y")
             )
-            messages_to_send.append((user.telegram_id, message_text))
+            messages_to_send.append(
+                (user.telegram_id, message_text, training.id)
+            )
 
     # Відправляємо асинхронно батчами
     await send_messages_in_batches(messages_to_send)
@@ -65,7 +66,9 @@ def get_trainings_with_registered_participants(ids_list: list):
     return trainings
 
 
-async def send_messages_in_batches(messages_list: List[Tuple[int, str]]):
+async def send_messages_in_batches(
+    messages_list: List[Tuple[int, str, int]],
+):
     """Відправляє повідомлення в батчах"""
     batch_size = 50
 
@@ -73,8 +76,10 @@ async def send_messages_in_batches(messages_list: List[Tuple[int, str]]):
         batch = messages_list[i : i + batch_size]
         async with ROBOT as bot:
             tasks = []
-            for chat_id, text in batch:
-                tasks.append(send_single_message(bot, chat_id, text))
+            for chat_id, text, training_id in batch:
+                tasks.append(
+                    send_single_message(bot, chat_id, text, training_id)
+                )
             results = await asyncio.gather(*tasks, return_exceptions=True)
 
             # Обробка результатів
@@ -85,13 +90,13 @@ async def send_messages_in_batches(messages_list: List[Tuple[int, str]]):
                     )
 
 
-async def send_single_message(bot, chat_id: int, text: str):
+async def send_single_message(bot, chat_id: int, text: str, training_id: int):
     """Відправка повідомлення"""
     try:
         await bot.send_message(
             chat_id=chat_id,
             text=text,
-            reply_markup=kb.rating_and_comment_keyboard,
+            reply_markup=kb.rating_and_comment_keyboard(training_id),
         )
         return None
     except Exception as e:
