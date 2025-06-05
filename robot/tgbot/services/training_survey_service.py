@@ -96,7 +96,7 @@ async def send_single_message(bot, chat_id: int, text: str, training_id: int):
         await bot.send_message(
             chat_id=chat_id,
             text=text,
-            reply_markup=kb.rating_and_comment_keyboard(training_id),
+            reply_markup=kb.rating_keyboard(training_id),
         )
         return None
     except Exception as e:

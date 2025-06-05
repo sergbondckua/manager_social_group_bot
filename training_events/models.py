@@ -1,7 +1,11 @@
 import uuid
 from datetime import timedelta
 
-from django.core.validators import FileExtensionValidator
+from django.core.validators import (
+    FileExtensionValidator,
+    MinValueValidator,
+    MaxValueValidator,
+)
 from django.db import models
 from django.utils import timezone
 from django.utils.timezone import localtime
@@ -222,3 +226,68 @@ class TrainingRegistration(BaseModel):
         unique_together = ("training", "participant")
         verbose_name = "📝 Реєстрацію"
         verbose_name_plural = "🧑‍🤝‍🧑 Зареєстровані"
+
+
+class TrainingRating(BaseModel):
+    training = models.ForeignKey(
+        verbose_name="Тренування",
+        to=TrainingEvent,
+        on_delete=models.CASCADE,
+        related_name="ratings",
+    )
+    participant = models.ForeignKey(
+        verbose_name="Учасник",
+        to=ClubUser,
+        on_delete=models.CASCADE,
+        related_name="ratings",
+    )
+    rating = models.IntegerField(
+        verbose_name="Рейтинг",
+        validators=[MinValueValidator(1), MaxValueValidator(5)],
+        help_text="Рейтинг учасника від 1 до 10",
+    )
+
+    def __str__(self):
+        return (
+            f"{self.training.title} - "
+            f"{self.participant.get_full_name() or self.participant.username}: "
+            f"{self.rating}/5"
+        )
+
+    class Meta:
+        unique_together = ("training", "participant")
+        verbose_name = "🌟 Рейтинг"
+        verbose_name_plural = "🌟 Рейтинги"
+
+
+class TrainingComment(BaseModel):
+    training = models.ForeignKey(
+        verbose_name="Тренування",
+        to=TrainingEvent,
+        on_delete=models.CASCADE,
+        related_name="comments",
+    )
+    participant = models.ForeignKey(
+        verbose_name="Учасник",
+        to=ClubUser,
+        on_delete=models.CASCADE,
+        related_name="comments",
+    )
+    comment = models.TextField(
+        verbose_name="Коментар",
+        help_text="Коментар учасника",
+    )
+    is_public = models.BooleanField(
+        default=True, help_text="Чи видимий коментар іншим учасникам"
+    )
+
+    def __str__(self):
+        return (
+            f"{self.training.title} - "
+            f"{self.participant.get_full_name() or self.participant.username}"
+        )
+
+    class Meta:
+        verbose_name = "💬 Відгук"
+        verbose_name_plural = "💬 Відгуки"
+        ordering = ["-created_at"]
