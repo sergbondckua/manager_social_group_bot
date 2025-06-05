@@ -55,9 +55,9 @@ def get_trainings_with_registered_participants(ids_list: list):
         TrainingEvent.objects.filter(id__in=ids_list).prefetch_related(
             Prefetch(
                 "registrations",
-                queryset=TrainingRegistration.objects.filter(
-                    is_confirmed=True
-                ).select_related("participant"),
+                queryset=TrainingRegistration.objects.select_related(
+                    "participant"
+                ),
             )
         )
     )
