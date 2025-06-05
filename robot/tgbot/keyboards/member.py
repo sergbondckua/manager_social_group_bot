@@ -1,14 +1,15 @@
 from aiogram.types import InlineKeyboardButton
 from aiogram.utils.keyboard import ReplyKeyboardBuilder, InlineKeyboardBuilder
 from aiogram import types
-from robot.tgbot.text.member_template import btn_yes, btn_no, btn_cancel
+from robot.tgbot.text.member_template import member_template as mt
 
 
 def yes_no_keyboard():
     """Клавіатура "Так/Ні"."""
     builder = ReplyKeyboardBuilder()
     builder.row(
-        types.KeyboardButton(text=btn_yes), types.KeyboardButton(text=btn_no)
+        types.KeyboardButton(text=mt.btn_yes),
+        types.KeyboardButton(text=mt.btn_no),
     )
     return builder.as_markup(resize_keyboard=True, one_time_keyboard=False)
 
@@ -20,7 +21,7 @@ def contact_keyboard():
         types.KeyboardButton(
             text="📱 Поділитися номером", request_contact=True
         ),
-        types.KeyboardButton(text=btn_cancel),
+        types.KeyboardButton(text=mt.btn_cancel),
     )
     return builder.as_markup(resize_keyboard=True, one_time_keyboard=False)
 
@@ -28,7 +29,7 @@ def contact_keyboard():
 def cancel_keyboard():
     """Клавіатура "Відмінити"."""
     builder = ReplyKeyboardBuilder()
-    builder.add(types.KeyboardButton(text=btn_cancel))
+    builder.add(types.KeyboardButton(text=mt.btn_cancel))
     return builder.as_markup(resize_keyboard=True, one_time_keyboard=False)
 
 
@@ -49,4 +50,8 @@ def rating_and_comment_keyboard(training_id):
             callback_data=f"comment_training_{training_id}",
         )
     )
+    builder.add(
+        InlineKeyboardButton(text=mt.btn_cancel, callback_data="btn_cancel")
+    )
+    builder.adjust(3, 2, 1, 1)
     return builder.as_markup()
