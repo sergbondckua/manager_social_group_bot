@@ -1,7 +1,7 @@
 from aiogram.types import InlineKeyboardButton
 from aiogram.utils.keyboard import ReplyKeyboardBuilder, InlineKeyboardBuilder
 from aiogram import types
-from robot.tgbot.text.member_template import member_template as mt
+from robot.tgbot.text import member_template as mt
 
 
 def yes_no_keyboard():
