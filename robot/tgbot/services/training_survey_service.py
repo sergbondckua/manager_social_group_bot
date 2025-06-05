@@ -83,7 +83,7 @@ async def send_messages_in_batches(
             results = await asyncio.gather(*tasks, return_exceptions=True)
 
             # Обробка результатів
-            for res, (chat_id, _) in zip(results, batch):
+            for res, (chat_id, _, _) in zip(results, batch):
                 if isinstance(res, Exception):
                     logger.error(
                         f"Помилка відправки для {chat_id}: {str(res)}"
