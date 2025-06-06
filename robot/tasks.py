@@ -14,15 +14,15 @@ logger = logging.getLogger("robot")
 
 
 @shared_task(bind=True)
-def visualize_gpx(gpx_file: str, output_file: str = None):
+def visualize_gpx(self, gpx_file: str, output_file: str = None):
     """Функція для візуалізації маршруту з GPX-файлу"""
     visualizer = GPXVisualizer(gpx_file, output_file)
     visualizer.visualize()
     return visualizer.output_file
 
 
-@shared_task(bind=True)
-def send_post_training_survey(*args, **kwargs):
+@shared_task
+def send_post_training_survey():
     """Функція для відправки опитування після тренування"""
     try:
         # Отримуємо всі тренування, які закінчилися протягом останніх 2 годин
