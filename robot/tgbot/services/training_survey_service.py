@@ -28,7 +28,7 @@ async def process_trainings(training_ids: List[int]):
 
     for training in await trainings:
         localized_time = timezone.localtime(training.date)
-
+        distances = ", ".join([f"{d.distance} км" for d in training.distances.all()])
         for reg in training.registrations.all():
             user = reg.participant
             if not user.telegram_id or user.telegram_id in seen_users:
@@ -36,7 +36,9 @@ async def process_trainings(training_ids: List[int]):
 
             seen_users.add(user.telegram_id)
             message_text = mt.rating_request_template.format(
-                title=training.title, date=localized_time.strftime("%d.%m.%Y")
+                title=f"{training.title} - {training.location}",
+                date=localized_time.strftime("%d.%m.%Y %H:%M"),
+                distances=distances,
             )
             messages_to_send.append(
                 (user.telegram_id, message_text, training.id)

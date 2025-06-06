@@ -44,7 +44,7 @@ async def process_training_rating(callback: types.CallbackQuery):
         # Оновлюємо повідомлення, відображаємо оцінку
         await callback.message.edit_text(
             text=mt.rating_confirmation_template.format(
-                title=training.title,
+                title=f"{training.title} - {training.location}",
                 rating=f"{'⭐' * rating}",
             ),
             reply_markup=kb.add_comment_keyboard(training_id),
@@ -115,7 +115,7 @@ async def process_training_comment(message: types.Message, state: FSMContext):
         await message.bot.send_message(
             chat_id=owner_id,
             text=mt.new_comment_template.format(
-                title=training.title,
+                title=f"{training.title} - {training.location}",
                 comment=message.text,
                 participant=user,
                 training_id=training.id,
