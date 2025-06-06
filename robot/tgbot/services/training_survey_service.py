@@ -28,7 +28,9 @@ async def process_trainings(training_ids: List[int]):
 
     for training in await trainings:
         localized_time = timezone.localtime(training.date)
-        distances = ", ".join([f"{d.distance} км" for d in training.distances.all()])
+        distances = ", ".join(
+            [f"{d.distance} км" async for d in training.distances.all()]
+        )
         for reg in training.registrations.all():
             user = reg.participant
             if not user.telegram_id or user.telegram_id in seen_users:
