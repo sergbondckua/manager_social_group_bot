@@ -74,7 +74,7 @@ async def request_training_comment(
     # Переходимо до наступного стану
     await state.set_state(TrainingCommentStates.waiting_for_comment)
 
-    await callback.message.answer(
+    await callback.message.edit_text(
         "📝 Будь ласка, напишіть ваш коментар про тренування:"
     )
 
@@ -109,7 +109,10 @@ async def process_training_comment(message: types.Message, state: FSMContext):
             defaults={"comment": message.text},
         )
         await message.answer(
-            "🙏 Дякуємо за ваш коментар! Ваш відгук допоможе покращити майбутні тренування."
+            mt.rating_confirmation_template.format(
+                title=f"{training.title} - {training.location}",
+                rating=f"{'⭐' * rating.rating}",
+            )
         )
         # Відправлення повідомлення організатору
         await message.bot.send_message(

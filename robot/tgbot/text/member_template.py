@@ -1,4 +1,4 @@
-from aiogram.utils.markdown import text, hbold, hlink, hcode, hitalic
+from aiogram.utils.markdown import text, hbold, hcode, hitalic, hblockquote
 
 # Константи для повторюваних елементів
 DOUBLE_TAB: str = "\t\t"
@@ -88,7 +88,7 @@ new_comment_template = text(
     "👤 " + hbold("Від: ") + "{participant}\n",
     "💫 " + hbold("Оцінка: ") + "{rating}\n",
     hbold("💬 Коментар:"),
-    hcode("{comment}\n"),
+    hblockquote("{comment}\n"),
     "🔗 " + hitalic("Перейти до тренування, /get_training_{training_id}"),
     sep="\n"
 )
