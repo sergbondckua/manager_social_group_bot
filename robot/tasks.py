@@ -14,7 +14,7 @@ logger = logging.getLogger("robot")
 
 
 @shared_task(bind=True)
-def visualize_gpx(gpx_file: str, output_file: str = None, *args, **kwargs):
+def visualize_gpx(gpx_file: str, output_file: str = None):
     """Функція для візуалізації маршруту з GPX-файлу"""
     visualizer = GPXVisualizer(gpx_file, output_file)
     visualizer.visualize()

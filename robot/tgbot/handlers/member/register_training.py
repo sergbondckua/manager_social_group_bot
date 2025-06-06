@@ -81,109 +81,132 @@ async def register_training(callback: types.CallbackQuery):
             id=training_id
         )
         participant = await ClubUser.objects.aget(telegram_id=user_id)
-    except (TrainingEvent.DoesNotExist, ClubUser.DoesNotExist):
-        await callback.answer(
-            text="🔍 Тренування або профіль користувача не знайдено!",
-        )
-        return
 
-    # Перевіряємо чи тренування було скасовано
-    if training.is_cancelled:
-        await callback.answer(
-            text="⚠️ Тренування було скасовано!",
-            show_alert=True,
-        )
-        return
-
-    # Перевіряємо чи тренування пройшло
-    if training.date < timezone.now():
-        await callback.answer(
-            text="⚠️ Це тренування вже відбулося!",
-            show_alert=True,
-        )
-        return
-
-    # Перевіряємо, чи користувач вже зареєстрований
-    existing_registration = await TrainingRegistration.objects.filter(
-        training=training, participant=participant
-    ).aexists()
-    if existing_registration:
-        await callback.answer(
-            text="⚠️ Ви вже зареєстровані на це тренування!",
-            show_alert=True,
-        )
-        return
-
-    # Якщо тренування має більше однієї дистанції
-    if await training.distances.acount() > 1:
-        distances = []
-        async for d in training.distances.all():
-            distances.append(
-                {
-                    "distance": d.distance,
-                    "training_id": training_id,
-                    "distance_id": d.id,
-                }
-            )
-
-        # Надсилаємо користувачу список дистанцій
-        await callback.message.bot.send_message(
-            chat_id=user_id,
-            text=mt.format_distance_selection_template.format(
-                title=training.title,
-                date=timezone.localtime(training.date).strftime("%d.%m.%Y 🕑 %H:%M"),
-                location=training.location,
-            ),
-            reply_markup=kb.distance_keyboard(distances),
-        )
-        return
-
-    # Якщо тільки одна дистанція - реєструємо відразу
-    distance: TrainingDistance = await training.distances.afirst()
-
-    # Перевіряємо максимальну кількість учасників
-    if distance.max_participants != 0:
-        if await training.registrations.acount() >= distance.max_participants:
+        # Перевіряємо чи тренування було скасовано
+        if training.is_cancelled:
             await callback.answer(
-                text="⚠️ Вибачте, максимальна кількість учасників вже зареєстрована!",
+                text="⚠️ Тренування було скасовано!",
                 show_alert=True,
             )
             return
 
-    # Створюємо реєстрацію
-    await TrainingRegistration.objects.acreate(
-        training=training, participant=participant, distance=distance
-    )
+        # Перевіряємо чи тренування пройшло
+        if training.date < timezone.now():
+            await callback.answer(
+                text="⚠️ Це тренування вже відбулося!",
+                show_alert=True,
+            )
+            return
 
-    logger.info(
-        "Користувач %s (ID: %s) зареєстрований на тренування %s",
-        user_full_name or "",
-        user_id,
-        training.title,
-    )
+        # Перевіряємо, чи користувач вже зареєстрований
+        existing_registration = await TrainingRegistration.objects.filter(
+            training=training, participant=participant
+        ).aexists()
+        if existing_registration:
+            await callback.answer(
+                text="⚠️ Ви вже зареєстровані на це тренування!",
+                show_alert=True,
+            )
+            return
 
-    # Надсилаємо повідомлення про успішну реєстрацію
-    await callback.message.bot.send_message(
-        chat_id=user_id,
-        text=mt.format_success_registration_template.format(
+        # Якщо тренування має більше однієї дистанції
+        if await training.distances.acount() > 1:
+            distances = []
+            async for d in training.distances.all():
+                distances.append(
+                    {
+                        "distance": d.distance,
+                        "training_id": training_id,
+                        "distance_id": d.id,
+                    }
+                )
+
+            # Надсилаємо користувачу список дистанцій
+            await callback.message.bot.send_message(
+                chat_id=user_id,
+                text=mt.format_distance_selection_template.format(
+                    title=training.title,
+                    date=timezone.localtime(training.date).strftime(
+                        "%d.%m.%Y 🕑 %H:%M"
+                    ),
+                    location=training.location,
+                ),
+                reply_markup=kb.distance_keyboard(distances),
+            )
+            return
+
+        # Якщо тільки одна дистанція - реєструємо відразу
+        distance: TrainingDistance = await training.distances.afirst()
+
+        # Перевіряємо максимальну кількість учасників
+        if distance.max_participants != 0:
+            if (
+                await training.registrations.acount()
+                >= distance.max_participants
+            ):
+                await callback.answer(
+                    text="⚠️ Вибачте, максимальна кількість учасників вже зареєстрована!",
+                    show_alert=True,
+                )
+                return
+
+        # Створюємо реєстрацію
+        await TrainingRegistration.objects.acreate(
+            training=training, participant=participant, distance=distance
+        )
+
+        logger.info(
+            "Користувач %s (ID: %s) зареєстрований на тренування %s",
+            user_full_name or "",
+            user_id,
+            training.title,
+        )
+
+        # Надсилаємо повідомлення про успішну реєстрацію
+        await callback.message.bot.send_message(
+            chat_id=user_id,
+            text=mt.format_success_registration_template.format(
+                participant=await get_full_name(callback, participant),
+                title=training.title,
+                distance=distance.distance,
+                date=timezone.localtime(training.date).strftime(
+                    "%d.%m.%Y 🕑 %H:%M"
+                ),
+                location=training.location,
+            ),
+        )
+
+        # Відправляємо повідомлення організатору про реєстрацію
+        msg = mt.format_registration_template.format(
             participant=await get_full_name(callback, participant),
+            username=await get_username(callback),
             title=training.title,
-            distance=distance.distance,
-            date=timezone.localtime(training.date).strftime("%d.%m.%Y 🕑 %H:%M"),
+            date=timezone.localtime(training.date).strftime(
+                "%d.%m.%Y 🕑 %H:%M"
+            ),
             location=training.location,
-        ),
-    )
+            distance=distance.distance,
+        )
 
-    # Відправляємо повідомлення організатору про реєстрацію
-    msg = mt.format_registration_template.format(
-        participant=await get_full_name(callback, participant),
-        username=await get_username(callback),
-        title=training.title,
-        date=timezone.localtime(training.date).strftime("%d.%m.%Y 🕑 %H:%M"),
-        location=training.location,
-        distance=distance.distance,
-    )
-    await send_creator_training_notification(training, callback.message, msg)
+        await send_creator_training_notification(
+            training, callback.message, msg
+        )
+
+    except TrainingEvent.DoesNotExist:
+        await callback.answer(
+            text="🔍 Тренування не знайдено!",
+        )
+    except ClubUser.DoesNotExist:
+        await callback.answer(
+            text=mt.registration_required_template,
+            show_alert=True,
+        )
+    except Exception as e:
+        logger.error("Помилка під час реєстрації на навчання: %s", e)
+        await callback.answer(
+            text="⚠️ Під час реєстрації виникла помилка!",
+            show_alert=True,
+        )
 
 
 @reg_training_router.callback_query(F.data.startswith("distance_"))
@@ -265,7 +288,9 @@ async def register_for_distance(callback: types.CallbackQuery):
             participant=await get_full_name(callback, participant),
             title=training.title,
             distance=distance.distance,
-            date=timezone.localtime(training.date).strftime("%d.%m.%Y 🕑 %H:%M"),
+            date=timezone.localtime(training.date).strftime(
+                "%d.%m.%Y 🕑 %H:%M"
+            ),
             location=training.location,
         ),
     )
@@ -318,14 +343,18 @@ async def unregister_training(message: types.Message):
             chat_id=user_id,
             text=mt.format_unregister_confirmation.format(
                 title=training.title,
-                date=timezone.localtime(training.date).strftime('%d.%m.%Y 🕑 %H:%M')
-            )
+                date=timezone.localtime(training.date).strftime(
+                    "%d.%m.%Y 🕑 %H:%M"
+                ),
+            ),
         )
 
         # Відправляємо повідомлення адміністраторам про скасовану реєстрацію
         msg = mt.format_unregister_template.format(
             title=training.title,
-            date=timezone.localtime(training.date).strftime("%d.%m.%Y 🕑 %H:%M"),
+            date=timezone.localtime(training.date).strftime(
+                "%d.%m.%Y 🕑 %H:%M"
+            ),
             participant_name=await get_full_name(message, participant),
             username=await get_username(message),
         )
@@ -359,7 +388,9 @@ async def show_my_registrations(message: types.Message):
         TrainingRegistration.objects.select_related("training", "distance")
         .filter(
             participant=participant,
-            training__date__gte=make_aware(datetime.now().replace(tzinfo=None)),
+            training__date__gte=make_aware(
+                datetime.now().replace(tzinfo=None)
+            ),
             training__is_cancelled=False,
         )
         .order_by("training__date")
@@ -377,7 +408,9 @@ async def show_my_registrations(message: types.Message):
     for reg in registrations:
         text += mt.format_my_reg_training.format(
             title=reg.training.title,
-            date=timezone.localtime(reg.training.date).strftime("%d.%m.%Y 🕑 %H:%M"),
+            date=timezone.localtime(reg.training.date).strftime(
+                "%d.%m.%Y 🕑 %H:%M"
+            ),
             location=reg.training.location,
             distance=reg.distance.distance,
             created_at=reg.created_at.strftime("%d.%m.%Y 🕑 %H:%M"),

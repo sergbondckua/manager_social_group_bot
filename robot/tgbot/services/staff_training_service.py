@@ -56,6 +56,7 @@ async def create_poster_path(
 async def create_route_path(
     club_user_id: int,
     distance: float,
+    training_id: int,
     training_date: datetime,
     file_id: str,
     bot: Bot,
@@ -64,7 +65,7 @@ async def create_route_path(
     try:
         file = await bot.get_file(file_id)
         file_extension = file.file_path.split("/")[-1].split(".")[-1]
-        file_name = f"{distance}km_{training_date.strftime('%d%B%Y_%H%M')}.{file_extension}"
+        file_name = f"{distance}km_{training_id}_{training_date.strftime('%d%B%Y_%H%M')}.{file_extension}"
 
         save_path = Path(settings.MEDIA_ROOT) / f"trainings/{club_user_id}/gpx"
         save_path.mkdir(parents=True, exist_ok=True)
@@ -74,13 +75,13 @@ async def create_route_path(
         if await download_file_safe(bot, file_id, str(route_path)):
             map_image_path = str(route_path).replace(".gpx", ".png")
             # Запускаємо Celery-задачу асинхронно
-            visualize_gpx.delay(
+            visualize_gpx.apply_async(
                 gpx_file=str(route_path), output_file=map_image_path
             )
             return str(route_path), map_image_path
         return None, None
     except Exception as e:
-        logger.error(f"Помилка створення шляху маршруту: {e}")
+        logger.error("Помилка створення шляху маршруту: %s", e, exc_info=True)
         return None, None
 
 
@@ -115,11 +116,12 @@ async def process_gpx_files_after_creation(
 
         # Створюємо шляхи для GPX файлу та мапи
         route_path, map_image_path = await create_route_path(
-            club_user_id,
-            distance_data["distance"],
-            training_datetime,
-            distance_data["route_gpx"],
-            bot,
+            club_user_id=club_user_id,
+            distance=distance_data["distance"],
+            training_id=distance_obj.training.id,
+            training_date=training_datetime,
+            file_id=distance_data["route_gpx"],
+            bot=bot,
         )
 
         # Оновлюємо шляхи в базі даних
