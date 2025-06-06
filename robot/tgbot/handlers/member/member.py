@@ -108,7 +108,7 @@ async def process_training_comment(message: types.Message, state: FSMContext):
             participant=participant,
             defaults={"comment": message.text},
         )
-        await message.edit_text(
+        await message.answer(
             "🙏 Дякуємо за ваш коментар! Ваш відгук допоможе покращити майбутні тренування."
         )
         # Відправлення повідомлення організатору
