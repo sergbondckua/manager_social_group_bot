@@ -15,6 +15,11 @@ rating_comment_router.message.filter(ClubMemberFilter())
 
 logger = logging.getLogger("robot")
 
+@rating_comment_router.callback_query(F.data == "btn_close")
+async def btn_close(callback: types.CallbackQuery):
+    """Закриває повідомлення і видаляє клавіатуру."""
+    await callback.message.delete()
+    return
 
 @rating_comment_router.callback_query(F.data.startswith("rate_training_"))
 async def process_training_rating(callback: types.CallbackQuery):

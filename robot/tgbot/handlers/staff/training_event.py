@@ -6,7 +6,7 @@ from typing import Optional
 from aiogram import types, Router, F, Bot
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
-from aiogram.types import FSInputFile, InputMediaDocument, InputMediaPhoto
+from aiogram.types import FSInputFile
 from asgiref.sync import sync_to_async
 from django.conf import settings
 from django.core.exceptions import ValidationError
