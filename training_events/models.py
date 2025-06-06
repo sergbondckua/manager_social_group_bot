@@ -54,6 +54,11 @@ class TrainingEvent(BaseModel):
         related_name="created_trainings",
     )
     is_cancelled = models.BooleanField(verbose_name="Скасовано", default=False)
+    is_feedback_sent = models.BooleanField(
+        default=False,
+        verbose_name="Оцінювання надіслано",
+        help_text="Чи було відправлено запит на оцінювання тренування.",
+    )
     cancellation_reason = models.TextField(
         verbose_name="Причина скасування", blank=True
     )
@@ -96,8 +101,8 @@ class TrainingEvent(BaseModel):
 
     class Meta:
         ordering = ["date"]
-        verbose_name = "🏃‍♀️ Тренування"
-        verbose_name_plural = "🏃‍♀️ Тренування"
+        verbose_name = "👟️ Тренування"
+        verbose_name_plural = "👟 Тренування"
 
 
 class TrainingDistance(BaseModel):

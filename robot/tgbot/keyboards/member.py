@@ -43,9 +43,12 @@ def rating_keyboard(training_id):
         )
         for i in range(1, 6)
     ]
-    builder.add(*buttons)
     builder.add(
-        InlineKeyboardButton(text=mt.btn_cancel, callback_data="btn_cancel")
+        *buttons,
+        InlineKeyboardButton(
+            text=mt.btn_close,
+            callback_data="btn_close",
+        ),
     )
     builder.adjust(3, 2, 1)
     return builder.as_markup()
@@ -58,9 +61,7 @@ def add_comment_keyboard(training_id):
         InlineKeyboardButton(
             text="📝 Залишити коментар",
             callback_data=f"comment_training_{training_id}",
-        )
-    )
-    builder.add(
-        InlineKeyboardButton(text=mt.btn_cancel, callback_data="btn_cancel")
+        ),
+        InlineKeyboardButton(text=mt.btn_close, callback_data="btn_close"),
     )
     return builder.as_markup()

@@ -15,7 +15,7 @@ from robot.tgbot.text import member_template as mt
 logger = logging.getLogger("robot")
 
 
-async def process_trainings(training_ids: List[int]):
+async def process_trainings(training_ids: List[int]) -> None:
     """Асинхронна обробка тренувань"""
 
     # Асинхронно отримуємо тренування з пов'язаними даними

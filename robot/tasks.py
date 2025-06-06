@@ -30,7 +30,9 @@ def send_post_training_survey(*args, **kwargs):
         two_hours_ago = now - timedelta(hours=2)
         training_ids = list(
             TrainingEvent.objects.filter(
-                date__gt=two_hours_ago, date__lt=now, is_cancelled=False
+                date__lte=two_hours_ago,  # Тренування почалося до або рівно 2 години тому
+                is_feedback_sent=False,  # Запит на оцінювання ще не відправлений
+                is_cancelled=False,
             ).values_list("id", flat=True)
         )
 
@@ -39,7 +41,11 @@ def send_post_training_survey(*args, **kwargs):
             return
 
         async def main():
-            return await process_trainings(training_ids)
+            await process_trainings(training_ids)
+            # Помічаємо ці тренування як "запит на оцінювання відправлено"
+            await TrainingEvent.objects.filter(id__in=training_ids).aupdate(
+                is_feedback_sent=True
+            )
 
         loop = asyncio.get_event_loop()
         loop.run_until_complete(main())

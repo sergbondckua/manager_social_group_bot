@@ -8,18 +8,24 @@ from robot.tgbot.filters.member import ClubMemberFilter
 from robot.tgbot.keyboards import member as kb
 from robot.tgbot.states.member import TrainingCommentStates
 from robot.tgbot.text import member_template as mt
-from training_events.models import TrainingEvent, TrainingRating
+from training_events.models import (
+    TrainingEvent,
+    TrainingRating,
+    TrainingComment,
+)
 
 rating_comment_router = Router()
 rating_comment_router.message.filter(ClubMemberFilter())
 
 logger = logging.getLogger("robot")
 
+
 @rating_comment_router.callback_query(F.data == "btn_close")
 async def btn_close(callback: types.CallbackQuery):
     """Закриває повідомлення і видаляє клавіатуру."""
     await callback.message.delete()
     return
+
 
 @rating_comment_router.callback_query(F.data.startswith("rate_training_"))
 async def process_training_rating(callback: types.CallbackQuery):
@@ -68,7 +74,7 @@ async def process_training_rating(callback: types.CallbackQuery):
 
 @rating_comment_router.callback_query(F.data.startswith("comment_training_"))
 async def request_training_comment(
-    callback: types.CallbackQuery, state: FSMContext
+        callback: types.CallbackQuery, state: FSMContext
 ):
     """Запит коментаря до тренування."""
 
@@ -108,7 +114,7 @@ async def process_training_comment(message: types.Message, state: FSMContext):
         )
 
         # Зберігаємо коментар в БД
-        await TrainingRating.objects.aupdate_or_create(
+        await TrainingComment.objects.aupdate_or_create(
             training=training,
             participant=participant,
             defaults={"comment": message.text},

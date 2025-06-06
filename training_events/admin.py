@@ -6,6 +6,7 @@ from training_events.models import (
     TrainingEvent,
     TrainingDistance,
     TrainingRegistration,
+    TrainingRating, TrainingComment,
 )
 
 
@@ -30,6 +31,7 @@ class TrainingEventAdmin(BaseAdmin):
         "created_by",
         "get_distances",
         "get_participant_count",
+        "is_feedback_sent",
         "is_cancelled",
     ]
     search_fields = [
@@ -43,6 +45,7 @@ class TrainingEventAdmin(BaseAdmin):
         "location",
         "created_by",
         "is_cancelled",
+        "is_feedback_sent",
     ]
     inlines = (TrainingDistanceInline,)
     fieldsets = (
@@ -57,7 +60,9 @@ class TrainingEventAdmin(BaseAdmin):
                     "poster",
                     "get_image",
                     "created_by",
+                    "is_feedback_sent",
                     "is_cancelled",
+                    "cancellation_reason",
                 )
             },
         ),
@@ -122,6 +127,42 @@ class TrainingRegistrationAdmin(BaseAdmin):
                     "expected_pace",
                     "notes",
                 )
+            },
+        ),
+    ) + BaseAdmin.fieldsets
+
+
+@admin.register(TrainingRating)
+class TrainingRatingAdmin(BaseAdmin):
+    """Клас адмін-панелі для моделі TrainingRating"""
+
+    readonly_fields = ("created_at", "updated_at")
+    list_display = ["training", "participant", "rating", "created_at"]
+    search_fields = ["training__title", "participant__username"]
+    list_filter = ["training", "participant", "created_at"]
+    fieldsets = (
+        (
+            "Основні дані",
+            {
+                "fields": ("training", "participant", "rating")
+            },
+        ),
+    ) + BaseAdmin.fieldsets
+
+
+@admin.register(TrainingComment)
+class TrainingCommentAdmin(BaseAdmin):
+    """Клас адмін-панелі для моделі TrainingComment"""
+
+    readonly_fields = ("created_at", "updated_at")
+    list_display = ["training", "participant", "created_at"]
+    search_fields = ["training__title", "participant__username"]
+    list_filter = ["training", "participant", "created_at"]
+    fieldsets = (
+        (
+            "Основні дані",
+            {
+                "fields": ("training", "participant", "comment", "is_public")
             },
         ),
     ) + BaseAdmin.fieldsets
