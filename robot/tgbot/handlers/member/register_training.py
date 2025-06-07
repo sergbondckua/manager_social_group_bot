@@ -9,6 +9,7 @@ from django.utils.timezone import make_aware
 
 from profiles.models import ClubUser
 from robot.tgbot.keyboards import user as kb
+from robot.tgbot.misc.validators import is_private_chat
 from robot.tgbot.text import user_template as mt
 from training_events.models import (
     TrainingEvent,
@@ -223,7 +224,8 @@ async def register_for_distance(callback: types.CallbackQuery):
         distance = await training.distances.aget(id=distance_id)
         participant = await ClubUser.objects.aget(telegram_id=user_id)
     except (TrainingEvent.DoesNotExist, ClubUser.DoesNotExist):
-        await callback.answer(
+        await callback.bot.send_message(
+            chat_id=message.from_user.id,
             text="🔍 Тренування, дистанцію або профіль не знайдено!",
             show_alert=True,
         )
@@ -367,11 +369,13 @@ async def unregister_training(message: types.Message):
         )
 
 
-# @reg_training_router.callback_query(F.data == "my_registrations")
 @reg_training_router.message(Command("my_trainings"))
 async def show_my_registrations(message: types.Message):
     """Показує список реєстрацій користувача"""
     user_id = message.from_user.id
+
+    if not await is_private_chat(message):
+        return
 
     try:
         participant = await ClubUser.objects.aget(telegram_id=user_id)

@@ -107,3 +107,18 @@ def btn_close():
         )
     )
     return builder.as_markup()
+
+def btn_url(text: str, url: str):
+    builder = InlineKeyboardBuilder()
+    builder.add(
+        types.InlineKeyboardButton(
+            text=text,
+            url=url,
+        ),
+        types.InlineKeyboardButton(
+            text=mt.btn_close,
+            callback_data="btn_close",
+        )
+    )
+    builder.adjust(1)
+    return builder.as_markup()

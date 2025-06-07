@@ -18,6 +18,7 @@ from profiles.models import ClubUser
 from robot.tgbot.filters.staff import ClubStaffFilter
 from robot.tgbot.keyboards import staff as kb
 from robot.tgbot.misc import validators
+from robot.tgbot.misc.validators import is_private_chat
 from robot.tgbot.services import reg_training_service as rs
 from robot.tgbot.services.staff_training_service import (
     create_poster_path,
@@ -93,6 +94,10 @@ async def cmd_my_trainings(message: types.Message):
     """Показує список тренувань, створених користувачем."""
     user_id = message.from_user.id
     club_user = await get_club_user(message.from_user.id)
+
+    if not await is_private_chat(message):
+        return
+
     if not club_user:
         await message.bot.send_message(
             user_id,
@@ -177,10 +182,16 @@ async def cmd_get_training(message: types.Message):
 async def cmd_create_training(message: types.Message, state: FSMContext):
     """Обробник команди "/create_training"."""
 
+    # Перевіряємо, чи це приватний чат
+    if not await is_private_chat(message):
+        return
+
     # Перевіряємо, чи користувач має права
     club_user = await get_club_user(message.from_user.id)
+
     if not club_user:
-        await message.answer(
+        await message.bot.send_message(
+            message.from_user.id,
             "❌ Ваш обліковий запис не знайдено в системі. "
             "Зверніться до адміністратора."
         )

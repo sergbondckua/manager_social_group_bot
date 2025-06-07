@@ -1,6 +1,8 @@
 # Константи
 from datetime import datetime
 
+from aiogram.types import Message
+
 MIN_TITLE_LENGTH = 3
 MAX_TITLE_LENGTH = 100
 MIN_LOCATION_LENGTH = 3
@@ -40,3 +42,7 @@ def validate_pace(pace_str: str) -> bool:
         return MIN_PACE_SECONDS <= total_seconds <= MAX_PACE_SECONDS
     except ValueError:
         return False
+
+# Перевірка, що повідомлення надійшло у приватному чаті
+async def is_private_chat(message: Message) -> bool:
+    return message.chat.type == "private"
