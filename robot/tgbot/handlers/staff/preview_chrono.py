@@ -1,8 +1,11 @@
 import logging
+from typing import Optional, List
+
 from aiogram import Router, F
 from aiogram.filters import Command
 from aiogram.types import Message, CallbackQuery
 from asgiref.sync import sync_to_async
+from django.db.models import QuerySet
 from django.utils.timezone import localtime
 
 from chronopost.models import ScheduledMessage
@@ -18,8 +21,11 @@ pre_post_router.message.filter(ClubStaffFilter())
 
 
 @sync_to_async
-def fetch_chrono_posts(limit: int = 10):
-    """Асинхронно отримуємо часопости"""
+def get_inactive_scheduled_messages(
+    limit: int = 10,
+) -> QuerySet[ScheduledMessage] | None:
+    """ Асинхронно отримує неактивні заплановані повідомлення."""
+
     try:
         return ScheduledMessage.objects.filter(is_active=False).order_by(
             "-created_at"
@@ -40,7 +46,7 @@ async def btn_close(callback: CallbackQuery):
 async def handle_preview_chrono(message: Message):
     """Показує підготовані часопости"""
 
-    posts = await fetch_chrono_posts()
+    posts = await get_inactive_scheduled_messages()
 
     if await posts.acount() < 1:
         await message.bot.send_message(
@@ -56,7 +62,8 @@ async def handle_preview_chrono(message: Message):
                 title=post.title,
                 periodicity=post.periodicity,
                 scheduled_time=localtime(post.scheduled_time).strftime(
-                "%d.%m.%Y %H:%M"),
+                    "%d.%m.%Y %H:%M"
+                ),
                 post_id=post.id,
             ),
             reply_markup=kb.btn_close(),

@@ -224,8 +224,7 @@ async def register_for_distance(callback: types.CallbackQuery):
         distance = await training.distances.aget(id=distance_id)
         participant = await ClubUser.objects.aget(telegram_id=user_id)
     except (TrainingEvent.DoesNotExist, ClubUser.DoesNotExist):
-        await callback.bot.send_message(
-            chat_id=message.from_user.id,
+        await callback.answer(
             text="🔍 Тренування, дистанцію або профіль не знайдено!",
             show_alert=True,
         )
