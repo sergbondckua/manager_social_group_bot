@@ -65,7 +65,7 @@ async def create_route_path(
     try:
         file = await bot.get_file(file_id)
         file_extension = file.file_path.split("/")[-1].split(".")[-1]
-        file_name = f"{distance}km_{training_id}_{training_date.strftime('%d%B%Y_%H%M')}.{file_extension}"
+        file_name = f"{distance}km_{training_id}_{training_date.strftime('%d%B%Y')}.{file_extension}"
 
         save_path = Path(settings.MEDIA_ROOT) / f"trainings/{club_user_id}/gpx"
         save_path.mkdir(parents=True, exist_ok=True)

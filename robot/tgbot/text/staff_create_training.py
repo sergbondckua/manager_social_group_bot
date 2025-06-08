@@ -135,7 +135,7 @@ def format_success_message(training: TrainingEvent, distances: list) -> str:
     # Опис (якщо є)
     if training.description:
         message.append(
-            f"📋 {hbold('Опис:')} {clean_tag_message(training.description)}"
+            f"\n📋 {hbold('Опис:')}\n {clean_tag_message(training.description)}"
         )
 
     # Дата та час
