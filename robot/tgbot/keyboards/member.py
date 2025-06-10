@@ -59,9 +59,10 @@ def add_comment_keyboard(training_id):
     builder = InlineKeyboardBuilder()
     builder.add(
         InlineKeyboardButton(
-            text="📝 Залишити коментар",
+            text="🪧 Побажання / Пропозиції",
             callback_data=f"comment_training_{training_id}",
         ),
         InlineKeyboardButton(text=mt.btn_close, callback_data="btn_close"),
     )
+    builder.adjust(1)
     return builder.as_markup()
