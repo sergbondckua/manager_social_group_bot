@@ -10,6 +10,7 @@ from django.utils import timezone
 
 from robot.services.gpx_vizualizer import GPXVisualizer
 from robot.tgbot.services.training_survey_service import process_trainings
+from training_events.enums import TrainingMapProcessingStatusChoices
 from training_events.models import TrainingEvent, TrainingDistance
 
 logger = logging.getLogger("robot")
@@ -50,15 +51,17 @@ def create_route_visualization_task(self, distance_id):
 
         # Перевіряємо чи є GPX файл
         if not distance.route_gpx:
-            logger.warning("GPX файл відсутній для дистанції ID %s", distance_id)
+            logger.warning(
+                "GPX файл відсутній для дистанції ID %s", distance_id
+            )
             TrainingDistance.objects.filter(pk=distance_id).update(
-                map_processing_status="failed"
+                map_processing_status=TrainingMapProcessingStatusChoices.FAILED
             )
             return False
 
         # Оновлюємо статус на "обробляється"
         TrainingDistance.objects.filter(pk=distance_id).update(
-            map_processing_status="processing"
+            map_processing_status=TrainingMapProcessingStatusChoices.PROCESSING
         )
 
         # Отримуємо шлях до GPX файлу
@@ -68,7 +71,7 @@ def create_route_visualization_task(self, distance_id):
         if not os.path.exists(gpx_path):
             logger.error("GPX файл не існує: %s", gpx_path)
             TrainingDistance.objects.filter(pk=distance_id).update(
-                map_processing_status="failed"
+                map_processing_status=TrainingMapProcessingStatusChoices.FAILED
             )
             return False
 
@@ -88,7 +91,8 @@ def create_route_visualization_task(self, distance_id):
 
             # Оновлюємо об'єкт з новою картою та статусом
             TrainingDistance.objects.filter(pk=distance_id).update(
-                route_gpx_map=relative_path, map_processing_status="completed"
+                route_gpx_map=relative_path,
+                map_processing_status=TrainingMapProcessingStatusChoices.COMPLETED,
             )
 
             logger.info(
@@ -99,10 +103,11 @@ def create_route_visualization_task(self, distance_id):
             return True
         else:
             logger.error(
-                "Не вдалося створити візуалізацію для дистанції %s", distance_id
+                "Не вдалося створити візуалізацію для дистанції %s",
+                distance_id,
             )
             TrainingDistance.objects.filter(pk=distance_id).update(
-                map_processing_status="failed"
+                map_processing_status=TrainingMapProcessingStatusChoices.FAILED
             )
             return False
 
@@ -116,7 +121,7 @@ def create_route_visualization_task(self, distance_id):
         # Оновлюємо статус на помилку
         try:
             TrainingDistance.objects.filter(pk=distance_id).update(
-                map_processing_status="failed"
+                map_processing_status=TrainingMapProcessingStatusChoices.FAILED
             )
         except Exception:
             pass

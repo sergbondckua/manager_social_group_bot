@@ -15,6 +15,7 @@ from django.utils.timezone import localtime
 
 from common.models import BaseModel
 from profiles.models import ClubUser
+from training_events.enums import TrainingMapProcessingStatusChoices
 
 logger = logging.getLogger(__name__)
 
@@ -178,13 +179,8 @@ class TrainingDistance(BaseModel):
     map_processing_status = models.CharField(
         verbose_name="Статус обробки карти",
         max_length=20,
-        choices=[
-            ("pending", "Очікує обробки"),
-            ("processing", "Обробляється"),
-            ("completed", "Завершено"),
-            ("failed", "Помилка"),
-        ],
-        default="pending",
+        choices=TrainingMapProcessingStatusChoices.choices,
+        default=TrainingMapProcessingStatusChoices.PENDING,
         blank=True,
     )
 
@@ -212,7 +208,9 @@ class TrainingDistance(BaseModel):
 
         # Якщо є новий GPX файл і немає карти, запускаємо асинхронну обробку
         if is_new_gpx and not self.route_gpx_map:
-            self.map_processing_status = "pending"
+            self.map_processing_status = (
+                TrainingMapProcessingStatusChoices.PENDING
+            )
             super().save()
 
             # Запускаємо асинхронну задачу після завершення транзакції
@@ -222,7 +220,6 @@ class TrainingDistance(BaseModel):
         """Запускає асинхронну задачу для створення візуалізації"""
         try:
             from robot.tasks import create_route_visualization_task
-
             create_route_visualization_task.delay(self.pk)
         except Exception as e:
             logger.error(
@@ -232,7 +229,7 @@ class TrainingDistance(BaseModel):
             )
             # Встановлюємо статус помилки
             TrainingDistance.objects.filter(pk=self.pk).update(
-                map_processing_status="failed"
+                map_processing_status=TrainingMapProcessingStatusChoices.FAILED
             )
 
     def __str__(self):
