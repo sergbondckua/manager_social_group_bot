@@ -18,7 +18,7 @@ class TrainingDistanceInline(admin.TabularInline):
     min_num = 1
     max_num = 5
     validate_min = True
-    readonly_fields = ("get_route_map_preview", "get_processing_status")
+    readonly_fields = ("get_route_map_preview",)  #, "get_processing_status")
 
     def get_route_map_preview(self, obj):
         """Мініатюра карти маршруту"""
