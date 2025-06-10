@@ -1,6 +1,10 @@
+import logging
+import os
 import uuid
 from datetime import timedelta
 
+from django.conf import settings
+from django.core.files.base import ContentFile
 from django.core.validators import (
     FileExtensionValidator,
     MinValueValidator,
@@ -12,6 +16,9 @@ from django.utils.timezone import localtime
 
 from common.models import BaseModel
 from profiles.models import ClubUser
+from robot.tasks import visualize_gpx
+
+logger = logging.getLogger(__name__)
 
 
 class TrainingEvent(BaseModel):
@@ -169,6 +176,45 @@ class TrainingDistance(BaseModel):
         blank=True,
         help_text="Карта маршруту: .jpg, .jpeg, .png, .svg, .webp",
     )
+
+    def save(self, *args, **kwargs):
+        """Перевизначений метод збереження для автоматичного створення візуалізації маршруту"""
+
+        # Спочатку зберігаємо об'єкт, щоб отримати ID та зберегти GPX файл
+        super().save(*args, **kwargs)
+
+        # Перевіряємо умови для створення візуалізації
+        if self.route_gpx and not self.route_gpx_map:
+            try:
+                # Отримуємо шлях до GPX файлу
+                gpx_path = self.route_gpx.path
+
+                # Створюємо шлях для PNG файлу (замінюємо розширення на .png)
+                png_path = os.path.splitext(gpx_path)[0] + ".png"
+
+                # Створюємо візуалізацію, передаючи шлях де зберегти PNG
+                visualization_success = visualize_gpx.delay(gpx_path, png_path)
+
+                if visualization_success and os.path.exists(png_path):
+                    # Отримуємо відносний шлях для збереження в базі даних
+                    # Видаляємо MEDIA_ROOT з абсолютного шляху
+
+                    relative_path = os.path.relpath(
+                        png_path, settings.MEDIA_ROOT
+                    )
+
+                    # Зберігаємо відносний шлях в поле route_gpx_map
+                    self.route_gpx_map = relative_path
+
+                    # Зберігаємо об'єкт знову з оновленим полем route_gpx_map
+                    super().save()
+
+            except Exception as e:
+                logger.error(
+                    "Помилка при створенні візуалізації маршруту для дистанції %s: %s",
+                    self.id,
+                    e,
+                )
 
     def __str__(self):
         name = "".join(
