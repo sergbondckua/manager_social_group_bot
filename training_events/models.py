@@ -191,9 +191,9 @@ class TrainingDistance(BaseModel):
                 png_path = os.path.splitext(gpx_path)[0] + ".png"
 
                 # Створюємо візуалізацію, передаючи шлях де зберегти PNG
-                from robot.tasks import visualize_gpx
+                from robot.tasks import visualize_gpx2
 
-                visualization_success = visualize_gpx.delay(gpx_path, png_path)
+                visualization_success = visualize_gpx2(gpx_path, png_path)
 
                 if visualization_success and os.path.exists(png_path):
                     # Отримуємо відносний шлях для збереження в базі даних

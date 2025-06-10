@@ -20,6 +20,12 @@ def visualize_gpx(self, gpx_file: str, output_file: str = None):
     visualizer.visualize()
     return visualizer.output_file
 
+def visualize_gpx2(gpx_file: str, output_file: str = None):
+    """Функція для візуалізації маршруту з GPX-файлу"""
+    visualizer = GPXVisualizer(gpx_file, output_file)
+    visualizer.visualize()
+    return visualizer.output_file
+
 
 @shared_task
 def send_post_training_survey():
