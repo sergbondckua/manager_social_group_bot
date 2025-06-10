@@ -1,9 +1,7 @@
 import logging
-import os
 import uuid
 from datetime import timedelta
 
-from django.conf import settings
 from django.core.validators import (
     FileExtensionValidator,
     MinValueValidator,
@@ -121,7 +119,8 @@ class TrainingDistance(BaseModel):
             file_extension = filename.split(".")[-1]
             new_filename = (
                 f"{self.distance}km_"
-                f"{self.training.date.strftime('%d%B%Y_%H%M')}.{file_extension}"
+                f"{self.training_id}_"
+                f"{self.training.date.strftime('%d%B%Y')}.{file_extension}"
             )
             return (
                 f"trainings/{self.training.created_by.id}/gpx/{new_filename}"

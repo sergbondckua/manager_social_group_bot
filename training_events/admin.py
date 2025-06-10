@@ -2,11 +2,13 @@ from django.contrib import admin
 from django.utils.safestring import mark_safe
 
 from common.admin import BaseAdmin
+from training_events.enums import TrainingMapProcessingStatusChoices
 from training_events.models import (
     TrainingEvent,
     TrainingDistance,
     TrainingRegistration,
-    TrainingRating, TrainingComment,
+    TrainingRating,
+    TrainingComment,
 )
 
 
@@ -25,16 +27,29 @@ class TrainingDistanceInline(admin.TabularInline):
                 f'<img src="{obj.route_gpx_map.url}" height="100" width="auto" alt="Карта маршруту" />'
             )
         elif (
-            obj and obj.route_gpx and obj.map_processing_status == "processing"
+            obj
+            and obj.route_gpx
+            and obj.map_processing_status
+            == TrainingMapProcessingStatusChoices.PROCESSING
         ):
             return mark_safe(
                 '<span style="color: orange;">⏳ Обробляється...</span>'
             )
-        elif obj and obj.route_gpx and obj.map_processing_status == "pending":
+        elif (
+            obj
+            and obj.route_gpx
+            and obj.map_processing_status
+            == TrainingMapProcessingStatusChoices.PENDING
+        ):
             return mark_safe(
                 '<span style="color: blue;">⏳ Очікує обробки</span>'
             )
-        elif obj and obj.route_gpx and obj.map_processing_status == "failed":
+        elif (
+            obj
+            and obj.route_gpx
+            and obj.map_processing_status
+            == TrainingMapProcessingStatusChoices.FAILED
+        ):
             return mark_safe(
                 '<span style="color: red;">❌ Помилка обробки</span>'
             )
@@ -196,9 +211,7 @@ class TrainingRatingAdmin(BaseAdmin):
     fieldsets = (
         (
             "Основні дані",
-            {
-                "fields": ("training", "participant", "rating")
-            },
+            {"fields": ("training", "participant", "rating")},
         ),
     ) + BaseAdmin.fieldsets
 
@@ -214,8 +227,6 @@ class TrainingCommentAdmin(BaseAdmin):
     fieldsets = (
         (
             "Основні дані",
-            {
-                "fields": ("training", "participant", "comment", "is_public")
-            },
+            {"fields": ("training", "participant", "comment", "is_public")},
         ),
     ) + BaseAdmin.fieldsets
