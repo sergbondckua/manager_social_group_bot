@@ -768,6 +768,7 @@ async def create_training_final(message: types.Message, state: FSMContext):
             message,
             state,
             "❌ Помилка валідації даних. Спробуйте створити тренування знову.",
+            keyboard=types.ReplyKeyboardRemove(),
         )
     except Exception as e:
         logger.error("Помилка створення тренування: %s", e)
@@ -776,6 +777,7 @@ async def create_training_final(message: types.Message, state: FSMContext):
             state,
             "❌ Виникла помилка при створенні тренування. "
             "Спробуйте пізніше або зверніться до адміністратора.",
+            keyboard=types.ReplyKeyboardRemove(),
         )
 
 
