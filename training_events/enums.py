@@ -7,3 +7,4 @@ class TrainingMapProcessingStatusChoices(TextChoices):
     PROCESSING = "processing", "В обробці"
     COMPLETED = "completed", "Оброблена"
     FAILED = "failed", "Помилка"
+    WITHOUT_ROUTE = "without_route", "Без маршруту"

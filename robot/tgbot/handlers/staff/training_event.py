@@ -715,7 +715,7 @@ async def create_training_final(message: types.Message, state: FSMContext):
                         pace_max=distance_data.get("pace_max"),
                         route_gpx=None,  # Встановимо пізніше
                         route_gpx_map=None,  # Встановимо пізніше
-                        map_processing_status=None,  # Встановимо пізніше
+                        map_processing_status=TrainingMapProcessingStatusChoices.WITHOUT_ROUTE,  # Встановимо пізніше
                     )
                     created_distance_records.append(
                         {
