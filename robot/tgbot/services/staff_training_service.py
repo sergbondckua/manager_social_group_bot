@@ -11,6 +11,7 @@ from celery.result import AsyncResult
 from django.conf import settings
 
 from robot.tasks import visualize_gpx
+from training_events.enums import TrainingMapProcessingStatusChoices
 from training_events.models import TrainingDistance, TrainingEvent
 from robot.tgbot.text import staff_create_training as mt
 from robot.tgbot.keyboards import staff as kb
@@ -159,6 +160,9 @@ async def update_distance_paths(
         updates["route_gpx_map"] = map_image_path.replace(
             str(settings.MEDIA_ROOT), ""
         ).lstrip("/")
+        updates["map_processing_status"] = (
+            TrainingMapProcessingStatusChoices.COMPLETED
+        )
 
     if updates:
         await sync_to_async(

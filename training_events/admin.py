@@ -57,33 +57,33 @@ class TrainingDistanceInline(admin.TabularInline):
 
     get_route_map_preview.short_description = "Карта маршруту"
 
-    def get_processing_status(self, obj):
-        """Статус обробки карти"""
-        if not obj:
-            return "-"
-
-        status_colors = {
-            "pending": "blue",
-            "processing": "orange",
-            "completed": "green",
-            "failed": "red",
-        }
-
-        status_labels = {
-            "pending": "⏳ Очікує",
-            "processing": "🔄 Обробляється",
-            "completed": "✅ Готово",
-            "failed": "❌ Помилка",
-        }
-
-        color = status_colors.get(obj.map_processing_status, "gray")
-        label = status_labels.get(
-            obj.map_processing_status, obj.map_processing_status
-        )
-
-        return mark_safe(f'<span style="color: {color};">{label}</span>')
-
-    get_processing_status.short_description = "Статус карти"
+    # def get_processing_status(self, obj):
+    #     """Статус обробки карти"""
+    #     if not obj:
+    #         return "-"
+    #
+    #     status_colors = {
+    #         "pending": "blue",
+    #         "processing": "orange",
+    #         "completed": "green",
+    #         "failed": "red",
+    #     }
+    #
+    #     status_labels = {
+    #         "pending": "⏳ Очікує",
+    #         "processing": "🔄 Обробляється",
+    #         "completed": "✅ Готово",
+    #         "failed": "❌ Помилка",
+    #     }
+    #
+    #     color = status_colors.get(obj.map_processing_status, "gray")
+    #     label = status_labels.get(
+    #         obj.map_processing_status, obj.map_processing_status
+    #     )
+    #
+    #     return mark_safe(f'<span style="color: {color};">{label}</span>')
+    #
+    # get_processing_status.short_description = "Статус карти"
 
 
 @admin.register(TrainingEvent)

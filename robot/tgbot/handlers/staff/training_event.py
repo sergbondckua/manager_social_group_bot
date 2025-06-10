@@ -30,6 +30,7 @@ from robot.tgbot.services.staff_training_service import (
 )
 from robot.tgbot.states.staff import CreateTraining
 from robot.tgbot.text import staff_create_training as mt
+from training_events.enums import TrainingMapProcessingStatusChoices
 from training_events.models import TrainingEvent, TrainingDistance
 
 # Налаштування логування
@@ -193,7 +194,7 @@ async def cmd_create_training(message: types.Message, state: FSMContext):
         await message.bot.send_message(
             message.from_user.id,
             "❌ Ваш обліковий запис не знайдено в системі. "
-            "Зверніться до адміністратора."
+            "Зверніться до адміністратора.",
         )
         return
 
@@ -714,6 +715,7 @@ async def create_training_final(message: types.Message, state: FSMContext):
                         pace_max=distance_data.get("pace_max"),
                         route_gpx=None,  # Встановимо пізніше
                         route_gpx_map=None,  # Встановимо пізніше
+                        map_processing_status=None,  # Встановимо пізніше
                     )
                     created_distance_records.append(
                         {
