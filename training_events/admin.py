@@ -16,6 +16,59 @@ class TrainingDistanceInline(admin.TabularInline):
     min_num = 1
     max_num = 5
     validate_min = True
+    readonly_fields = ("get_route_map_preview", "get_processing_status")
+
+    def get_route_map_preview(self, obj):
+        """Мініатюра карти маршруту"""
+        if obj and obj.route_gpx_map:
+            return mark_safe(
+                f'<img src="{obj.route_gpx_map.url}" height="100" width="auto" alt="Карта маршруту" />'
+            )
+        elif (
+            obj and obj.route_gpx and obj.map_processing_status == "processing"
+        ):
+            return mark_safe(
+                '<span style="color: orange;">⏳ Обробляється...</span>'
+            )
+        elif obj and obj.route_gpx and obj.map_processing_status == "pending":
+            return mark_safe(
+                '<span style="color: blue;">⏳ Очікує обробки</span>'
+            )
+        elif obj and obj.route_gpx and obj.map_processing_status == "failed":
+            return mark_safe(
+                '<span style="color: red;">❌ Помилка обробки</span>'
+            )
+        return "-"
+
+    get_route_map_preview.short_description = "Карта маршруту"
+
+    def get_processing_status(self, obj):
+        """Статус обробки карти"""
+        if not obj:
+            return "-"
+
+        status_colors = {
+            "pending": "blue",
+            "processing": "orange",
+            "completed": "green",
+            "failed": "red",
+        }
+
+        status_labels = {
+            "pending": "⏳ Очікує",
+            "processing": "🔄 Обробляється",
+            "completed": "✅ Готово",
+            "failed": "❌ Помилка",
+        }
+
+        color = status_colors.get(obj.map_processing_status, "gray")
+        label = status_labels.get(
+            obj.map_processing_status, obj.map_processing_status
+        )
+
+        return mark_safe(f'<span style="color: {color};">{label}</span>')
+
+    get_processing_status.short_description = "Статус карти"
 
 
 @admin.register(TrainingEvent)

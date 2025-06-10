@@ -9,7 +9,7 @@ from django.core.validators import (
     MinValueValidator,
     MaxValueValidator,
 )
-from django.db import models
+from django.db import models, transaction
 from django.utils import timezone
 from django.utils.timezone import localtime
 
@@ -174,47 +174,66 @@ class TrainingDistance(BaseModel):
         blank=True,
         help_text="Карта маршруту: .jpg, .jpeg, .png, .svg, .webp",
     )
+    # Поле для відстеження статусу обробки
+    map_processing_status = models.CharField(
+        verbose_name="Статус обробки карти",
+        max_length=20,
+        choices=[
+            ("pending", "Очікує обробки"),
+            ("processing", "Обробляється"),
+            ("completed", "Завершено"),
+            ("failed", "Помилка"),
+        ],
+        default="pending",
+        blank=True,
+    )
 
     def save(self, *args, **kwargs):
-        """Перевизначений метод збереження для автоматичного створення візуалізації маршруту"""
+        """Перевизначений метод збереження для асинхронного створення візуалізації маршруту"""
 
-        # Спочатку зберігаємо об'єкт, щоб отримати ID та зберегти GPX файл
+        # Перевіряємо чи це новий об'єкт з GPX файлом
+        is_new_gpx = False
+        if self.pk:
+            # Якщо об'єкт вже існує, перевіряємо чи змінився GPX файл
+            try:
+                old_instance = TrainingDistance.objects.get(pk=self.pk)
+                is_new_gpx = self.route_gpx and (
+                    not old_instance.route_gpx
+                    or self.route_gpx.name != old_instance.route_gpx.name
+                )
+            except TrainingDistance.DoesNotExist:
+                is_new_gpx = bool(self.route_gpx)
+        else:
+            # Новий об'єкт
+            is_new_gpx = bool(self.route_gpx)
+
+        # Зберігаємо об'єкт
         super().save(*args, **kwargs)
 
-        # Перевіряємо умови для створення візуалізації
-        if self.route_gpx and not self.route_gpx_map:
-            try:
-                # Отримуємо шлях до GPX файлу
-                gpx_path = self.route_gpx.path
+        # Якщо є новий GPX файл і немає карти, запускаємо асинхронну обробку
+        if is_new_gpx and not self.route_gpx_map:
+            self.map_processing_status = "pending"
+            super().save()
 
-                # Створюємо шлях для PNG файлу (замінюємо розширення на .png)
-                png_path = os.path.splitext(gpx_path)[0] + ".png"
+            # Запускаємо асинхронну задачу після завершення транзакції
+            transaction.on_commit(lambda: self._create_visualization_async())
 
-                # Створюємо візуалізацію, передаючи шлях де зберегти PNG
-                from robot.tasks import visualize_gpx2
+    def _create_visualization_async(self):
+        """Запускає асинхронну задачу для створення візуалізації"""
+        try:
+            from robot.tasks import create_route_visualization_task
 
-                visualization_success = visualize_gpx2(gpx_path, png_path)
-
-                if visualization_success and os.path.exists(png_path):
-                    # Отримуємо відносний шлях для збереження в базі даних
-                    # Видаляємо MEDIA_ROOT з абсолютного шляху
-
-                    relative_path = os.path.relpath(
-                        png_path, settings.MEDIA_ROOT
-                    )
-
-                    # Зберігаємо відносний шлях в поле route_gpx_map
-                    self.route_gpx_map = relative_path
-
-                    # Зберігаємо об'єкт знову з оновленим полем route_gpx_map
-                    super().save()
-
-            except Exception as e:
-                logger.error(
-                    "Помилка при створенні візуалізації маршруту для дистанції %s: %s",
-                    self.id,
-                    e,
-                )
+            create_route_visualization_task.delay(self.pk)
+        except Exception as e:
+            logger.error(
+                "Помилка при запуску асинхронної задачі для дистанції %s: %s",
+                self.pk,
+                e,
+            )
+            # Встановлюємо статус помилки
+            TrainingDistance.objects.filter(pk=self.pk).update(
+                map_processing_status="failed"
+            )
 
     def __str__(self):
         name = "".join(
