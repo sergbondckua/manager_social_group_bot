@@ -4,7 +4,6 @@ import uuid
 from datetime import timedelta
 
 from django.conf import settings
-from django.core.files.base import ContentFile
 from django.core.validators import (
     FileExtensionValidator,
     MinValueValidator,
@@ -16,7 +15,6 @@ from django.utils.timezone import localtime
 
 from common.models import BaseModel
 from profiles.models import ClubUser
-from robot.tasks import visualize_gpx
 
 logger = logging.getLogger(__name__)
 
@@ -193,6 +191,8 @@ class TrainingDistance(BaseModel):
                 png_path = os.path.splitext(gpx_path)[0] + ".png"
 
                 # Створюємо візуалізацію, передаючи шлях де зберегти PNG
+                from robot.tasks import visualize_gpx
+
                 visualization_success = visualize_gpx.delay(gpx_path, png_path)
 
                 if visualization_success and os.path.exists(png_path):
