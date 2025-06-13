@@ -85,12 +85,12 @@ def revoke_training_keyboard(training_id: int):
     return builder.as_markup()
 
 
-def register_training_keyboard(training_id):
+def register_training_keyboard(training_id: int, participants_count: int = 0):
     """ Інлайн-клавіатура для реєстрації на тренування."""
     builder = InlineKeyboardBuilder()
     builder.add(
         types.InlineKeyboardButton(
-            text=mt.btn_register_training,
+            text=mt.btn_register_training + f" ({participants_count})",
             callback_data=f"register_training_{training_id}",
         ),
     )

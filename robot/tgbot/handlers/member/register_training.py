@@ -9,6 +9,7 @@ from django.utils.timezone import make_aware
 
 from profiles.models import ClubUser
 from robot.tgbot.keyboards import user as kb
+from robot.tgbot.keyboards import staff as kb_staff
 from robot.tgbot.misc.validators import is_private_chat
 from robot.tgbot.text import user_template as mt
 from training_events.models import (
@@ -162,6 +163,15 @@ async def register_training(callback: types.CallbackQuery):
             user_id,
             training.title,
         )
+
+        # Отримуємо оновлену кількість учасників
+        participants_count = await training.registrations.acount()
+
+        # Оновлюємо клавіатуру
+        new_keyboard = kb_staff.register_training_keyboard(
+            training_id, participants_count
+        )
+        await callback.message.edit_reply_markup(reply_markup=new_keyboard)
 
         # Надсилаємо повідомлення про успішну реєстрацію
         await callback.message.bot.send_message(
