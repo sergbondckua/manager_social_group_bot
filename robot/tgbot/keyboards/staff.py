@@ -92,7 +92,7 @@ def register_training_keyboard(training_id: int, participants_count: int = 0):
         mt.btn_register_training
         if participants_count == 0
         else mt.btn_register_training
-        + f" ({participants_count} вже зареєстровані)"
+        + f" (+{participants_count} уч.)"
     )
     builder = InlineKeyboardBuilder()
     builder.add(
