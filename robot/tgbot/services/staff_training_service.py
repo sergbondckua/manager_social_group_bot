@@ -11,7 +11,10 @@ from celery.result import AsyncResult
 from django.conf import settings
 
 from robot.tasks import visualize_gpx
-from robot.tgbot.services.helper_training_msg import save_training_message_info
+from robot.tgbot.services.helper_training_msg import (
+    update_training_message_info,
+    get_training_message_info,
+)
 from training_events.enums import TrainingMapProcessingStatusChoices
 from training_events.models import TrainingDistance, TrainingEvent
 from robot.tgbot.text import staff_create_training as mt
@@ -242,13 +245,30 @@ async def publish_training_message(
 ):
     """Відправляє основне повідомлення про тренування."""
     message_text = await mt.format_success_message(training, distances)
-    keyboard = kb.register_training_keyboard(training.id)
+    participants_count = await training.registrations.acount()
+    keyboard = kb.register_training_keyboard(training.id, participants_count)
     chat_id = settings.DEFAULT_CHAT_ID
+    message_data = await get_training_message_info(training.id)
 
+    # Видаляємо попередню клавіатуру, якщо є дані про повідомлення
+    if all(message_data):
+        try:
+            await callback.message.bot.edit_message_reply_markup(
+                chat_id=message_data[0],
+                message_id=message_data[1],
+                reply_markup=None,
+            )
+        except Exception as e:
+            logger.error("Помилка при редагуванні клавіатури: %s", e)
+
+    # Підготовка дії залежно від наявності постера
+    action = "upload_photo" if training.poster else "typing"
+    await callback.message.bot.send_chat_action(
+        callback.message.chat.id, action=action
+    )
+
+    # Відправка повідомлення з постером або без
     if training.poster:
-        await callback.message.bot.send_chat_action(
-            callback.message.chat.id, action="upload_photo"
-        )
         photo_file = FSInputFile(training.poster.path)
         sent_message = await callback.message.bot.send_photo(
             chat_id=chat_id,
@@ -257,16 +277,13 @@ async def publish_training_message(
             reply_markup=keyboard,
         )
     else:
-        await callback.message.bot.send_chat_action(
-            callback.message.chat.id, action="typing"
-        )
         sent_message = await callback.message.bot.send_message(
             chat_id=chat_id,
             text=message_text,
             reply_markup=keyboard,
         )
-    # Зберігаємо інформацію про повідомлення
-    await save_training_message_info(
+    # Оновлюємо інформацію про повідомлення
+    await update_training_message_info(
         training.id, chat_id, sent_message.message_id
     )
 

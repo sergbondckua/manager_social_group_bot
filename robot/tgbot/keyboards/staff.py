@@ -68,6 +68,7 @@ def confirmation_keyboard(prefix: str):
     builder.button(text="❌ Ні, відмінити", callback_data=f"{prefix}_no")
     return builder.as_markup()
 
+
 def revoke_training_keyboard(training_id: int):
     """Інлайн-клавіатура для скасування тренування."""
     builder = InlineKeyboardBuilder()
@@ -79,18 +80,24 @@ def revoke_training_keyboard(training_id: int):
         types.InlineKeyboardButton(
             text=mt.btn_close,
             callback_data="btn_close",
-        )
+        ),
     )
     builder.adjust(1)
     return builder.as_markup()
 
 
 def register_training_keyboard(training_id: int, participants_count: int = 0):
-    """ Інлайн-клавіатура для реєстрації на тренування."""
+    """Інлайн-клавіатура для реєстрації на тренування."""
+    text_button = (
+        mt.btn_register_training
+        if participants_count == 0
+        else mt.btn_register_training
+        + f" ({participants_count} вже зареєстровані)"
+    )
     builder = InlineKeyboardBuilder()
     builder.add(
         types.InlineKeyboardButton(
-            text=mt.btn_register_training + f" ({participants_count})",
+            text=text_button,
             callback_data=f"register_training_{training_id}",
         ),
     )
@@ -108,6 +115,7 @@ def btn_close():
     )
     return builder.as_markup()
 
+
 def btn_url(text: str, url: str):
     builder = InlineKeyboardBuilder()
     builder.add(
@@ -118,7 +126,7 @@ def btn_url(text: str, url: str):
         types.InlineKeyboardButton(
             text=mt.btn_close,
             callback_data="btn_close",
-        )
+        ),
     )
     builder.adjust(1)
     return builder.as_markup()

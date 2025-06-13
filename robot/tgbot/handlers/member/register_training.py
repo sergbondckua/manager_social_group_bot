@@ -399,6 +399,30 @@ async def unregister_training(message: types.Message):
             training.title,
         )
 
+        # Отримуємо оновлену кількість учасників
+        participants_count = await training.registrations.acount()
+
+        # Оновлюємо клавіатуру в оригінальному повідомленні (якщо є інформація)
+        try:
+            training_message = await TrainingMessage.objects.aget(
+                training=training
+            )
+            new_keyboard = kb_staff.register_training_keyboard(
+                int(training_id), participants_count
+            )
+            await message.bot.edit_message_reply_markup(
+                chat_id=training_message.chat_id,
+                message_id=training_message.message_id,
+                reply_markup=new_keyboard,
+            )
+        except TrainingMessage.DoesNotExist:
+            logger.warning(
+                "Інформація про повідомлення тренування не знайдена для training_id: %s",
+                training_id,
+            )
+        except Exception as e:
+            logger.warning("Не вдалося оновити клавіатуру тренування: %s", e)
+
         # Відправляємо повідомлення про скасовану реєстрацію
         await message.bot.send_message(
             chat_id=user_id,
