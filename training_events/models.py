@@ -357,3 +357,26 @@ class TrainingComment(BaseModel):
         verbose_name = "💬 Відгук"
         verbose_name_plural = "💬 Відгуки"
         ordering = ["-created_at"]
+
+
+class TrainingMessage(models.Model):
+    """Модель для зберігання інформації про повідомлення з тренуваннями"""
+
+    training = models.OneToOneField(
+        TrainingEvent,
+        on_delete=models.CASCADE,
+        related_name="message_info",
+        verbose_name="Тренування",
+    )
+    chat_id = models.BigIntegerField(
+        verbose_name="ID чату", help_text="ID чату, де опубліковано тренування"
+    )
+    message_id = models.IntegerField(
+        verbose_name="ID повідомлення",
+        help_text="ID повідомлення з тренуванням",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Повідомлення тренування"
+        verbose_name_plural = "Повідомлення тренувань"
