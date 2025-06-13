@@ -16,6 +16,7 @@ from training_events.models import (
     TrainingEvent,
     TrainingRegistration,
     TrainingDistance,
+    TrainingMessage,
 )
 
 reg_training_router = Router()
@@ -168,10 +169,35 @@ async def register_training(callback: types.CallbackQuery):
         participants_count = await training.registrations.acount()
 
         # Оновлюємо клавіатуру
-        new_keyboard = kb_staff.register_training_keyboard(
-            training_id, participants_count
-        )
-        await callback.message.edit_reply_markup(reply_markup=new_keyboard)
+        try:
+            training_message = await TrainingMessage.objects.aget(
+                training=training
+            )
+            new_keyboard = kb_staff.register_training_keyboard(
+                training_id, participants_count
+            )
+            await callback.message.bot.edit_message_reply_markup(
+                chat_id=training_message.chat_id,
+                message_id=training_message.message_id,
+                reply_markup=new_keyboard,
+            )
+        except TrainingMessage.DoesNotExist:
+            logger.warning(
+                "Інформація про повідомлення тренування не знайдена для training_id: %s",
+                training_id,
+            )
+            # Fallback: оновлюємо клавіатуру поточного повідомлення
+            new_keyboard = kb_staff.register_training_keyboard(
+                training_id, participants_count
+            )
+            await callback.message.edit_reply_markup(reply_markup=new_keyboard)
+        except Exception as e:
+            logger.warning("Не вдалося оновити клавіатуру тренування: %s", e)
+            # Fallback: оновлюємо клавіатуру поточного повідомлення
+            new_keyboard = kb_staff.register_training_keyboard(
+                training_id, participants_count
+            )
+            await callback.message.edit_reply_markup(reply_markup=new_keyboard)
 
         # Надсилаємо повідомлення про успішну реєстрацію
         await callback.message.bot.send_message(
@@ -291,6 +317,30 @@ async def register_for_distance(callback: types.CallbackQuery):
 
     # Видаляємо попереднє повідомлення з вибором дистанції
     await callback.message.delete()
+
+    # Отримуємо оновлену кількість учасників та оновлюємо клавіатуру
+    participants_count = await training.registrations.acount()
+
+    # Оновлюємо клавіатуру в оригінальному повідомленні (якщо є інформація)
+    try:
+        training_message = await TrainingMessage.objects.aget(
+            training=training
+        )
+        new_keyboard = kb_staff.register_training_keyboard(
+            int(training_id), participants_count
+        )
+        await callback.message.bot.edit_message_reply_markup(
+            chat_id=training_message.chat_id,
+            message_id=training_message.message_id,
+            reply_markup=new_keyboard,
+        )
+    except TrainingMessage.DoesNotExist:
+        logger.warning(
+            "Інформація про повідомлення тренування не знайдена для training_id: %s",
+            training_id,
+        )
+    except Exception as e:
+        logger.warning("Не вдалося оновити клавіатуру тренування: %s", e)
 
     # Надсилаємо повідомлення про успішну реєстрацію
     await callback.message.bot.send_message(

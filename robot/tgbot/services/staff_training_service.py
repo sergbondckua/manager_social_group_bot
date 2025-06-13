@@ -11,6 +11,7 @@ from celery.result import AsyncResult
 from django.conf import settings
 
 from robot.tasks import visualize_gpx
+from robot.tgbot.services.helper_training_msg import save_training_message_info
 from training_events.enums import TrainingMapProcessingStatusChoices
 from training_events.models import TrainingDistance, TrainingEvent
 from robot.tgbot.text import staff_create_training as mt
@@ -242,14 +243,15 @@ async def publish_training_message(
     """Відправляє основне повідомлення про тренування."""
     message_text = await mt.format_success_message(training, distances)
     keyboard = kb.register_training_keyboard(training.id)
+    chat_id = settings.DEFAULT_CHAT_ID
 
     if training.poster:
         await callback.message.bot.send_chat_action(
             callback.message.chat.id, action="upload_photo"
         )
         photo_file = FSInputFile(training.poster.path)
-        await callback.message.bot.send_photo(
-            chat_id=settings.DEFAULT_CHAT_ID,
+        sent_message = await callback.message.bot.send_photo(
+            chat_id=chat_id,
             photo=photo_file,
             caption=message_text,
             reply_markup=keyboard,
@@ -258,11 +260,15 @@ async def publish_training_message(
         await callback.message.bot.send_chat_action(
             callback.message.chat.id, action="typing"
         )
-        await callback.message.bot.send_message(
-            chat_id=settings.DEFAULT_CHAT_ID,
+        sent_message = await callback.message.bot.send_message(
+            chat_id=chat_id,
             text=message_text,
             reply_markup=keyboard,
         )
+    # Зберігаємо інформацію про повідомлення
+    await save_training_message_info(
+        training.id, chat_id, sent_message.message_id
+    )
 
 
 async def prepare_media_groups(
