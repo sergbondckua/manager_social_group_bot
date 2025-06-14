@@ -177,7 +177,6 @@ class TrainingRegistrationAdmin(BaseAdmin):
     search_fields = ["training__title", "participant__username"]
     list_filter = [
         "training",
-        "participant",
         "created_at",
         "attendance_confirmed",
         "actual_attendance",
@@ -207,7 +206,7 @@ class TrainingRatingAdmin(BaseAdmin):
     readonly_fields = ("created_at", "updated_at")
     list_display = ["training", "participant", "rating", "created_at"]
     search_fields = ["training__title", "participant__username"]
-    list_filter = ["training", "participant", "created_at"]
+    list_filter = ["training", "created_at"]
     fieldsets = (
         (
             "Основні дані",
@@ -223,7 +222,7 @@ class TrainingCommentAdmin(BaseAdmin):
     readonly_fields = ("created_at", "updated_at")
     list_display = ["training", "participant", "created_at"]
     search_fields = ["training__title", "participant__username"]
-    list_filter = ["training", "participant", "created_at"]
+    list_filter = ["training", "created_at"]
     fieldsets = (
         (
             "Основні дані",
