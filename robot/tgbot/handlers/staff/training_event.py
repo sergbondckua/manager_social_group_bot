@@ -71,7 +71,10 @@ async def cancel_training_creation(message: types.Message, state: FSMContext):
     """Скасування створення тренування."""
     current_state = await state.get_state()
     if current_state is None:
-        await message.answer("Немає активного процесу, який можна скасувати.")
+        await message.answer(
+            "Немає активного процесу, який можна скасувати.",
+            reply_markup=types.ReplyKeyboardRemove(),
+        )
         return
 
     await clear_state_and_notify(
