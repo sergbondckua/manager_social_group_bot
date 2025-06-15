@@ -24,7 +24,7 @@ pre_post_router.message.filter(ClubStaffFilter())
 def get_inactive_scheduled_messages(
     limit: int = 10,
 ) -> QuerySet[ScheduledMessage] | None:
-    """ Асинхронно отримує неактивні заплановані повідомлення."""
+    """Асинхронно отримує неактивні заплановані повідомлення."""
 
     try:
         return ScheduledMessage.objects.filter(is_active=False).order_by(
@@ -46,7 +46,15 @@ async def btn_close(callback: CallbackQuery):
 async def handle_preview_chrono(message: Message):
     """Показує підготовані часопости"""
 
-    posts = await get_inactive_scheduled_messages()
+    try:
+        posts = await get_inactive_scheduled_messages()
+    except Exception as e:
+        logger.error("Помилка при отриманні часопостів: %s", e)
+        await message.bot.send_message(
+            message.from_user.id,
+            f"Помилка при отриманні часопостів. {e}",
+        )
+        return
 
     if await posts.acount() < 1:
         await message.bot.send_message(
@@ -55,19 +63,23 @@ async def handle_preview_chrono(message: Message):
         )
         return
 
+    msg = []
     async for post in posts:
-        await message.bot.send_message(
-            chat_id=message.from_user.id,
-            text=mt.post_template.format(
+        msg.append(
+            mt.post_template.format(
                 title=post.title,
                 periodicity=post.periodicity,
                 scheduled_time=localtime(post.scheduled_time).strftime(
                     "%d.%m.%Y %H:%M"
                 ),
                 post_id=post.id,
-            ),
-            reply_markup=kb.btn_close(),
+            )
         )
+    await message.bot.send_message(
+        chat_id=message.from_user.id,
+        text="\n".join(msg),
+        reply_markup=kb.btn_close(),
+    )
 
 
 @pre_post_router.message(F.text.startswith("/chrono_preview_"))
