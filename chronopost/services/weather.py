@@ -143,11 +143,13 @@ class WeatherFormatter:
             .capitalize()
         )
         temperature = round(float(entry.get("main", {}).get("temp", "N/A")), 1)
+        wind = round(float(entry.get("wind", {}).get("speed", "N/A")), 1)
 
         return bmt.part_forecast_text.format(
             forecast_time=forecast_time,
             weather_description=weather_description,
             temperature=temperature,
+            wind=wind,
             precipitation_info=precipitation_info,
         )
 

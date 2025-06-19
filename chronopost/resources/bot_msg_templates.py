@@ -2,7 +2,7 @@ from aiogram.utils.markdown import text, hbold
 
 # Текст для часткового прогнозу
 part_forecast_text = text(
-    f"🕗 {hbold('{forecast_time} 🌡 {temperature}°C')}",
+    "🕗 " + hbold('{forecast_time} 🌡 {temperature}°C 🌬 {wind}м/с'),
     text(
         "▫️ {weather_description}",
         "{precipitation_info}",
