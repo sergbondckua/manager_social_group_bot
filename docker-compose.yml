@@ -21,6 +21,10 @@ services:
       - redis
     networks:
       - default_network
+      - proxy-global-network  # Підключення до глобальної мережі
+    environment:
+      - VIRTUAL_HOST=run.crossrunche.com,www.run.crossrunche.com
+      - VIRTUAL_PORT=8000
 
   db:
     image: postgres:alpine
@@ -49,6 +53,10 @@ services:
       - pgadmin_data:/var/lib/pgadmin
     networks:
       - default_network
+      - proxy-global-network  # Підключення до глобальної мережі
+    environment:
+      - VIRTUAL_HOST=pgadmin.crossrunche.com
+      - VIRTUAL_PORT=5050
 
   redis:
     image: redis:alpine
@@ -62,26 +70,26 @@ services:
     networks:
       - default_network
 
-  nginx:
-    build:
-      dockerfile: ./Dockerfile
-      context: ./nginx/
-    container_name: nginx_msg_bot
-    #    command: nginx -g "daemon off;"
-    restart: always
-    ports:
-      - "80:80"
-#      - "443:443"
-    volumes:
-      - ./static:/app/static
-      - ./media:/app/media
-      - letsencrypt_volume:/etc/letsencrypt
-      - certbot_webroot_volume:/var/www/certbot
-    depends_on:
-      - web
-#      - certbot
-    networks:
-      - default_network
+#  nginx:
+#    build:
+#      dockerfile: ./Dockerfile
+#      context: ./nginx/
+#    container_name: nginx_msg_bot
+#    #    command: nginx -g "daemon off;"
+#    restart: always
+#    ports:
+#      - "80:80"
+##      - "443:443"
+#    volumes:
+#      - ./static:/app/static
+#      - ./media:/app/media
+#      - letsencrypt_volume:/etc/letsencrypt
+#      - certbot_webroot_volume:/var/www/certbot
+#    depends_on:
+#      - web
+##      - certbot
+#    networks:
+#      - default_network
 
 #  certbot:
 #    image: certbot/certbot:latest
@@ -144,10 +152,12 @@ networks:
     ipam:
       config:
         - subnet: 192.168.21.0/24
+  proxy-global-network:
+    external: true  # Використовуємо зовнішню мережу
 
 volumes:
   postgres_data:
   redis_data:
   pgadmin_data:
-  letsencrypt_volume:
-  certbot_webroot_volume:
+#  letsencrypt_volume:
+#  certbot_webroot_volume:
