@@ -14,8 +14,8 @@ services:
       - ./:/app
       - ./static:/app/static
       - ./media:/app/media
-#    ports:
-#      - "8000:8000"
+    ports:
+      - "8000:8000"
     depends_on:
       - db
       - redis
@@ -23,7 +23,7 @@ services:
       - default_network
       - proxy-global-network  # Підключення до глобальної мережі
     environment:
-      - VIRTUAL_HOST=run.crossrunche.com,www.run.crossrunche.com
+      - VIRTUAL_HOST=run.crossrunche.com
       - VIRTUAL_PORT=8000
 
   db:
