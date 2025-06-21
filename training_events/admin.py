@@ -2,7 +2,6 @@ from django.contrib import admin
 from django.utils.safestring import mark_safe
 
 from common.admin import BaseAdmin
-from profiles.models import ClubUser
 from training_events.enums import TrainingMapProcessingStatusChoices
 from training_events.models import (
     TrainingEvent,
@@ -11,24 +10,6 @@ from training_events.models import (
     TrainingRating,
     TrainingComment,
 )
-
-
-class StaffOnlyFilter(admin.SimpleListFilter):
-    title = 'Створено персоналом'
-    parameter_name = 'created_by_staff'
-
-    def lookups(self, request, model_admin):
-        # Отримуємо тільки користувачів, які є staff і створили події
-        staff_users = ClubUser.objects.filter(
-            is_staff=True,
-            created_training_events__isnull=False
-        ).distinct()
-        return [(user.id, f"{user.first_name} {user.last_name}") for user in staff_users]
-
-    def queryset(self, request, queryset):
-        if self.value():
-            return queryset.filter(created_by=self.value())
-        return queryset
 
 
 class TrainingDistanceInline(admin.TabularInline):
@@ -128,7 +109,6 @@ class TrainingEventAdmin(BaseAdmin):
     ]
     list_filter = [
         "date",
-        StaffOnlyFilter,
         "location",
         "is_cancelled",
         "is_feedback_sent",
