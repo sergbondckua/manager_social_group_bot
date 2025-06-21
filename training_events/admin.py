@@ -109,9 +109,8 @@ class TrainingEventAdmin(BaseAdmin):
     ]
     list_filter = [
         "date",
-        "created_by",
+        "created_by__is_staff",
         "location",
-        "created_by",
         "is_cancelled",
         "is_feedback_sent",
     ]
