@@ -109,7 +109,7 @@ class TrainingEventAdmin(BaseAdmin):
     ]
     list_filter = [
         "date",
-        "created_by__is_staff",
+        ("created_by", admin.RelatedOnlyFieldListFilter),
         "location",
         "is_cancelled",
         "is_feedback_sent",
