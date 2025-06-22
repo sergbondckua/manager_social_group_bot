@@ -198,9 +198,11 @@ CELERY_RESULT_BACKEND = REDIS_URL_TEMPLATE.format(
 )
 
 # Robot redis settings
-BOT_STORAGE_URL = REDIS_URL_TEMPLATE.format(
-    host=REDIS_HOST, port=REDIS_PORT, db=4
-) if os.environ.get("USE_REDIS_WITH_BOT") else None
+BOT_STORAGE_URL = (
+    REDIS_URL_TEMPLATE.format(host=REDIS_HOST, port=REDIS_PORT, db=4)
+    if os.environ.get("USE_REDIS_WITH_BOT")
+    else None
+)
 
 # Celery settings
 CELERY_BROKER_TRANSPORT_OPTIONS = {"visibility_timeout": 3600}
@@ -263,3 +265,21 @@ LOGGING = {
         },
     },
 }
+# HTTPS та проксі налаштування
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+SECURE_SSL_REDIRECT = False  # NPM вже обробляє редирект
+USE_TLS = True
+
+# CSRF налаштування
+CSRF_TRUSTED_ORIGINS = [
+    env.str("BASE_URL"),
+    "https://pgadmin.crossrunche.com",
+]
+
+# Session cookies
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True
+
+# Security headers
+SECURE_BROWSER_XSS_FILTER = True
+SECURE_CONTENT_TYPE_NOSNIFF = True

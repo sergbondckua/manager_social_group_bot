@@ -6,7 +6,11 @@ services:
       ./manage.py collectstatic --noinput &&
       ./manage.py makemigrations &&
       ./manage.py migrate  &&
-      gunicorn core.asgi:application --workers 2 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000"
+      gunicorn core.asgi:application
+        --workers 3
+        --worker-class uvicorn.workers.UvicornWorker
+        --bind 0.0.0.0:8000
+      "
     restart: always
     env_file:
       - .env
@@ -14,8 +18,8 @@ services:
       - ./:/app
       - ./static:/app/static
       - ./media:/app/media
-    ports:
-      - "8000:8000"
+#    ports:
+#      - "8000:8000"
     depends_on:
       - db
       - redis
@@ -70,37 +74,37 @@ services:
     networks:
       - default_network
 
-  nginx:
-    build:
-      dockerfile: ./Dockerfile
-      context: ./nginx/
-    container_name: nginx_msg_bot
-    #    command: nginx -g "daemon off;"
-    restart: always
-    ports:
-      - "80:80"
-#      - "443:443"
-    volumes:
-      - ./static:/app/static
-      - ./media:/app/media
-#      - letsencrypt_volume:/etc/letsencrypt
-#      - certbot_webroot_volume:/var/www/certbot
-    depends_on:
-      - web
-#      - certbot
-    networks:
-      - default_network
+  #  nginx:
+  #    build:
+  #      dockerfile: ./Dockerfile
+  #      context: ./nginx/
+  #    container_name: nginx_msg_bot
+  #    #    command: nginx -g "daemon off;"
+  #    restart: always
+  #    ports:
+  #      - "80:80"
+  ##      - "443:443"
+  #    volumes:
+  #      - ./static:/app/static
+  #      - ./media:/app/media
+  ##      - letsencrypt_volume:/etc/letsencrypt
+  ##      - certbot_webroot_volume:/var/www/certbot
+  #    depends_on:
+  #      - web
+  ##      - certbot
+  #    networks:
+  #      - default_network
 
-#  certbot:
-#    image: certbot/certbot:latest
-#    container_name: certbot_msg_bot
-#    restart: unless-stopped
-#    entrypoint: /bin/sh -c 'trap exit TERM; while :; do certbot certonly --webroot -w /var/www/certbot -d club1.crossrunche.com --agree-tos --email admin@fregi.pp.ua --non-interactive --renew-by-default; sleep 12h & wait $${!}; done;'
-#    volumes:
-#      - letsencrypt_volume:/etc/letsencrypt
-#      - certbot_webroot_volume:/var/www/certbot
-#    networks:
-#      - default_network
+  #  certbot:
+  #    image: certbot/certbot:latest
+  #    container_name: certbot_msg_bot
+  #    restart: unless-stopped
+  #    entrypoint: /bin/sh -c 'trap exit TERM; while :; do certbot certonly --webroot -w /var/www/certbot -d club1.crossrunche.com --agree-tos --email admin@fregi.pp.ua --non-interactive --renew-by-default; sleep 12h & wait $${!}; done;'
+  #    volumes:
+  #      - letsencrypt_volume:/etc/letsencrypt
+  #      - certbot_webroot_volume:/var/www/certbot
+  #    networks:
+  #      - default_network
 
   celery_worker:
     build: .
