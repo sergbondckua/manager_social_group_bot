@@ -229,6 +229,22 @@ TINYMCE_DEFAULT_CONFIG = {
     "preview",
     "valid_elements": "p,br,b,strong,i,em,u,ins,s,strike,a[href|target],code,pre",
     "emoticons_database": "emojis",
+    "convert_newlines_to_brs": True,
+    "remove_linebreaks": False,
+    # // Не видаляємо порожні теги
+    "remove_trailing_brs": False,
+    # // Зберігаємо пробіли
+    "entity_encoding": "raw",
+    # // Відключаємо автоматичне форматування
+    "verify_html": False,
+    "cleanup": False,
+    # // Відключаємо перевірку елементів
+    "element_format": "html",
+    # // Видаляємо всі атрибути крім базових
+    "valid_styles": {},
+    # // Блокуємо вставку з буфера з форматуванням
+    "paste_as_text": True,
+    "content_css": False,
 }
 
 
