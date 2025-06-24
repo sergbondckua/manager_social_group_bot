@@ -500,7 +500,9 @@ async def show_my_registrations(message: types.Message):
             ),
             location=reg.training.location,
             distance=reg.distance.distance,
-            created_at=reg.created_at.strftime("%d.%m.%Y 🕑 %H:%M"),
+            created_at=timezone.localtime(reg.created_at).strftime(
+                "%d.%m.%Y 🕑 %H:%M"
+            ),
             training_id=reg.training.id,
         )
 
