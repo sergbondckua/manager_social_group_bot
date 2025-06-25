@@ -22,7 +22,6 @@ def clean_tag_message(
     if allowed_tags is None:
         allowed_tags = [
             "b",
-            "br",
             "strong",
             "i",
             "em",
@@ -38,7 +37,6 @@ def clean_tag_message(
     # За замовчуванням замінюємо певні символи
     if replace_symbols is None:
         replace_symbols = {
-            "br": "\n",
             "&nbsp;": " ",
             "\u00a0": " ",
             "&ndash;": "-",
