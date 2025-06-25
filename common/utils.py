@@ -22,6 +22,7 @@ def clean_tag_message(
     if allowed_tags is None:
         allowed_tags = [
             "b",
+            "br",
             "strong",
             "i",
             "em",
