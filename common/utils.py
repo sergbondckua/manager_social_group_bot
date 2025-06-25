@@ -19,13 +19,6 @@ def clean_tag_message(
     :return: Очищений текст.
     """
     
-    # Замінюємо <br> на \n
-    content = re.sub(r'<br\s*/?>', '\n', text, flags=re.IGNORECASE)
-    
-    # Очищаємо зайві пробіли навколо переносів
-    content = re.sub(r'\n\s+', '\n', content)
-    content = re.sub(r'\s+\n', '\n', content)
-    
     # За замовчуванням дозволяються певні теги
     if allowed_tags is None:
         allowed_tags = [
@@ -56,7 +49,7 @@ def clean_tag_message(
         }
 
     # Очищення HTML-тегів
-    cleaned_text = bleach.clean(content, tags=allowed_tags, strip=True)
+    cleaned_text = bleach.clean(text, tags=allowed_tags, strip=True)
 
     # Замінюємо символи за допомогою словника
     for symbol, replacement in replace_symbols.items():
