@@ -244,7 +244,7 @@ TINYMCE_DEFAULT_CONFIG = {
     "valid_styles": {},
     # // Блокуємо вставку з буфера з форматуванням
     "paste_as_text": True,
-    "content_css": False,
+    # "content_css": False,
 }
 
 
