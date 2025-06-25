@@ -227,7 +227,7 @@ TINYMCE_DEFAULT_CONFIG = {
     "plugins": "advlist autolink lists link code codesample preview emoticons",
     "toolbar": "undo redo | bold italic underline strikethrough | emoticons | link codesample code | "
     "preview",
-    "valid_elements": "p,br,b,strong,i,em,u,ins,s,strike,a[href|target],code,pre",
+    "valid_elements": "b,strong,i,em,u,ins,s,strike,a[href|target],code,pre",
     "emoticons_database": "emojis",
     "convert_newlines_to_brs": True,
     "remove_linebreaks": False,
