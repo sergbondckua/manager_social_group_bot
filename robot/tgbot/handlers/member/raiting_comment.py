@@ -85,7 +85,11 @@ async def request_training_comment(
     # Переходимо до наступного стану
     await state.set_state(TrainingCommentStates.waiting_for_comment)
 
-    await callback.message.edit_text(
+    # Видаляємо повідомлення
+    await callback.message.delete()
+
+    # Відправляємо повідомлення
+    await callback.message.answer(
         "📝 Будь ласка, напишіть ваш коментар про тренування:"
     )
 
