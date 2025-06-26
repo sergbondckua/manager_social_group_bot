@@ -167,9 +167,9 @@ def format_success_message(training: TrainingEvent, distances: list) -> str:
             if distance.pace_min or distance.pace_max:
                 pace = []
                 if distance.pace_min:
-                    pace.append(f"від {distance.pace_min}")
+                    pace.append(f"від {distance.pace_min.strftime('%M:%S')}")
                 if distance.pace_max:
-                    pace.append(f"до {distance.pace_max}")
+                    pace.append(f"до {distance.pace_max.strftime('%M:%S')}")
                 distance_line += f" | 🏃 {hitalic('темп:')} {' '.join(pace)}"
 
             # Маршрут
