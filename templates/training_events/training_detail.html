@@ -1,0 +1,1067 @@
+<!-- templates/club/training_detail.html -->
+{% extends "club/base.html" %}
+{% load static %}
+
+{% block title %}{{ training.title }}{% endblock %}
+
+{% block content %}
+  <div class="training-detail-container">
+    <!-- Основна інформація про тренування -->
+    <section class="hero gradient-bg">
+      <div class="container">
+        <div class="training-header-content">
+          {% if training.poster %}
+            <div class="training-poster">
+              <img src="{{ training.poster.url }}" alt="{{ training.title }}">
+            </div>
+          {% endif %}
+
+          <div class="training-info">
+            <div class="training-status">
+              {% if training.is_cancelled %}
+                <span class="status-badge cancelled">
+                  <i class="fas fa-times-circle"></i>
+                  <span class="status-text">Скасовано</span>
+                </span>
+              {% elif training.is_past %}
+                <span class="status-badge completed">
+                  <i class="fas fa-check-circle"></i>
+                  <span class="status-text">Завершено</span>
+                </span>
+              {% elif training.is_soon %}
+                <span class="status-badge soon">
+                  <i class="fas fa-clock"></i>
+                  <span class="status-text">Скоро</span>
+                </span>
+              {% else %}
+                <span class="status-badge upcoming">
+                  <i class="fas fa-calendar"></i>
+                  <span class="status-text">Заплановано</span>
+                </span>
+              {% endif %}
+            </div>
+
+            <h3 class="training-title">{{ training.title }}</h3>
+
+            <div class="training-meta">
+              <div class="meta-item">
+                <i class="fas fa-calendar"></i>
+                <span>{{ training.date|date:"d.m.Y" }}</span>
+              </div>
+              <div class="meta-item">
+                <i class="fas fa-clock"></i>
+                <span>{{ training.date|time:"H:i" }}</span>
+              </div>
+              <div class="meta-item">
+                <i class="fas fa-map-marker-alt"></i>
+                <span>{{ training.location }}</span>
+              </div>
+              <div class="meta-item">
+                <i class="fas fa-user-tie"></i>
+                <span>{{ training.created_by.get_full_name|default:training.created_by.username }}</span>
+              </div>
+            </div>
+
+            <!-- Рейтинг тренування -->
+            {% if average_rating %}
+              <div class="training-rating">
+                <div class="rating-stars">
+                  {% for i in "12345" %}
+                    {% if forloop.counter <= average_rating %}
+                      <i class="fas fa-star filled"></i>
+                    {% else %}
+                      <i class="far fa-star"></i>
+                    {% endif %}
+                  {% endfor %}
+                </div>
+                <span class="rating-text">{{ average_rating|floatformat:1 }} ({{ ratings_count }} оцінок)</span>
+              </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="container">
+      <div class="training-content">
+        <!-- Опис тренування -->
+        {% if training.description %}
+          <section class="training-description">
+            <h2>Опис тренування</h2>
+            <div class="description-content">
+              {{ training.description|safe|linebreaks }}
+            </div>
+          </section>
+        {% endif %}
+
+        <!-- Дистанції -->
+        <section class="training-distances">
+          <h2>Доступні дистанції</h2>
+          <div class="distances-grid">
+            {% for item in distances_with_participants %}
+              <div class="distance-card">
+                <div class="distance-header">
+                  <h3>{{ item.distance.distance }} км</h3>
+                  <div class="participants-count">
+                    <i class="fas fa-users"></i>
+                    <span>{{ item.count }}{% if item.distance.max_participants > 0 %}/
+                      {{ item.distance.max_participants }}{% endif %}</span>
+                  </div>
+                </div>
+
+                {% if item.distance.pace_min or item.distance.pace_max %}
+                  <div class="pace-info">
+                    <i class="fas fa-tachometer-alt"></i>
+                    <span>
+                      {% if item.distance.pace_min and item.distance.pace_max %}
+                        {{ item.distance.pace_min|time:"i:s" }} - {{ item.distance.pace_max|time:"i:s" }} хв/км
+                      {% elif item.distance.pace_min %}
+                        від {{ item.distance.pace_min|time:"i:s" }} хв/км
+                      {% elif item.distance.pace_max %}
+                        до {{ item.distance.pace_max|time:"i:s" }} хв/км
+                      {% endif %}
+                    </span>
+                  </div>
+                {% endif %}
+
+                <!-- GPX файл та карта -->
+                {% if item.distance.route_gpx or item.distance.route_gpx_map %}
+                  <div class="route-info">
+                    {% if item.distance.route_gpx_map %}
+                      <div class="route-map">
+                        <img src="{{ item.distance.route_gpx_map.url }}"
+                             alt="Карта маршруту {{ item.distance.distance }} км"
+                             onclick="openMapModal('{{ item.distance.route_gpx_map.url }}', '{{ item.distance.distance }} км')"
+                             style="cursor: pointer;">
+                      </div>
+                    {% endif %}
+                    {% if item.distance.route_gpx %}
+                      <a href="{{ item.distance.route_gpx.url }}" class="btn btn-outline" download>
+                        <i class="fas fa-download"></i>
+                        <span>Завантажити GPX</span>
+                      </a>
+                    {% endif %}
+                  </div>
+                {% endif %}
+
+                <!-- Кнопка реєстрації -->
+                {% if not training.is_past and not training.is_cancelled %}
+                  {% if user.is_authenticated %}
+                    {% if user_registration %}
+                      {% if user_registration.distance == item.distance %}
+                        <form method="post" action="{% url 'training_events:training_unregister' training.id %}">
+                          {% csrf_token %}
+                          <button type="submit" class="btn btn-danger btn-mobile"
+                                  onclick="return confirm('Ви впевнені, що хочете скасувати реєстрацію?')">
+                            <i class="fas fa-times"></i>
+                            <span>Скасувати реєстрацію</span>
+                          </button>
+                        </form>
+                      {% else %}
+                        <form method="post" action="{% url 'training_events:training_register' training.id %}">
+                          {% csrf_token %}
+                          <input type="hidden" name="distance_id" value="{{ item.distance.id }}">
+                          <button type="submit" class="btn btn-primary btn-mobile">
+                            <i class="fas fa-exchange-alt"></i>
+                            <span>Змінити дистанцію</span>
+                          </button>
+                        </form>
+                      {% endif %}
+                    {% else %}
+                      {% if item.distance.max_participants == 0 or item.count < item.distance.max_participants %}
+                        <form method="post" action="{% url 'training_events:training_register' training.id %}">
+                          {% csrf_token %}
+                          <input type="hidden" name="distance_id" value="{{ item.distance.id }}">
+                          <button type="submit" class="btn btn-primary btn-mobile">
+                            <i class="fas fa-plus"></i>
+                            <span>Записатися</span>
+                          </button>
+                        </form>
+                      {% else %}
+                        <span class="btn btn-secondary disabled btn-mobile">
+                          <span>Місць немає</span>
+                        </span>
+                      {% endif %}
+                    {% endif %}
+                  {% endif %}
+                {% endif %}
+              </div>
+            {% endfor %}
+          </div>
+        </section>
+
+        <!-- Учасники -->
+        <section class="training-participants">
+          <h2>Учасники ({{ participants_count }})</h2>
+          {% if participants_count > 0 %}
+            <div class="participants-by-distance">
+              {% for item in distances_with_participants %}
+                {% if item.count > 0 %}
+                  <div class="distance-participants">
+                    <h3>{{ item.distance.distance }} км ({{ item.count }})</h3>
+                    <div class="participants-list">
+                      {% for registration in item.participants %}
+                        <div class="participant-item">
+                          <div class="participant-info">
+                            <i class="fas fa-user"></i>
+                            <span>{{ registration.participant.get_full_name|default:registration.participant.username }}</span>
+                          </div>
+                          {% if registration.expected_pace %}
+                            <div class="expected-pace">
+                              <i class="fas fa-tachometer-alt"></i>
+                              <span>{{ registration.expected_pace|floatformat:0 }}с/км</span>
+                            </div>
+                          {% endif %}
+                        </div>
+                      {% endfor %}
+                    </div>
+                  </div>
+                {% endif %}
+              {% endfor %}
+            </div>
+          {% else %}
+            <p class="no-participants">Поки що немає зареєстрованих учасників</p>
+          {% endif %}
+        </section>
+
+        <!-- Рейтинг та коментарі (тільки для завершених тренувань) -->
+        {% if training.is_past %}
+          <section class="feedback-section">
+            <!-- Форма оцінювання -->
+            {% if can_rate_and_comment and user.is_authenticated %}
+              <div class="feedback-forms">
+                <!-- Рейтинг -->
+                <div class="rating-form">
+                  <h3>Ваша оцінка</h3>
+                  {% if user_rating %}
+                    <p>Ви оцінили це тренування на {{ user_rating.rating }} з 5</p>
+                    <!-- Версія для оновлення існуючого рейтингу -->
+                    <form method="post" action="{% url 'training_events:add_training_rating' training.id %}">
+                      {% csrf_token %}
+                      <div class="rating-stars-input">
+                        {% for i in "54321" %}
+                          <input type="radio" name="rating" value="{{ i }}" id="star{{ i }}"
+                                 {% if user_rating.rating|stringformat:"i" == i %}checked{% endif %}>
+                          <label for="star{{ i }}">
+                            <i class="fas fa-star"></i>
+                          </label>
+                        {% endfor %}
+                      </div>
+                      <button type="submit" class="btn btn-primary btn-mobile">Оновити оцінку</button>
+                    </form>
+                  {% else %}
+                    <!-- Версія для нового рейтингу -->
+                    <form method="post" action="{% url 'training_events:add_training_rating' training.id %}">
+                      {% csrf_token %}
+                      <div class="rating-stars-input">
+                        {% for i in "54321" %}
+                          <input type="radio" name="rating" value="{{ i }}" id="star{{ i }}" required>
+                          <label for="star{{ i }}">
+                            <i class="fas fa-star"></i>
+                          </label>
+                        {% endfor %}
+                      </div>
+                      <button type="submit" class="btn btn-primary btn-mobile">Оцінити</button>
+                    </form>
+                  {% endif %}
+                </div>
+
+                <!-- Коментар -->
+                <div class="comment-form">
+                  <h3>Ваш відгук</h3>
+                  {% if user_comment %}
+                    <div class="user-comment-display">
+                      <p><strong>Ваш коментар:</strong> {{ user_comment.comment }}</p>
+                      <p class="comment-visibility">
+                        <small>Публічний: {% if user_comment.is_public %}Так{% else %}Ні{% endif %}</small>
+                      </p>
+                    </div>
+                  {% endif %}
+                  <form method="post" action="{% url 'training_events:add_training_comment' training.id %}">
+                    {% csrf_token %}
+                    {{ comment_form.comment }}
+                    <div class="form-check">
+                      {{ comment_form.is_public }}
+                      <label for="{{ comment_form.is_public.id_for_label }}">{{ comment_form.is_public.label }}</label>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-mobile">
+                      {% if user_comment %}Оновити відгук{% else %}Додати відгук{% endif %}
+                    </button>
+                  </form>
+                </div>
+              </div>
+            {% endif %}
+
+            <!-- Коментарі інших учасників -->
+            <div class="comments-section">
+              <h3>Відгуки учасників</h3>
+              {% if comments %}
+                <div class="comments-list">
+                  {% for comment in comments %}
+                    <div class="comment-item">
+                      <div class="comment-header">
+                        <div class="author-info">
+                          <i class="fas fa-user"></i>
+                          <span>{{ comment.participant.get_full_name|default:comment.participant.username }}</span>
+                        </div>
+                        <div class="comment-date">
+                          {{ comment.created_at|date:"j M Y, H:i" }}
+                        </div>
+                      </div>
+                      <div class="comment-content">
+                        {{ comment.comment|linebreaks }}
+                      </div>
+                    </div>
+                  {% endfor %}
+                </div>
+              {% else %}
+                <p class="no-comments">Поки що немає відгуків</p>
+              {% endif %}
+            </div>
+          </section>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Модальне вікно для карти -->
+  <div id="mapModal" class="modal" onclick="closeMapModal()">
+    <div class="modal-content" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <h3 id="modalTitle">Карта маршруту</h3>
+        <span class="close" onclick="closeMapModal()">&times;</span>
+      </div>
+      <div class="modal-body">
+        <img id="modalImage" src="" alt="Карта маршруту">
+      </div>
+    </div>
+  </div>
+
+  <script>
+      function openMapModal(imageSrc, title) {
+          const modal = document.getElementById('mapModal');
+          const modalImage = document.getElementById('modalImage');
+          const modalTitle = document.getElementById('modalTitle');
+
+          modalImage.src = imageSrc;
+          modalTitle.textContent = 'Карта маршруту ' + title;
+          modal.style.display = 'block';
+          document.body.style.overflow = 'hidden';
+      }
+
+      function closeMapModal() {
+          const modal = document.getElementById('mapModal');
+          modal.style.display = 'none';
+          document.body.style.overflow = 'auto';
+      }
+
+      // Закриття модального вікна по ESC
+      document.addEventListener('keydown', function (event) {
+          if (event.key === 'Escape') {
+              closeMapModal();
+          }
+      });
+  </script>
+{% endblock %}
+
+{% block extra_css %}
+  <style>
+      .training-detail-container {
+          min-height: 100vh;
+      }
+
+      .container {
+          max-width: 1200px;
+          margin: 0 auto;
+          padding: 0 1rem;
+      }
+
+      .training-header-content {
+          display: flex;
+          gap: 2rem;
+          align-items: flex-start;
+      }
+
+      .training-poster {
+          flex: 0 0 300px;
+      }
+
+      .training-poster img {
+          width: 100%;
+          height: 300px;
+          object-fit: cover;
+          border-radius: 12px;
+          box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+      }
+
+      .training-info {
+          flex: 1;
+          min-width: 0;
+      }
+
+      .training-status {
+          margin-bottom: 1rem;
+      }
+
+      .status-badge {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.5rem;
+          padding: 0.5rem 1rem;
+          border-radius: 20px;
+          font-weight: 500;
+          font-size: 0.9rem;
+          white-space: nowrap;
+      }
+
+      .status-badge.cancelled {
+          background: #dc3545;
+      }
+
+      .status-badge.completed {
+          background: #28a745;
+      }
+
+      .status-badge.soon {
+          background: #ffc107;
+          color: #000;
+      }
+
+      .status-badge.upcoming {
+          background: #007bff;
+      }
+
+      .training-title {
+          font-size: 2.5rem;
+          margin-bottom: 1rem;
+          font-weight: 700;
+          line-height: 1.2;
+          word-wrap: break-word;
+      }
+
+      .training-meta {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+          gap: 1rem;
+          margin-bottom: 1rem;
+      }
+
+      .meta-item {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          font-size: 1.1rem;
+          word-wrap: break-word;
+      }
+
+      .training-rating {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          flex-wrap: wrap;
+      }
+
+      .rating-stars i {
+          color: #ffc107;
+          margin-right: 2px;
+      }
+
+      .training-content {
+          padding: 2rem 0;
+      }
+
+      .training-content section {
+          margin-bottom: 3rem;
+      }
+
+      .training-content h2 {
+          color: var(--primary-red);
+          margin-bottom: 1.5rem;
+          font-size: 1.8rem;
+      }
+
+      .description-content {
+          background: #f8f9fa;
+          padding: 1.5rem;
+          border-radius: 10px;
+          border-left: 4px solid var(--primary-red);
+          word-wrap: break-word;
+      }
+
+      .distances-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+          gap: 1.5rem;
+      }
+
+      .distance-card {
+          background: white;
+          border: 1px solid #dee2e6;
+          border-radius: 10px;
+          padding: 1.5rem;
+          box-shadow: var(--shadow);
+          transition: var(--transition);
+      }
+
+      .distance-card:hover {
+          transform: translateY(-2px);
+          box-shadow: var(--shadow);
+      }
+
+      .distance-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 1rem;
+      }
+
+      .distance-header h3 {
+          color: var(--primary-red);
+          margin: 0;
+          font-size: 1.3rem;
+      }
+
+      .participants-count {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          color: #666;
+          font-size: 0.9rem;
+          white-space: nowrap;
+      }
+
+      .pace-info {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          margin-bottom: 1rem;
+          color: #666;
+          font-size: 0.9rem;
+      }
+
+      .route-info {
+          margin: 1rem 0;
+      }
+
+      .route-map {
+          margin-bottom: 1rem;
+      }
+
+      .route-map img {
+          width: 100%;
+          height: 300px;
+          object-fit: cover;
+          border-radius: 10px;
+          box-shadow: var(--shadow);
+      }
+
+      .btn {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.5rem;
+          padding: 0.75rem 1.5rem;
+          border: none;
+          border-radius: 10px;
+          font-size: 0.9rem;
+          font-weight: 500;
+          text-decoration: none;
+          cursor: pointer;
+          transition: var(--transition);
+          white-space: nowrap;
+      }
+
+      .btn-primary {
+          background: var(--primary-red);
+          color: white;
+      }
+
+      .btn-primary:hover {
+          background: var(--secondary-red);
+      }
+
+      .btn-danger {
+          background: #dc3545;
+          color: white;
+      }
+
+      .btn-danger:hover {
+          background: #c82333;
+      }
+
+      .btn-outline {
+          background: transparent;
+          color: var(--primary-red);
+          border: 1px solid var(--primary-red);
+      }
+
+      .btn-outline:hover {
+          background: var(--primary-red);
+          color: white;
+      }
+
+      .btn-secondary {
+          background: #6c757d;
+          color: white;
+      }
+
+      .btn.disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+      }
+
+      .btn-mobile {
+          width: 100%;
+          justify-content: center;
+      }
+
+      .participants-by-distance {
+          display: flex;
+          flex-direction: column;
+          gap: 2rem;
+      }
+
+      .distance-participants h3 {
+          color: var(--primary-red);
+          margin-bottom: 1rem;
+          font-size: 1.2rem;
+      }
+
+      .participants-list {
+          display: grid;
+          gap: 0.5rem;
+          max-height: 300px;
+          overflow-y: auto;
+      }
+
+      .participant-item {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 0.5rem 0.75rem;
+          background: #f8f9fa;
+          border-radius: 8px;
+          border-left: 3px solid var(--primary-red);
+      }
+
+      /* Модальне вікно */
+      .modal {
+          display: none;
+          position: fixed;
+          z-index: 1000;
+          left: 0;
+          top: 0;
+          width: 100%;
+          height: 100%;
+          background-color: rgba(0, 0, 0, 0.8);
+          animation: fadeIn 0.3s ease;
+      }
+
+      .modal-content {
+          position: relative;
+          background-color: white;
+          margin: 2% auto;
+          padding: 0;
+          border-radius: 12px;
+          max-width: 95%;
+          max-height: 95%;
+          box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+          animation: slideIn 0.3s ease;
+      }
+
+      .modal-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 1rem 1.5rem;
+          border-bottom: 1px solid #dee2e6;
+          background: #f8f9fa;
+          border-radius: 12px 12px 0 0;
+      }
+
+      .modal-header h3 {
+          margin: 0;
+          color: #333;
+          font-size: 1.2rem;
+      }
+
+      .close {
+          color: #666;
+          font-size: 2rem;
+          font-weight: bold;
+          cursor: pointer;
+          background: none;
+          border: none;
+          padding: 0;
+          width: 30px;
+          height: 30px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 50%;
+          transition: all 0.2s ease;
+      }
+
+      .close:hover {
+          color: #000;
+          background: #e9ecef;
+      }
+
+      .modal-body {
+          padding: 1rem;
+          text-align: center;
+      }
+
+      .modal-body img {
+          max-width: 100%;
+          max-height: 80vh;
+          object-fit: contain;
+          border-radius: 8px;
+      }
+
+      @keyframes fadeIn {
+          from {
+              opacity: 0;
+          }
+          to {
+              opacity: 1;
+          }
+      }
+
+      @keyframes slideIn {
+          from {
+              opacity: 0;
+              transform: translateY(-50px);
+          }
+          to {
+              opacity: 1;
+              transform: translateY(0);
+          }
+      }
+
+      .participant-info {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          min-width: 0;
+          flex: 1;
+      }
+
+      .participant-info span {
+          word-wrap: break-word;
+      }
+
+      .expected-pace {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          color: #666;
+          font-size: 0.85rem;
+          white-space: nowrap;
+      }
+
+      .feedback-forms {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 1.5rem;
+          margin-bottom: 2rem;
+      }
+
+      .rating-form,
+      .comment-form {
+          background: #f8f9fa;
+          padding: 1.25rem;
+          border-radius: 10px;
+          border: 1px solid #dee2e6;
+      }
+
+      .rating-form h3,
+      .comment-form h3 {
+          margin-bottom: 1rem;
+          font-size: 1.1rem;
+          color: var(--primary-red);
+      }
+
+      .rating-stars-input {
+          display: flex;
+          gap: 0.25rem;
+          margin: 0.75rem 0;
+          justify-content: center;
+          direction: rtl;
+      }
+
+      .rating-stars-input input {
+          display: none;
+      }
+
+      .rating-stars-input label {
+          cursor: pointer;
+          font-size: 1.3rem;
+          color: #ddd;
+          transition: color 0.2s;
+      }
+
+      /* Підсвічування при наведенні */
+      .rating-stars-input label:hover,
+      .rating-stars-input label:hover ~ label {
+          color: #ffc107;
+      }
+
+      /* Підсвічування обраних зірок */
+      .rating-stars-input input:checked ~ label,
+      .rating-stars-input input:checked + label {
+          color: #ffc107;
+      }
+
+      .comment-form textarea {
+          width: 100%;
+          min-height: 80px;
+          padding: 0.5rem;
+          border: 1px solid #dee2e6;
+          border-radius: 8px;
+          resize: vertical;
+          font-family: inherit;
+          font-size: 0.9rem;
+      }
+
+      .form-check {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          margin: 0.75rem 0;
+      }
+
+      .user-comment-display {
+          background: white;
+          padding: 0.75rem;
+          border-radius: 8px;
+          margin-bottom: 0.75rem;
+          border: 1px solid #dee2e6;
+          font-size: 0.9rem;
+      }
+
+      .comment-visibility {
+          margin: 0.5rem 0 0 0;
+          color: #666;
+      }
+
+      .comments-list {
+          display: flex;
+          flex-direction: column;
+          gap: 0.75rem;
+          max-height: 400px;
+          overflow-y: auto;
+          padding-right: 0.5rem;
+      }
+
+      .comment-item {
+          background: white;
+          padding: 0.75rem;
+          border-radius: 8px;
+          border: 1px solid #dee2e6;
+          box-shadow: var(--shadow);
+      }
+
+      .comment-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 0.5rem;
+          gap: 1rem;
+      }
+
+      .author-info {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          min-width: 0;
+          flex: 1;
+      }
+
+      .author-info span {
+          font-weight: 500;
+          word-wrap: break-word;
+      }
+
+      .comment-date {
+          color: #666;
+          font-size: 0.85rem;
+          white-space: nowrap;
+      }
+
+      .comment-content {
+          line-height: 1.5;
+          word-wrap: break-word;
+      }
+
+      .no-participants,
+      .no-comments {
+          text-align: center;
+          color: #666;
+          font-style: italic;
+          padding: 2rem;
+          background: #f8f9fa;
+          border-radius: 10px;
+      }
+
+      /* Стилізація скролбару для краси */
+      .participants-list::-webkit-scrollbar,
+      .comments-list::-webkit-scrollbar {
+          width: 6px;
+      }
+
+      .participants-list::-webkit-scrollbar-track,
+      .comments-list::-webkit-scrollbar-track {
+          background: #f1f1f1;
+          border-radius: 3px;
+      }
+
+      .participants-list::-webkit-scrollbar-thumb,
+      .comments-list::-webkit-scrollbar-thumb {
+          background: #c1c1c1;
+          border-radius: 3px;
+      }
+
+      .participants-list::-webkit-scrollbar-thumb:hover,
+      .comments-list::-webkit-scrollbar-thumb:hover {
+          background: #a8a8a8;
+      }
+
+      /* Адаптивність для мобільних пристроїв */
+      @media (max-width: 768px) {
+          .training-header-content {
+              flex-direction: column;
+              text-align: center;
+          }
+
+          .training-poster {
+              flex: none;
+              align-self: center;
+              max-width: 250px;
+          }
+
+          .training-title {
+              font-size: 2rem;
+          }
+
+          .training-meta {
+              grid-template-columns: 1fr;
+              gap: 0.75rem;
+          }
+
+          .distances-grid {
+              grid-template-columns: 1fr;
+          }
+
+          .feedback-forms {
+              grid-template-columns: 1fr;
+              gap: 1rem;
+          }
+
+          .modal-content {
+              margin: 5% auto;
+              max-width: 98%;
+              max-height: 90%;
+          }
+
+          .modal-header {
+              padding: 0.75rem 1rem;
+          }
+
+          .modal-header h3 {
+              font-size: 1rem;
+          }
+
+          .close {
+              font-size: 1.5rem;
+              width: 25px;
+              height: 25px;
+          }
+
+          .comment-header {
+              flex-direction: column;
+              align-items: flex-start;
+              gap: 0.5rem;
+          }
+
+          .participants-list,
+          .comments-list {
+              max-height: 250px;
+          }
+      }
+
+      @media (max-width: 480px) {
+          .container {
+              padding: 0 0.5rem;
+          }
+
+          .training-title {
+              font-size: 1.75rem;
+          }
+
+          .distance-card {
+              padding: 1rem;
+          }
+
+          .btn-mobile {
+              font-size: 0.85rem;
+              padding: 0.6rem 1rem;
+          }
+
+          .modal-body {
+              padding: 0.5rem;
+          }
+      }
+
+      /* Анімації та переходи */
+      .distance-card,
+      .participant-item,
+      .comment-item {
+          transition: all 0.2s ease;
+      }
+
+      .participant-item:hover,
+      .comment-item:hover {
+          background: #f0f0f0;
+          transform: translateX(2px);
+      }
+
+      /* Стилі для форм */
+      form {
+          margin: 0;
+      }
+
+      textarea:focus,
+      input[type="radio"]:focus + label {
+          outline: 2px solid var(--primary-red);
+          outline-offset: 2px;
+      }
+
+      /* Додаткові стилі для кращого UX */
+      .btn:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+          pointer-events: none;
+      }
+
+      .status-text {
+          font-weight: 600;
+      }
+
+      .training-rating .rating-text {
+          font-size: 0.9rem;
+          color: rgba(255, 255, 255, 0.9);
+      }
+
+      /* Покращення читабельності */
+      .description-content,
+      .comment-content {
+          line-height: 1.6;
+      }
+
+      /* Стилі для пустих станів */
+      .no-participants,
+      .no-comments {
+          border: 2px dashed #dee2e6;
+      }
+  </style>
+{% endblock %}

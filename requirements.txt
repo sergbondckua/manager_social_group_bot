@@ -11,6 +11,7 @@ django-cleanup~=9.0.0
 django-redis~=5.4.0
 django-tinymce~=4.1.0
 environs~=14.1.0
+fontawesomefree~=6.6.0
 geopandas~=1.0.1
 geopy~=2.4.1
 gpxpy~=1.6.2

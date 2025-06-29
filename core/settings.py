@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     "django_celery_beat",
     "tinymce",
     "django_cleanup",
+    "fontawesomefree",
     # Local apps
     "bank",
     "common",

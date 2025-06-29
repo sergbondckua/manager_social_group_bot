@@ -93,6 +93,13 @@ class TrainingEvent(BaseModel):
         return self.registrations.count()
 
     @property
+    def avg_rating(self):
+        ratings = self.ratings.all()
+        if ratings:
+            return sum(r.rating for r in ratings) / len(ratings)
+        return None
+
+    @property
     def has_available_slots(self):
         if self.distances.max_participants == 0:  # необмежена кількість
             return True
@@ -219,6 +226,7 @@ class TrainingDistance(BaseModel):
         """Запускає асинхронну задачу для створення візуалізації"""
         try:
             from robot.tasks import create_route_visualization_task
+
             create_route_visualization_task.delay(self.pk)
         except Exception as e:
             logger.error(

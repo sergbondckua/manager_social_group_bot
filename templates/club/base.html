@@ -1,0 +1,121 @@
+<!-- templates/club/base.html -->
+{% load static %}
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}{% endblock %} - CrossRunChe Club</title>
+  <link href="{% static 'fontawesomefree/css/all.min.css' %}" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'club/css/style.css' %}">
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Exo+2:wght@300;400;700&display=swap" rel="stylesheet">
+
+  {% block extra_css %}{% endblock %}
+</head>
+<body>
+<!-- Header -->
+<header class="header">
+  <div class="container">
+    <nav class="nav-container">
+      <div class="logo">
+        <a href="{% url 'home' %}">
+          <img src="{% static 'club/images/logo.png' %}" alt="Logo" height="65">
+        </a>
+      </div>
+      <ul class="nav-menu">
+        <li><a href="{% url 'home' %}" class="{% if request.resolver_match.url_name == 'home' %}active{% endif %}">Головна</a>
+        </li>
+        <li><a href="{% url 'training_events:training_list' %}"
+               class="{% if request.resolver_match.url_name == 'training_list' %}active{% endif %}">Тренування</a></li>
+        <li><a href="#"
+               class="{% if request.resolver_match.url_name == 'schedule' %}active{% endif %}">Розклад</a></li>
+        <li><a href="#"
+               class="{% if request.resolver_match.url_name == 'reviews' %}active{% endif %}">Наша команда</a></li>
+        <li><a href="#"
+               class="{% if request.resolver_match.url_name == 'chat' %}active{% endif %}">Про клуб</a></li>
+        {#        {% if user.is_authenticated %}#}
+        {#          <li class="dropdown">#}
+        {#            <a href="#" class="dropdown-toggle">#}
+        {#              <i class="fas fa-user"></i> {{ user.first_name|default:user.username }}#}
+        {#            </a>#}
+        {#            <ul class="dropdown-menu">#}
+        {#              <li><a href="#"><i class="fas fa-user-circle"></i> Профіль</a></li>#}
+        {#              <li><a href="#"><i class="fas fa-calendar-check"></i> Мої тренування</a></li>#}
+        {#              <li><a href="#"><i class="fas fa-plus"></i> Створити тренування</a></li>#}
+        {#              <li>#}
+        {#                <hr>#}
+        {#              </li>#}
+        {#              <li><a href="#"><i class="fas fa-sign-out-alt"></i> Вийти</a></li>#}
+        {#            </ul>#}
+        {#          </li>#}
+        {#        {% else %}#}
+        {#          <li><a href="#" class="btn btn-outline">Увійти</a></li>#}
+        {#          <li><a href="#" class="btn btn-primary">Реєстрація</a></li>#}
+        {#        {% endif %}#}
+      </ul>
+      <div class="mobile-menu-btn">
+        <i class="fas fa-bars"></i>
+      </div>
+    </nav>
+  </div>
+</header>
+
+<!-- Messages -->
+{% if messages %}
+  <div class="messages-container">
+    {% for message in messages %}
+      <div class="alert alert-{{ message.tags }}">
+        <i class="fas fa-{% if message.tags == 'success' %}check-circle{% elif message.tags == 'error' %}exclamation-circle{% elif message.tags == 'warning' %}exclamation-triangle{% else %}info-circle{% endif %}"></i>
+        {{ message }}
+        <span class="close-alert">&times;</span>
+      </div>
+    {% endfor %}
+  </div>
+{% endif %}
+
+<!-- Main Content -->
+<main>
+  {% block content %}{% endblock %}
+</main>
+
+<!-- Footer -->
+<footer class="footer">
+  <div class="container">
+    <div class="footer-content">
+      <div class="footer-section">
+        <img src="{% static 'club/images/logo.png' %}" alt="Logo" height="60">
+        <p>
+          Біговий клуб для всіх, хто прагне здорового способу життя та нових досягнень.
+        </p>
+        <div class="social-links">
+          <a href="https://www.facebook.com/search/top?q=cross_run_che" target="_blank"><i class="fab fa-facebook"></i></a>
+          <a href="https://www.instagram.com/cross_run_che/" target="_blank"><i class="fab fa-instagram"></i></a>
+          <a href="#" target="_blank"><i class="fab fa-telegram"></i></a>
+          <a href="https://www.strava.com/clubs/582642" target="_blank"><i class="fab fa-strava"></i></a>
+        </div>
+      </div>
+      <div class="footer-section">
+        <h3>Контакти</h3>
+        <p><i class="fas fa-envelope"></i> info@crossrunche.com</p>
+        <p><i class="fas fa-phone"></i> +38 (067) 000-00-00</p>
+        <p><i class="fas fa-map-marker-alt"></i> м. Черкаси, Україна</p>
+      </div>
+      <div class="footer-section">
+        <h3>Швидкі посилання</h3>
+        <p><a href="{% url 'training_events:training_list' %}">Тренування</a></p>
+        <p><a href="#">Розклад</a></p>
+        <p><a href="#">Наша команда</a></p>
+        <p><a href="#">Про клуб</a></p>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>&copy; {% now "Y" %} CrossRunСhe Club. Всі права захищені.</p>
+    </div>
+  </div>
+</footer>
+
+<!-- Scripts -->
+<script src="{% static 'club/js/main.js' %}"></script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>

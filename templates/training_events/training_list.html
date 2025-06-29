@@ -1,0 +1,801 @@
+{% extends 'club/base.html' %}
+{% load static %}
+
+{% block title %}Тренування{% endblock %}
+
+{% block content %}
+  <section class="hero gradient-bg">
+    <div class="container">
+      <!-- Заголовок -->
+      <div class="hero-title">
+        <h2>Тренування клубу</h2>
+      </div>
+
+      <!-- Фільтри та пошук -->
+      <div class="hero-content">
+        <form method="get" id="filters-form">
+          <!-- Пошукова панель -->
+          <div class="search-bar">
+            <input type="text"
+                   name="search"
+                   class="search-input"
+                   placeholder="Пошук тренувань, локацій, організаторів..."
+                   value="{{ search_query }}"
+                   id="search-input">
+            <button type="submit" class="search-btn">
+              <i class="fas fa-search"></i> Пошук
+            </button>
+          </div>
+
+          <!-- Фільтри -->
+          <div class="filters-grid">
+            <div class="filter-group">
+              <label class="filter-label">Статус</label>
+              <select name="status" class="filter-select">
+                <option value="">Всі тренування</option>
+                <option value="upcoming" {% if selected_status == 'upcoming' %}selected{% endif %}>Майбутні</option>
+                <option value="past" {% if selected_status == 'past' %}selected{% endif %}>Минулі</option>
+                <option value="cancelled" {% if selected_status == 'cancelled' %}selected{% endif %}>Скасовані
+                </option>
+              </select>
+            </div>
+
+            <div class="filter-group">
+              <label class="filter-label">Локація</label>
+              <select name="location" class="filter-select">
+                <option value="">Всі локації</option>
+                {% for location in locations %}
+                  <option value="{{ location }}" {% if selected_location == location %}selected{% endif %}>
+                    {{ location }}
+                  </option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <div class="filter-group">
+              <label class="filter-label">Дистанція</label>
+              <select name="distance" class="filter-select">
+                <option value="">Всі дистанції</option>
+                {% for distance in distances %}
+                  <option value="{{ distance }}"
+                          {% if selected_distance == distance|floatformat:0 %}selected{% endif %}>
+                    {{ distance }} км
+                  </option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <div class="filter-group">
+              <label class="filter-label">Від дати</label>
+              <input type="date" name="date_from" class="filter-input" value="{{ date_from }}">
+            </div>
+
+            <div class="filter-group">
+              <label class="filter-label">До дати</label>
+              <input type="date" name="date_to" class="filter-input" value="{{ date_to }}">
+            </div>
+
+            <div class="filter-group">
+              <label class="filter-label">Організатор</label>
+              <select name="organizer" class="filter-select">
+                <option value="">Всі організатори</option>
+                {% for org in organizers %}
+                  <option value="{{ org.created_by__id }}"
+                          {% if selected_organizer == org.created_by__id|stringformat:"s" %}selected{% endif %}>
+                    {{ org.created_by__first_name }} {{ org.created_by__last_name }}
+                  </option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </section>
+
+
+  <div class="container">
+    <!-- Статистика та управління видом -->
+    <div class="stats-bar">
+      <div class="stats-info">
+        <div class="stat-item">
+          <span class="stat-number">{{ total_trainings }}</span>
+          <span class="stat-label">Всього</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-number">{{ upcoming_trainings }}</span>
+          <span class="stat-label">Майбутні</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-number">{{ past_trainings }}</span>
+          <span class="stat-label">Минулі</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-number">{{ trainings|length }}</span>
+          <span class="stat-label">Знайдено</span>
+        </div>
+      </div>
+
+      <div class="view-toggle">
+        <button class="view-btn active" data-view="grid">
+          <i class="fas fa-th-large"></i>
+        </button>
+        <button class="view-btn" data-view="list">
+          <i class="fas fa-list"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Список тренувань -->
+    {% if trainings %}
+      <div class="trainings-container grid-view" id="trainings-container">
+        {% for training in trainings %}
+          <div class="training-card {% if training.is_cancelled %}cancelled{% endif %}">
+            <div class="training-header gradient-bg">
+              <h3 class="training-title">{{ training.title }}</h3>
+              <div class="training-location">
+                <i class="fas fa-map-marker-alt"></i>
+                {{ training.location }}
+              </div>
+            </div>
+
+            <div class="training-content">
+              <div class="training-date">
+                <i class="far fa-calendar-alt"></i>
+                {{ training.date|date:"j F Y" }}
+                <i class="fa-regular fa-clock"></i>
+                {{ training.date|time:"H:i" }}
+              </div>
+              {% if training.description %}
+                <p class="training-description">
+                  {{ training.description|safe|truncatewords:20 }}
+                </p>
+              {% endif %}
+
+              <div class="training-info">
+                <div class="info-item">
+                  <i class="fas fa-user-tie"></i>
+                  <span>{{ training.created_by.get_full_name|default:training.created_by.username }}</span>
+                </div>
+                <div class="info-item">
+                  <i class="fas fa-users"></i>
+                  <span>{{ training.participant_count }} учасників</span>
+                </div>
+                {% if training.avg_rating %}
+                  <div class="info-item">
+                    <i class="fas fa-star"></i>
+                    <span>{{ training.avg_rating|floatformat:1 }}/5</span>
+                  </div>
+                {% endif %}
+                <div class="info-item">
+                  <i class="fas fa-clock"></i>
+                  <span>
+                    {% if training.is_past %}
+                      Завершено
+                    {% elif training.is_soon %}
+                      Скоро
+                    {% else %}
+                      {{ training.date|timeuntil }}
+                    {% endif %}
+                </span>
+                </div>
+              </div>
+
+              {% if training.available_distances %}
+                <div class="distances-list">
+                  <div class="distances-title">Дистанції:</div>
+                  <div class="distance-tags">
+                    {% for distance in training.available_distances %}
+                      <span class="distance-tag">
+                        {{ distance.distance }} км
+                        {% if distance.pace_min and distance.pace_max %}
+                          ({{ distance.pace_min|time:"i:s" }}-{{ distance.pace_max|time:"i:s" }} хв/км)
+                        {% endif %}
+                      </span>
+                    {% endfor %}
+                  </div>
+                </div>
+              {% endif %}
+
+              <div class="training-footer">
+                <div class="participants-count">
+                  <i class="fas fa-users"></i>
+                  <span>{{ training.participant_count }} з {{ training.distances.first.max_participants|default:"∞" }}</span>
+                </div>
+
+                <div class="training-actions">
+                  <a href="{% url 'training_events:training_detail' training.pk %}" class="btn btn-primary btn-small">
+                    <i class="fas fa-eye"></i> Детальніше
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+
+      <!-- Пагінація -->
+      {% if is_paginated %}
+        <div class="pagination-container">
+          <div class="pagination">
+            {% if page_obj.has_previous %}
+              <a href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page=1"
+                 title="Перша">
+                <i class="fas fa-angle-double-left"></i>
+              </a>
+              <a href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.previous_page_number }}"
+                 title="Попередня">
+                <i class="fas fa-angle-left"></i>
+              </a>
+            {% endif %}
+
+            {% for num in page_obj.paginator.page_range %}
+              {% if page_obj.number == num %}
+                <span class="current">{{ num }}</span>
+              {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                <a href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ num }}">{{ num }}</a>
+              {% endif %}
+            {% endfor %}
+
+            {% if page_obj.has_next %}
+              <a href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.next_page_number }}"
+                 title="Наступна">
+                <i class="fas fa-angle-right"></i>
+              </a>
+              <a href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.paginator.num_pages }}"
+                 title="Остання">
+                <i class="fas fa-angle-double-right"></i>
+              </a>
+            {% endif %}
+          </div>
+        </div>
+      {% endif %}
+    {% else %}
+      <div class="no-results">
+        <i class="fas fa-search"></i>
+        <h3>Тренування не знайдено</h3>
+        <p>Спробуйте змінити параметри пошуку або фільтри</p>
+        <a href="{% url 'training_events:training_list' %}" class="btn btn-primary">
+          <i class="fas fa-refresh"></i> Скинути фільтри
+        </a>
+      </div>
+    {% endif %}
+  </div>
+{% endblock %}
+
+{% block extra_js %}
+  <script>
+      document.addEventListener('DOMContentLoaded', function () {
+          // Перемикання виду відображення
+          const viewButtons = document.querySelectorAll('.view-btn');
+          const container = document.getElementById('trainings-container');
+
+          viewButtons.forEach(button => {
+              button.addEventListener('click', function () {
+                  viewButtons.forEach(btn => btn.classList.remove('active'));
+                  this.classList.add('active');
+
+                  const view = this.dataset.view;
+                  container.className = `trainings-container ${view}-view`;
+
+                  // Зберігаємо вибір користувача
+                  localStorage.setItem('trainings-view', view);
+              });
+          });
+
+          // Відновлюємо збережений вид
+          const savedView = localStorage.getItem('trainings-view');
+          if (savedView) {
+              const button = document.querySelector(`[data-view="${savedView}"]`);
+              if (button) {
+                  button.click();
+              }
+          }
+
+          // Автоматичне надсилання форми при зміні фільтрів
+          const filterInputs = document.querySelectorAll('.filter-select, .filter-input');
+          filterInputs.forEach(input => {
+              input.addEventListener('change', function () {
+                  document.getElementById('filters-form').submit();
+              });
+          });
+
+          // Живий пошук (з затримкою)
+          const searchInput = document.getElementById('search-input');
+          let searchTimeout;
+
+          searchInput.addEventListener('input', function () {
+              clearTimeout(searchTimeout);
+              searchTimeout = setTimeout(() => {
+                  if (this.value.length >= 3 || this.value.length === 0) {
+                      document.getElementById('filters-form').submit();
+                  }
+              }, 500);
+          });
+
+          // Закриття повідомлень
+          const closeButtons = document.querySelectorAll('.close-alert');
+          closeButtons.forEach(button => {
+              button.addEventListener('click', function () {
+                  this.parentElement.style.animation = 'fadeOut 0.3s ease-out';
+                  setTimeout(() => {
+                      this.parentElement.remove();
+                  }, 300);
+              });
+          });
+
+          // Автоматичне закриття повідомлень через 5 секунд
+          const alerts = document.querySelectorAll('.alert');
+          alerts.forEach(alert => {
+              setTimeout(() => {
+                  if (alert.parentElement) {
+                      alert.style.animation = 'fadeOut 0.3s ease-out';
+                      setTimeout(() => {
+                          if (alert.parentElement) {
+                              alert.remove();
+                          }
+                      }, 300);
+                  }
+              }, 5000);
+          });
+      });
+
+      // Додаткова анімація для fadeOut
+      const style = document.createElement('style');
+      style.textContent = `
+    @keyframes fadeOut {
+        from { opacity: 1; transform: translateY(0); }
+        to { opacity: 0; transform: translateY(-20px); }
+    }
+`;
+      document.head.appendChild(style);
+  </script>
+{% endblock %}
+
+{% block extra_css %}
+  <style>
+      /* Додаткові стилі для списку тренувань */
+      .filters-container {
+          background: var(--text-white);
+          border-radius: 15px;
+          padding: 1.5rem;
+          margin-bottom: 2rem;
+          box-shadow: var(--shadow);
+      }
+
+      .search-bar {
+          display: flex;
+          gap: 1rem;
+          margin-bottom: 1.5rem;
+          flex-wrap: wrap;
+      }
+
+      .search-input {
+          flex: 1;
+          min-width: 250px;
+          padding: 12px 20px;
+          border: 2px solid #e1e5e9;
+          border-radius: 25px;
+          font-size: 1rem;
+          transition: all 0.3s ease;
+      }
+
+      .search-input:focus {
+          outline: none;
+          border-color: var(--primary-red);
+          box-shadow: 0 0 0 3px rgba(139, 21, 56, 0.1);
+      }
+
+      .search-btn {
+          padding: 12px 30px;
+          background: var(--primary-red);
+          color: var(--text-white);
+          border: none;
+          border-radius: 25px;
+          font-weight: bold;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          white-space: nowrap;
+      }
+
+      .search-btn:hover {
+          background: var(--secondary-red);
+          transform: translateY(-2px);
+      }
+
+      .filters-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+          gap: 1rem;
+      }
+
+      .filter-group {
+          display: flex;
+          flex-direction: column;
+          gap: 0.5rem;
+      }
+
+      .filter-label {
+          font-weight: 600;
+          color: var(--text-white);
+          font-size: 1rem;
+      }
+
+      .filter-select, .filter-input {
+          padding: 10px 15px;
+          border: 2px solid #e1e5e9;
+          border-radius: 8px;
+          font-size: 0.95rem;
+          transition: border-color 0.3s ease;
+      }
+
+      .filter-select:focus, .filter-input:focus {
+          outline: none;
+          border-color: var(--primary-red);
+      }
+
+      .stats-bar {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 2rem;
+          flex-wrap: wrap;
+          gap: 1rem;
+      }
+
+      .stats-info {
+          display: flex;
+          gap: 2rem;
+          flex-wrap: wrap;
+      }
+
+      .stat-item {
+          text-align: center;
+          padding: 0.5rem 1rem;
+          background: var(--background-light);
+          border-radius: 8px;
+      }
+
+      .stat-number {
+          font-size: 1.5rem;
+          font-weight: bold;
+          color: var(--primary-red);
+          display: block;
+      }
+
+      .stat-label {
+          font-size: 0.85rem;
+          color: var(--text-dark);
+          opacity: 0.8;
+      }
+
+      .view-toggle {
+          display: flex;
+          background: var(--background-light);
+          border-radius: 25px;
+          overflow: hidden;
+      }
+
+      .view-btn {
+          padding: 8px 16px;
+          border: none;
+          background: transparent;
+          cursor: pointer;
+          transition: all 0.3s ease;
+      }
+
+      .view-btn.active {
+          background: var(--primary-red);
+          color: var(--text-white);
+      }
+
+      .trainings-container {
+          display: grid;
+          gap: 1.5rem;
+      }
+
+      .trainings-container.list-view {
+          grid-template-columns: 1fr;
+      }
+
+      .trainings-container.grid-view {
+          grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+      }
+
+      .training-card {
+          background: var(--text-white);
+          border-radius: 15px;
+          overflow: hidden;
+          box-shadow: var(--shadow);
+          transition: all 0.3s ease;
+          position: relative;
+      }
+
+      .training-card:hover {
+          transform: translateY(-3px);
+          box-shadow: 0 8px 25px rgba(139, 21, 56, 0.2);
+      }
+
+      .training-card.cancelled {
+          opacity: 0.6;
+      }
+
+      .training-card.cancelled::before {
+          content: 'СКАСОВАНО';
+          position: absolute;
+          top: 1rem;
+          right: 1rem;
+          background: #dc3545;
+          color: white;
+          padding: 4px 12px;
+          border-radius: 20px;
+          font-size: 0.8rem;
+          font-weight: bold;
+          z-index: 2;
+      }
+
+      .training-date {
+          font-size: 1.2rem;
+          opacity: 0.9;
+          margin-bottom: 1rem;
+          color: var(--secondary-red);
+          border-bottom: 2px dashed #f0f0f0;
+      }
+
+      .training-title {
+          font-size: 1.3rem;
+          font-weight: bold;
+          margin-bottom: 0.5rem;
+          line-height: 1.3;
+      }
+
+      .training-location {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          font-size: 0.95rem;
+          opacity: 0.9;
+      }
+
+      .training-content {
+          padding: 1.5rem;
+      }
+
+      .training-info {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+          gap: 1rem;
+          margin-bottom: 1.5rem;
+      }
+
+      .info-item {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          font-size: 0.9rem;
+      }
+
+      .info-item i {
+          color: var(--primary-red);
+          width: 16px;
+      }
+
+      .distances-list {
+          margin-bottom: 1.5rem;
+      }
+
+      .distances-title {
+          font-weight: 600;
+          margin-bottom: 0.5rem;
+          color: var(--text-dark);
+      }
+
+      .distance-tags {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 0.5rem;
+      }
+
+      .distance-tag {
+          background: var(--background-light);
+          padding: 4px 12px;
+          border-radius: 15px;
+          font-size: 0.85rem;
+          color: var(--text-dark);
+          border: 1px solid #e1e5e9;
+      }
+
+      .training-footer {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding-top: 1rem;
+          border-top: 1px solid #f0f0f0;
+      }
+
+      .participants-count {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          color: var(--text-dark);
+          font-size: 0.9rem;
+      }
+
+      .rating {
+          display: flex;
+          align-items: center;
+          gap: 0.3rem;
+      }
+
+      .rating i {
+          color: #ffa500;
+      }
+
+      .btn-small {
+          padding: 8px 16px;
+          font-size: 0.85rem;
+          border-radius: 20px;
+      }
+
+      .pagination-container {
+          display: flex;
+          justify-content: center;
+          margin-top: 3rem;
+          margin-bottom: 3rem;
+      }
+
+      .pagination {
+          display: flex;
+          list-style: none;
+          gap: 0.5rem;
+          align-items: center;
+      }
+
+      .pagination a,
+      .pagination span {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 40px;
+          height: 40px;
+          border-radius: 50%;
+          text-decoration: none;
+          font-weight: 500;
+          transition: all 0.3s ease;
+      }
+
+      .pagination a {
+          background: var(--text-white);
+          color: var(--text-dark);
+          border: 2px solid #e1e5e9;
+      }
+
+      .pagination a:hover {
+          border-color: var(--primary-red);
+          color: var(--primary-red);
+      }
+
+      .pagination .current {
+          background: var(--primary-red);
+          color: var(--text-white);
+          border: 2px solid var(--primary-red);
+      }
+
+      .no-results {
+          text-align: center;
+          padding: 3rem;
+          color: var(--text-dark);
+          opacity: 0.7;
+      }
+
+      .no-results i {
+          font-size: 3rem;
+          margin-bottom: 1rem;
+          color: var(--primary-red);
+          opacity: 0.5;
+      }
+
+      /* Мобільні стилі */
+      @media (max-width: 768px) {
+          .filters-container {
+              padding: 1rem;
+          }
+
+          .search-bar {
+              flex-direction: column;
+              gap: 0.5rem;
+          }
+
+          .search-input {
+              min-width: auto;
+          }
+
+          .filters-grid {
+              grid-template-columns: 1fr;
+              gap: 0.8rem;
+          }
+
+          .stats-bar {
+              flex-direction: column;
+              align-items: stretch;
+              gap: 1rem;
+          }
+
+          .stats-info {
+              justify-content: space-around;
+              gap: 1rem;
+          }
+
+          .stat-item {
+              flex: 1;
+              min-width: 0;
+          }
+
+          .view-toggle {
+              align-self: center;
+          }
+
+          .trainings-container.grid-view {
+              grid-template-columns: 1fr;
+          }
+
+          .training-info {
+              grid-template-columns: 1fr;
+              gap: 0.8rem;
+          }
+
+          .training-footer {
+              flex-direction: column;
+              gap: 1rem;
+              align-items: stretch;
+          }
+
+          .distance-tags {
+              justify-content: center;
+          }
+      }
+
+      @media (max-width: 480px) {
+          .training-header,
+          .training-content {
+              padding: 1rem;
+          }
+
+          .training-title {
+              font-size: 1.1rem;
+          }
+
+          .stats-info {
+              flex-direction: column;
+              gap: 0.5rem;
+          }
+
+          .stat-item {
+              padding: 0.8rem;
+          }
+      }
+
+      /* Загрузка */
+      .loading {
+          text-align: center;
+          padding: 2rem;
+          color: var(--text-dark);
+          opacity: 0.7;
+      }
+
+      .loading i {
+          animation: spin 1s linear infinite;
+          font-size: 2rem;
+          color: var(--primary-red);
+      }
+
+      @keyframes spin {
+          0% {
+              transform: rotate(0deg);
+          }
+          100% {
+              transform: rotate(360deg);
+          }
+      }
+  </style>
+{% endblock %}

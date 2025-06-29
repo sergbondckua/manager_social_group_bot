@@ -1,0 +1,385 @@
+<!-- templates/club/home.html -->
+{% extends "club/base.html" %}
+{% load static %}
+
+{% block title %}Головна{% endblock %}
+
+{% block content %}
+  <!-- Hero Section -->
+  <section class="hero gradient-bg" id="home">
+    <div class="container">
+      <div class="hero-content">
+        <h1>CrossRunChe CLUB</h1>
+        <p>Приєднуйся до нашої спільноти бігунів та досягай нових висот разом з нами!</p>
+        <div class="hero-stats">
+          <div class="stat-item">
+            <div class="stat-number">{{ total_members }}</div>
+            <div class="stat-label">Учасників</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-number">{{ total_trainings }}</div>
+            <div class="stat-label">Тренувань</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-number">{{ total_distance }}</div>
+            <div class="stat-label">Км пробігли</div>
+          </div>
+        </div>
+        <div class="hero-actions">
+          {% if user.is_authenticated %}
+            <a href="#" class="btn btn-primary">Переглянути тренування</a>
+            <a href="#" class="btn btn-secondary">Створити тренування</a>
+            {#          {% else %}#}
+            {#            <a href="#" class="btn btn-primary">Приєднатися до клубу</a>#}
+            {#            <a href="#" class="btn btn-secondary">Переглянути тренування</a>#}
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features Section -->
+  {#  <section class="section">#}
+  {#    <div class="container">#}
+  {#      <h2 class="section-title">Можливості клубу</h2>#}
+  {#      <div class="features-grid">#}
+  {#        <div class="feature-card">#}
+  {#          <div class="feature-icon gradient-bg">#}
+  {#            <i class="fas fa-plus"></i>#}
+  {#          </div>#}
+  {#          <h3>Створення тренувань</h3>#}
+  {#          <p>Організовуйте власні тренування та запрошуйте інших учасників приєднатися до вас</p>#}
+  {#          <a href="#" class="feature-link">Створити тренування →</a>#}
+  {#        </div>#}
+  {#        <div class="feature-card">#}
+  {#          <div class="feature-icon gradient-bg">#}
+  {#            <i class="fas fa-user-check"></i>#}
+  {#          </div>#}
+  {#          <h3>Реєстрація на тренування</h3>#}
+  {#          <p>Легко записуйтеся на тренування та отримуйте всю необхідну інформацію</p>#}
+  {#          <a href="#" class="feature-link">Переглянути тренування →</a>#}
+  {#        </div>#}
+  {#        <div class="feature-card">#}
+  {#          <div class="feature-icon gradient-bg">#}
+  {#            <i class="fas fa-star"></i>#}
+  {#          </div>#}
+  {#          <h3>Оцінювання тренувань</h3>#}
+  {#          <p>Оцінюйте якість тренувань та допомагайте покращувати досвід для всіх</p>#}
+  {#          <a href="#" class="feature-link">Переглянути відгуки →</a>#}
+  {#        </div>#}
+  {#        <div class="feature-card">#}
+  {#          <div class="feature-icon gradient-bg">#}
+  {#            <i class="fas fa-comments"></i>#}
+  {#          </div>#}
+  {#          <h3>Відгуки про тренування</h3>#}
+  {#          <p>Діліться враженнями та читайте відгуки інших учасників</p>#}
+  {#          <a href="#" class="feature-link">Залишити відгук →</a>#}
+  {#        </div>#}
+  {#        <div class="feature-card">#}
+  {#          <div class="feature-icon gradient-bg">#}
+  {#            <i class="fas fa-bullhorn"></i>#}
+  {#          </div>#}
+  {#          <h3>Анонси тренувань</h3>#}
+  {#          <p>Будьте в курсі всіх майбутніх заходів та спеціальних тренувань</p>#}
+  {#          <a href="#" class="feature-link">Дивитися анонси →</a>#}
+  {#        </div>#}
+  {#        <div class="feature-card">#}
+  {#          <div class="feature-icon gradient-bg">#}
+  {#            <i class="fas fa-calendar-alt"></i>#}
+  {#          </div>#}
+  {#          <h3>Тижневий розклад</h3>#}
+  {#          <p>Плануйте свої тренування заздалегідь з нашим зручним розкладом</p>#}
+  {#          <a href="#" class="feature-link">Переглянути розклад →</a>#}
+  {#        </div>#}
+  {#      </div>#}
+  {#    </div>#}
+  {#  </section>#}
+
+  <!-- Найближчі тренування -->
+  <section class="section" style="background: var(--background-light);">
+    <div class="container">
+      <div class="section-header">
+        <h2 class="section-title">Найближчі тренування</h2>
+        <a href="{% url 'training_events:training_list' %}" class="btn btn-outline">
+          Всі тренування
+        </a>
+      </div>
+
+      <div class="trainings-grid">
+        {% for training in upcoming_trainings %}
+          <div class="training-card">
+            <div class="training-header gradient-bg">
+              <h3>{{ training.title }}</h3>
+              <div class="training-rating">
+                <i class="fa-solid fa-clock-rotate-left fa-2xl"></i>
+              </div>
+            </div>
+            <div class="training-content">
+              <div class="training-info">
+                <div class="info-item">
+                  <i class="fas fa-calendar"></i>
+                  <span>{{ training.date|date:"d.m.Y" }}</span>
+                </div>
+                <div class="info-item">
+                  <i class="fas fa-clock"></i>
+                  <span>{{ training.date|time:"H:i" }}</span>
+                </div>
+                <div class="info-item">
+                  <i class="fas fa-map-marker-alt"></i>
+                  <span>{{ training.location }}</span>
+                </div>
+                <div class="info-item">
+                  <i class="fas fa-route"></i>
+                  <span>{{ training.distance }}</span>
+                </div>
+              </div>
+
+              {% if training.description %}
+                <p class="training-description">{{ training.description|truncatewords:30|safe }}</p>
+              {% endif %}
+
+              <div class="training-footer">
+                <div class="participants-info">
+                  <div class="participant-count">
+                    <i class="fas fa-users"></i>
+                    <span>{{ training.participants_count }}{% if training.max_participants %}/
+                      {{ training.max_participants }}{% endif %} уч.</span>
+                  </div>
+                </div>
+                Організатор:
+                <div class="trainer-info">
+                  <i class="fas fa-user-tie"></i>
+                  <span>{{ training.created_by.get_full_name|default:training.created_by.username }}</span>
+                </div>
+                <div class="training-actions">
+                  {% if user.is_authenticated %}
+                    {% if user in training.participants %}
+                      <span class="btn btn-success disabled"><i class="fas fa-check"></i> Вже долучився</span>
+                    {% elif training.max_participants == 0 or training.participants_count < training.max_participants %}
+                      <a href="#" class="btn btn-primary">
+                        Записатися
+                      </a>
+                    {% else %}
+                      <span class="btn btn-secondary disabled">Місць немає</span>
+                    {% endif %}
+                    {#                  {% else %}#}
+                    {#                    <a href="#" class="btn btn-primary">Увійти для запису</a>#}
+                  {% endif %}
+                  <a href="{% url 'training_events:training_detail' training.pk %}" class="btn btn-primary btn-small">
+                    <i class="fas fa-eye"></i> Детальніше
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+        {% empty %}
+          <div class="empty-state">
+            <i class="fas fa-calendar-times"></i>
+            <h3>Поки що немає запланованих тренувань</h3>
+            <p>Зачекайте, поки організатори анонсують заходи</p>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+
+  <!-- Sponsors Section -->
+{#  <section class="section sponsors-section">#}
+{#    <div class="container">#}
+{#      <h2 class="section-title">Наші спонсори</h2>#}
+{#      <div class="sponsors-container">#}
+{#        <div class="sponsors-track">#}
+{#          <!-- Sponsor logos will be duplicated for infinite effect -->#}
+{#          {% for i in "54321"|make_list %}#}
+{#            <div class="sponsor-item">#}
+{#              <img src="{% static 'club/images/sponsors/sponsor'|add:i|add:'.png' %}" alt="Спонсор {{ i }}">#}
+{#            </div>#}
+{#          {% endfor %}#}
+{#          {% for i in "12345"|make_list %}#}
+{#            <div class="sponsor-item" aria-hidden="true">#}
+{#              <img src="{% static 'club/img/sponsors/sponsor'|add:i|add:'.png' %}" alt="">#}
+{#            </div>#}
+{#          {% endfor %}#}
+{#        </div>#}
+{#      </div>#}
+{#    </div>#}
+{#  </section>#}
+
+  <!-- CTA Section -->
+  <section class="cta-section gradient-bg">
+    <div class="container">
+      <div class="cta-content">
+        <h2>Готові розпочати свій біговий шлях?</h2>
+        <p>Приєднуйтеся до нашої спільноти та почніть тренуватися вже сьогодні!</p>
+      </div>
+    </div>
+  </section>
+{% endblock %}
+
+{% block extra_css %}
+  <style>
+      .hero-stats {
+          display: flex;
+          justify-content: center;
+          gap: 3rem;
+          margin: 2rem 0;
+      }
+
+      .stat-item {
+          text-align: center;
+      }
+
+      .stat-number {
+          font-size: 2.5rem;
+          font-weight: bold;
+          color: var(--text-white);
+      }
+
+      .stat-label {
+          font-size: 1rem;
+          opacity: 0.9;
+      }
+
+      .section-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 2rem;
+      }
+
+      .trainings-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+          gap: 2rem;
+      }
+
+      .reviews-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+          gap: 2rem;
+      }
+
+      .cta-section {
+          text-align: center;
+          padding: 4rem 0;
+          color: var(--text-white);
+      }
+
+      .cta-content h2 {
+          font-size: 2rem;
+          margin-bottom: 1rem;
+      }
+
+      .cta-actions {
+          display: flex;
+          gap: 1rem;
+          justify-content: center;
+          flex-wrap: wrap;
+          margin-top: 2rem;
+      }
+
+      .btn-white {
+          background: var(--text-white);
+          color: var(--primary-red);
+      }
+
+      .btn-outline-white {
+          background: transparent;
+          border: 2px solid var(--text-white);
+          color: var(--text-white);
+      }
+
+      .empty-state {
+          grid-column: 1 / -1;
+          text-align: center;
+          padding: 3rem;
+          color: #666;
+      }
+
+      .empty-state i {
+          font-size: 4rem;
+          margin-bottom: 1rem;
+          color: #ddd;
+      }
+
+      @media (max-width: 768px) {
+          .hero-stats {
+              gap: 1.5rem;
+          }
+
+          .trainings-grid,
+          .reviews-grid {
+              grid-template-columns: 1fr;
+          }
+
+          .section-header {
+              flex-direction: column;
+              gap: 1rem;
+          }
+
+          .cta-actions {
+              flex-direction: column;
+              align-items: center;
+          }
+      }
+
+      /* Sponsors Section Styles */
+    .sponsors-section {
+      padding: 60px 0;
+      background: white;
+    }
+
+    .sponsors-container {
+      overflow: hidden;
+      position: relative;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .sponsors-track {
+      display: flex;
+      animation: scroll 25s linear infinite;
+    }
+
+    .sponsor-item {
+      flex: 0 0 auto;
+      width: 200px;
+      height: 120px;
+      margin: 0 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      filter: grayscale(100%);
+      opacity: 0.7;
+      transition: all 0.3s ease;
+    }
+
+    .sponsor-item:hover {
+      filter: grayscale(0);
+      opacity: 1;
+      transform: scale(1.05);
+    }
+
+    .sponsor-item img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+    }
+
+    @keyframes scroll {
+      0% { transform: translateX(0); }
+      100% { transform: translateX(-50%); }
+    }
+
+    @media (max-width: 768px) {
+      .sponsor-item {
+        width: 150px;
+        margin: 0 20px;
+      }
+
+      .sponsors-track {
+        animation-duration: 20s;
+      }
+    }
+  </style>
+{% endblock %}
