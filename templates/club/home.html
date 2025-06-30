@@ -38,63 +38,6 @@
     </div>
   </section>
 
-  <!-- Features Section -->
-  {#  <section class="section">#}
-  {#    <div class="container">#}
-  {#      <h2 class="section-title">Можливості клубу</h2>#}
-  {#      <div class="features-grid">#}
-  {#        <div class="feature-card">#}
-  {#          <div class="feature-icon gradient-bg">#}
-  {#            <i class="fas fa-plus"></i>#}
-  {#          </div>#}
-  {#          <h3>Створення тренувань</h3>#}
-  {#          <p>Організовуйте власні тренування та запрошуйте інших учасників приєднатися до вас</p>#}
-  {#          <a href="#" class="feature-link">Створити тренування →</a>#}
-  {#        </div>#}
-  {#        <div class="feature-card">#}
-  {#          <div class="feature-icon gradient-bg">#}
-  {#            <i class="fas fa-user-check"></i>#}
-  {#          </div>#}
-  {#          <h3>Реєстрація на тренування</h3>#}
-  {#          <p>Легко записуйтеся на тренування та отримуйте всю необхідну інформацію</p>#}
-  {#          <a href="#" class="feature-link">Переглянути тренування →</a>#}
-  {#        </div>#}
-  {#        <div class="feature-card">#}
-  {#          <div class="feature-icon gradient-bg">#}
-  {#            <i class="fas fa-star"></i>#}
-  {#          </div>#}
-  {#          <h3>Оцінювання тренувань</h3>#}
-  {#          <p>Оцінюйте якість тренувань та допомагайте покращувати досвід для всіх</p>#}
-  {#          <a href="#" class="feature-link">Переглянути відгуки →</a>#}
-  {#        </div>#}
-  {#        <div class="feature-card">#}
-  {#          <div class="feature-icon gradient-bg">#}
-  {#            <i class="fas fa-comments"></i>#}
-  {#          </div>#}
-  {#          <h3>Відгуки про тренування</h3>#}
-  {#          <p>Діліться враженнями та читайте відгуки інших учасників</p>#}
-  {#          <a href="#" class="feature-link">Залишити відгук →</a>#}
-  {#        </div>#}
-  {#        <div class="feature-card">#}
-  {#          <div class="feature-icon gradient-bg">#}
-  {#            <i class="fas fa-bullhorn"></i>#}
-  {#          </div>#}
-  {#          <h3>Анонси тренувань</h3>#}
-  {#          <p>Будьте в курсі всіх майбутніх заходів та спеціальних тренувань</p>#}
-  {#          <a href="#" class="feature-link">Дивитися анонси →</a>#}
-  {#        </div>#}
-  {#        <div class="feature-card">#}
-  {#          <div class="feature-icon gradient-bg">#}
-  {#            <i class="fas fa-calendar-alt"></i>#}
-  {#          </div>#}
-  {#          <h3>Тижневий розклад</h3>#}
-  {#          <p>Плануйте свої тренування заздалегідь з нашим зручним розкладом</p>#}
-  {#          <a href="#" class="feature-link">Переглянути розклад →</a>#}
-  {#        </div>#}
-  {#      </div>#}
-  {#    </div>#}
-  {#  </section>#}
-
   <!-- Найближчі тренування -->
   <section class="section" style="background: var(--background-light);">
     <div class="container">
@@ -182,28 +125,6 @@
       </div>
     </div>
   </section>
-
-  <!-- Sponsors Section -->
-{#  <section class="section sponsors-section">#}
-{#    <div class="container">#}
-{#      <h2 class="section-title">Наші спонсори</h2>#}
-{#      <div class="sponsors-container">#}
-{#        <div class="sponsors-track">#}
-{#          <!-- Sponsor logos will be duplicated for infinite effect -->#}
-{#          {% for i in "54321"|make_list %}#}
-{#            <div class="sponsor-item">#}
-{#              <img src="{% static 'club/images/sponsors/sponsor'|add:i|add:'.png' %}" alt="Спонсор {{ i }}">#}
-{#            </div>#}
-{#          {% endfor %}#}
-{#          {% for i in "12345"|make_list %}#}
-{#            <div class="sponsor-item" aria-hidden="true">#}
-{#              <img src="{% static 'club/img/sponsors/sponsor'|add:i|add:'.png' %}" alt="">#}
-{#            </div>#}
-{#          {% endfor %}#}
-{#        </div>#}
-{#      </div>#}
-{#    </div>#}
-{#  </section>#}
 
   <!-- CTA Section -->
   <section class="cta-section gradient-bg">
@@ -322,64 +243,5 @@
               align-items: center;
           }
       }
-
-      /* Sponsors Section Styles */
-    .sponsors-section {
-      padding: 60px 0;
-      background: white;
-    }
-
-    .sponsors-container {
-      overflow: hidden;
-      position: relative;
-      max-width: 1200px;
-      margin: 0 auto;
-    }
-
-    .sponsors-track {
-      display: flex;
-      animation: scroll 25s linear infinite;
-    }
-
-    .sponsor-item {
-      flex: 0 0 auto;
-      width: 200px;
-      height: 120px;
-      margin: 0 40px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      filter: grayscale(100%);
-      opacity: 0.7;
-      transition: all 0.3s ease;
-    }
-
-    .sponsor-item:hover {
-      filter: grayscale(0);
-      opacity: 1;
-      transform: scale(1.05);
-    }
-
-    .sponsor-item img {
-      max-width: 100%;
-      max-height: 100%;
-      object-fit: contain;
-    }
-
-    @keyframes scroll {
-      0% { transform: translateX(0); }
-      100% { transform: translateX(-50%); }
-    }
-
-    @media (max-width: 768px) {
-      .sponsor-item {
-        width: 150px;
-        margin: 0 20px;
-      }
-
-      .sponsors-track {
-        animation-duration: 20s;
-      }
-    }
   </style>
 {% endblock %}
