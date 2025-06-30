@@ -134,6 +134,12 @@
                              onclick="openMapModal('{{ item.distance.route_gpx_map.url }}', '{{ item.distance.distance }} км')"
                              style="cursor: pointer;">
                       </div>
+                      {% else %}
+                      <div class="route-map">
+                        <img src="{% static 'club/images/no_route_map.png' %}"
+                             alt="Карта маршруту {{ item.distance.distance }} км"
+                             style="cursor: pointer;">
+                      </div>
                     {% endif %}
                     {% if item.distance.route_gpx %}
                       <a href="{{ item.distance.route_gpx.url }}" class="btn btn-outline" download>
