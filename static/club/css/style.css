@@ -124,6 +124,7 @@ body {
     /*background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="30" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="2"/><circle cx="50" cy="50" r="20" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="1.5"/><circle cx="50" cy="50" r="10" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="1"/></svg>') center/150px;*/
     background: url('/static/club/images/large_crc_employe.svg') center/cover no-repeat;
     opacity: 0.3;
+    z-index: 0;
 }
 
 .hero-content {
