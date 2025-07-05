@@ -14,6 +14,7 @@ from django.db import transaction
 from django.utils import timezone
 from django.utils.timezone import make_aware
 
+from common.utils import clean_tag_message
 from profiles.models import ClubUser
 from robot.tgbot.filters.staff import ClubStaffFilter
 from robot.tgbot.keyboards import staff as kb
@@ -59,6 +60,7 @@ async def clear_state_and_notify(
     keyboard: types = None,
 ):
     """Очищує стан та надсилає повідомлення."""
+    text = clean_tag_message(text)  # Видалення HTML-тегів
     await state.clear()
     # Видалення попереднього повідомлення
     if prev_delete_message:
@@ -782,8 +784,8 @@ async def create_training_final(message: types.Message, state: FSMContext):
         await clear_state_and_notify(
             message,
             state,
-            "❌ Виникла помилка при створенні тренування. "
-            "Спробуйте пізніше або зверніться до адміністратора.",
+            f"❌ Виникла помилка при створенні тренування. "
+            "Спробуйте пізніше або зверніться до адміністратора.\n{e}",
             keyboard=types.ReplyKeyboardRemove(),
         )
 
