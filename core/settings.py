@@ -290,7 +290,7 @@ USE_TLS = True
 # CSRF налаштування
 CSRF_TRUSTED_ORIGINS = [
     env.str("BASE_URL"),
-    "https://pgadmin.crossrunche.com",
+    "https://crossrunche.com",
 ]
 
 # Session cookies
