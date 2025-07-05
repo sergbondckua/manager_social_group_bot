@@ -27,12 +27,12 @@
         </li>
         <li><a href="{% url 'training_events:training_list' %}"
                class="{% if request.resolver_match.url_name == 'training_list' %}active{% endif %}">Тренування</a></li>
-        <li><a href="#"
-               class="{% if request.resolver_match.url_name == 'schedule' %}active{% endif %}">Розклад</a></li>
-        <li><a href="#"
-               class="{% if request.resolver_match.url_name == 'reviews' %}active{% endif %}">Наша команда</a></li>
-        <li><a href="#"
-               class="{% if request.resolver_match.url_name == 'chat' %}active{% endif %}">Про клуб</a></li>
+{#        <li><a href="#"#}
+{#               class="{% if request.resolver_match.url_name == 'schedule' %}active{% endif %}">Розклад</a></li>#}
+{#        <li><a href="#"#}
+{#               class="{% if request.resolver_match.url_name == 'reviews' %}active{% endif %}">Наша команда</a></li>#}
+{#        <li><a href="#"#}
+{#               class="{% if request.resolver_match.url_name == 'chat' %}active{% endif %}">Про клуб</a></li>#}
         {#        {% if user.is_authenticated %}#}
         {#          <li class="dropdown">#}
         {#            <a href="#" class="dropdown-toggle">#}
@@ -97,19 +97,19 @@
       <div class="footer-section">
         <h3>Контакти</h3>
         <p><i class="fas fa-envelope"></i> info@crossrunche.com</p>
-        <p><i class="fas fa-phone"></i> +38 (067) 000-00-00</p>
+{#        <p><i class="fas fa-phone"></i> +38 (067) 000-00-00</p>#}
         <p><i class="fas fa-map-marker-alt"></i> м. Черкаси, Україна</p>
       </div>
       <div class="footer-section">
         <h3>Швидкі посилання</h3>
         <p><a href="{% url 'training_events:training_list' %}">Тренування</a></p>
-        <p><a href="#">Розклад</a></p>
-        <p><a href="#">Наша команда</a></p>
-        <p><a href="#">Про клуб</a></p>
+{#        <p><a href="#">Розклад</a></p>#}
+{#        <p><a href="#">Наша команда</a></p>#}
+{#        <p><a href="#">Про клуб</a></p>#}
       </div>
     </div>
     <div class="footer-bottom">
-      <p>&copy; {% now "Y" %} CrossRunСhe Club. Всі права захищені.</p>
+      <p>&copy; 2020-{% now "Y" %} CrossRunСhe Club. Всі права захищені.</p>
     </div>
   </div>
 </footer>
