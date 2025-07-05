@@ -3,19 +3,6 @@
 {% load static %}
 
 {% block title %}{{ training.title }}{% endblock %}
-{% block meta_tags %}
-  <meta property="og:title" content="{{ training.title }}">
-  <meta property="og:description" content="{{ training.description|striptags|truncatewords:25 }}">
-  {% if training.poster %}
-    <meta property="og:image" content="{{ request.build_absolute_uri(training.poster.url) }}">
-  {% else %}
-    <meta property="og:image" content="{{ request.build_absolute_uri(static('club/images/logo.png')) }}">
-  {% endif %}
-  <meta property="og:url" content="{{ request.build_absolute_uri }}">
-  <meta property="og:type" content="article">
-{% endblock %}
-
-
 
 {% block content %}
   <div class="training-detail-container">
