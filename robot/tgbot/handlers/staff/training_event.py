@@ -784,8 +784,8 @@ async def create_training_final(message: types.Message, state: FSMContext):
         await clear_state_and_notify(
             message,
             state,
-            f"❌ Виникла помилка при створенні тренування. "
-            "Спробуйте пізніше або зверніться до адміністратора.\n{e}",
+            "❌ Виникла помилка при створенні тренування. "
+            f"Спробуйте пізніше або зверніться до адміністратора.\n{e}",
             keyboard=types.ReplyKeyboardRemove(),
         )
 
