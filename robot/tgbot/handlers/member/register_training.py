@@ -124,6 +124,11 @@ async def register_training(callback: types.CallbackQuery):
                     }
                 )
 
+            # Просимо перейти в особисті повідомлення
+            await callback.answer(
+                text="Для продовження перейдіть в приватну бесіду з ботом",
+                show_alert=True,
+            )
             # Надсилаємо користувачу список дистанцій
             await callback.message.bot.send_message(
                 chat_id=user_id,
@@ -199,6 +204,10 @@ async def register_training(callback: types.CallbackQuery):
             )
             await callback.message.edit_reply_markup(reply_markup=new_keyboard)
 
+        await callback.answer(
+            text="✅ Реєстрація успішна! Деталі відправлені вам в приватну бесіду",
+            show_alert=True,
+        )
         # Надсилаємо повідомлення про успішну реєстрацію
         await callback.message.bot.send_message(
             chat_id=user_id,
