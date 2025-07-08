@@ -718,10 +718,10 @@ async def create_training_final(message: types.Message, state: FSMContext):
                         max_participants=distance_data["max_participants"],
                         pace_min=datetime.strptime(
                             distance_data.get("pace_min"), "%M:%S"
-                        ).time(),
+                        ).time() if distance_data.get("pace_min") else None,
                         pace_max=datetime.strptime(
                             distance_data.get("pace_max"), "%M:%S"
-                        ).time(),
+                        ).time() if distance_data.get("pace_max") else None,
                         route_gpx=None,  # Встановимо пізніше
                         route_gpx_map=None,  # Встановимо пізніше
                         map_processing_status=TrainingMapProcessingStatusChoices.WITHOUT_ROUTE,  # Встановимо пізніше
