@@ -42,8 +42,10 @@
       header h1 {
           margin-bottom: auto;
           font-family: 'Pacifico', cursive;
-          font-size: 2em;
+          font-size: 3.5em;
           color: #cf4430;
+          display: inline-block; /* transform працює з цими елементами */
+          transform: scaleX(1.5); /* Розтягує по горизонталі в 1.5 раза */
       }
 
       header p {
@@ -241,10 +243,8 @@
 </head>
 <body>
 <header>
-  <h1>
-    МОЄ МІСТО – МОЄ НАТХНЕННЯ<br>
-    Бігова екскурсія
-  </h1>
+  <h1>моє місто – моє натхнення<br></h1>
+  <h2>Бігова екскурсія</h2>
 </header>
 
 <main class="container">
