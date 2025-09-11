@@ -26,32 +26,40 @@
           background: url("header.png") no-repeat center center;
           background-size: cover;
           color: #fff;
-          text-align: center;
           min-height: 60vh;
           display: flex;
-          align-items: center;
-          justify-content: center;
+          flex-direction: column;
+          justify-content: space-between;
           padding: 40px 20px;
+          text-align: center;
       }
 
-      header h1, header p {
+      .header-content {
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between;
+          height: 100%;
           position: relative;
           z-index: 2;
       }
 
       header h1 {
-          margin-bottom: auto;
           font-family: 'Pacifico', cursive;
-          font-size: 3em;
+          font-size: 3.5em;
           color: #cf4430;
-          display: inline-block; /* transform працює з цими елементами */
-          transform: scaleX(1.3); /* Розтягує по горизонталі в 1.5 раза */
+          margin: 0;
+          letter-spacing: 3px; /* Розтягуємо текст */
+          line-height: 1.2;
+          text-align: center;
+          width: 100%;
       }
 
-      header p {
-          font-size: 1.2rem;
-          margin-top: 10px;
+      header .subtitle {
+          font-size: 1.8rem;
+          margin-top: auto;
+          padding-bottom: 20px;
           opacity: 0.9;
+          font-weight: bold;
       }
 
       /* --- мобільна адаптація --- */
@@ -62,11 +70,12 @@
           }
 
           header h1 {
-              font-size: 1.8rem;
+              font-size: 2.2rem;
+              letter-spacing: 2px;
           }
 
-          header p {
-              font-size: 1rem;
+          header .subtitle {
+              font-size: 1.2rem;
           }
       }
 
@@ -77,11 +86,14 @@
           }
 
           header h1 {
-              font-size: 1.5rem;
+              font-size: 1.8rem;
+              letter-spacing: 1px;
           }
 
-          header p {
-              font-size: 0.9rem;
+          header .subtitle {
+              font-size: 1rem;
+              margin-top: 300px;
+              margin-right: 150px;
           }
       }
 
@@ -243,8 +255,10 @@
 </head>
 <body>
 <header>
-  <h1>моє місто – моє натхнення<br></h1>
-  <h3>Бігова екскурсія</h3>
+  <div class="header-content">
+    <h1>моє місто – моє натхнення</h1>
+    <p class="subtitle">Бігова екскурсія</p>
+  </div>
 </header>
 
 <main class="container">
