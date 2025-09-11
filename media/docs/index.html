@@ -13,11 +13,23 @@
           line-height: 1.6;
       }
 
-      header {
+      /*header {
           background: linear-gradient(135deg, #f58585, #fff877);
           color: #fff;
           text-align: center;
           padding: 80px 20px;
+      }*/
+      header {
+          position: relative;
+          background: url("header.png") no-repeat center center;
+          background-size: cover;
+          color: #fff;
+          text-align: center;
+          min-height: 60vh;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 40px 20px;
       }
 
       header h1 {
@@ -42,7 +54,7 @@
           display: flex;
           flex-wrap: wrap;
           align-items: center;
-          background: #fff877;
+          background: #f9de62;
           margin-bottom: 40px;
           border-radius: 12px;
           box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
@@ -69,7 +81,7 @@
 
       .card-content h2 {
           margin-top: 0;
-          color: #0078d7;
+          color: #cf4430;
       }
 
       .card-content p {
@@ -78,7 +90,7 @@
           line-height: 1.7;
           background: #fff895;
           padding: 15px 20px;
-          border-left: 4px solid #f58585;
+          border-left: 4px solid #cf4430;
           border-radius: 8px;
           position: relative;
       }
@@ -113,7 +125,7 @@
       .final {
           text-align: center;
           padding: 60px 20px;
-          background: linear-gradient(135deg, #f58585, #fff877);
+          background: linear-gradient(135deg, #cf4430, #f9de62);
           color: #fff;
           border-radius: 16px;
       }
@@ -188,8 +200,8 @@
 </head>
 <body>
 <header>
-  <h1>МОЄ МІСТО – МОЄ НАТХНЕННЯ</h1>
-  <p>Бігова екскурсія</p>
+  <!--h1>МОЄ МІСТО – МОЄ НАТХНЕННЯ</h1>
+  <p>Бігова екскурсія</p-->
 </header>
 
 <main class="container">
@@ -361,7 +373,8 @@
         У давнину тут стояли прості козацькі хати. Вони зникли лише наприкінці 19ст.<br>
         Потім з’явилася центральна площа міста – Базарна. Пізніше її перейменували на Соборно-Миколаївську, бо тут
         стояла церква Святого Миколая.<br>
-        У 1908–1909 роках тут звели два цегляні павільйони – м’ясний та рибний ряди. Вони були основою міського ринку.<br>
+        У 1908–1909 роках тут звели два цегляні павільйони – м’ясний та рибний ряди. Вони були основою міського
+        ринку.<br>
         У 1950-х ринок знесли, але Рибний ряд дивом зберігся.<br>
         👉 Сьогодні це – господарське приміщення ЧНУ.<br>
         ❓ Є цікава гіпотеза: автором будівлі міг бути Владислав Городецький. Хоча доказів немає, в літературі про це
@@ -397,6 +410,7 @@
 </main>
 
 <section class="sponsors">
+  <h2 style="color: #FFFFFF;">Слідкуйте за НАМИ:</h2>
   <div class="sponsor-logos">
     <a href="https://www.instagram.com/shotut_che/" target="_blank"><img src="wotyt.png" alt="шо тут?"></a>
     <a href="https://www.instagram.com/ftc_club/" target="_blank"><img src="ftc.png" alt="ftc"></a>
